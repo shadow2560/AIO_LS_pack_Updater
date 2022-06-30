@@ -37,8 +37,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-APP_TITLE   := 	AtmoPackUpdater
-APP_AUTHOR  := 	PoloNX
+APP_TITLE   := 	AIO_LS_pack_Updater
+APP_AUTHOR  := 	PoloNX, modified by shadow256
 APP_VERSION := 	0.0.2
 
 TARGET		:=	$(notdir $(CURDIR))

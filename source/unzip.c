@@ -16,9 +16,16 @@ bool prefix(const char* pre, const char *str){
 
 int unzip(const char *output)
 {
+    // FILE *logfile = fopen("log.txt", "w");
+    // Define your first sub-folder in the zip with the last "/" explicitly, set to empty if you don't have a sub-folder in your zip
+    char project_subfolder_in_zip[] = "switch_AIO_LS_pack-main/";
     unzFile zfile = unzOpen(output);
     unz_global_info gi = {0};
     unzGetGlobalInfo(zfile, &gi);
+    int first_subfolder_passed = 0;
+    if (strcmp(project_subfolder_in_zip, "") == 0) {
+        first_subfolder_passed = 1;
+    }
 
     for (int i = 0; i < gi.number_entry; i++)
     {
@@ -27,20 +34,37 @@ int unzip(const char *output)
         unzOpenCurrentFile(zfile);
         unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 
+        char filename_on_sd[MAXFILENAME];
+        int k = 0;
+        for (int j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
+         {
+            filename_on_sd[k] = filename_inzip[j];
+            k++;
+        }
+        filename_on_sd[k] = '\0';
+        // printf("Test nom du fichier sur la SD: %s\n", filename_on_sd);
+        // fputs (filename_on_sd, logfile);
+        if (strcmp(filename_inzip, project_subfolder_in_zip) == 0 && first_subfolder_passed == 0){
+            first_subfolder_passed = 1;
+            unzCloseCurrentFile(zfile);
+            unzGoToNextFile(zfile);
+            consoleUpdate(NULL);
+            continue;
+        }
         // check if the string ends with a /, if so, then its a directory.
-        if ((filename_inzip[strlen(filename_inzip) - 1]) == '/')
+        else if ((filename_inzip[strlen(filename_inzip) - 1]) == '/')
         {
             // check if directory exists
-            DIR *dir = opendir(filename_inzip);
+            DIR *dir = opendir(filename_on_sd);
             if (dir) closedir(dir);
             else
             {
-                printf("Création du répertoir: %s\n", filename_inzip);
-                mkdir(filename_inzip, 0777);
+                printf("Création du répertoir: %s\n", filename_on_sd);
+                mkdir(filename_on_sd, 0777);
             }
         }    
 
-        else if (strcmp(filename_inzip, "atmosphere/package3") == 0){
+        else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
             FILE *outfile = fopen("atmosphere/package3.temp", "wb");
             void *buf = malloc(WRITEBUFFERSIZE);
 
@@ -55,7 +79,7 @@ int unzip(const char *output)
             free(buf);
         }
 
-        else if (strcmp(filename_inzip, "atmosphere/stratosphere.romfs") == 0){
+        else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
             FILE *outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
             void *buf = malloc(WRITEBUFFERSIZE);
 
@@ -72,11 +96,11 @@ int unzip(const char *output)
 
         else
         {
-            const char *write_filename = filename_inzip;
+            const char *write_filename = filename_on_sd;
             FILE *outfile = fopen(write_filename, "wb");
             void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf("Extraction de: %s\n", filename_inzip);
+            printf("Extraction de: %s\n", filename_on_sd);
             consoleUpdate(NULL);
 
             for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
@@ -98,6 +122,6 @@ int unzip(const char *output)
     consoleUpdate(NULL);
 
     sleep(5);
-
+// fclose(logfile);
     return 0;
 }

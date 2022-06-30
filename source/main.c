@@ -9,8 +9,8 @@
 #include "reboot.h"
 
 #define ROOT                    "/"
-#define APP_PATH                "/switch/AtmoPackUpdater/"
-#define APP_OUTPUT              "/switch/AtmoPackUpdater/sigpatch-updater.nro"
+#define APP_PATH                "/switch/AIO_LS_pack_Updater/"
+#define APP_OUTPUT              "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
 #define APP_VERSION             "0.0.2"
 #define CURSOR_LIST_MAX         1
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
                 
                 else
                 {
-                    printDisplay("Une erreure est surevenue lors du telechargement du cfw. etes vous connecte a internet ?\n");
+                    printDisplay("Une erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\n");
                 }
 
                 break;
@@ -121,13 +121,13 @@ int main(int argc, char **argv)
             case UP_APP:
                 if (downloadFile(APP_URL, TEMP_FILE, OFF))
                 {
-                    remove("/switch/AtmoPackUpdater.nro");
+                    remove("/switch/AIO_LS_pack_Updater.nro");
                     remove(APP_OUTPUT);
                     rename(TEMP_FILE, APP_OUTPUT);
                 }
                 else
                 {
-                    printDisplay("Une erreure est surevenue lors du telechargement de l'app\n");
+                    printDisplay("Une erreure est survenue lors du telechargement de l'app\n");
                 }
                 break;
             }
