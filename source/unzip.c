@@ -4,28 +4,157 @@
 #include <dirent.h>
 #include <switch.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "unzip.h"
 
-#define WRITEBUFFERSIZE 0x25000 // 4KiB 
+#define WRITEBUFFERSIZE 0x100000 // 4KiB 
 #define MAXFILENAME     0x301
 
 bool prefix(const char* pre, const char *str){
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
+int check(unsigned const char type) {
+    if(type == DT_REG)
+        return 1;
+    if(type == DT_DIR)
+        return 0;
+    return -1;
+}
+
+int remove_directory(const char *path) {
+   DIR *d = opendir(path);
+   size_t path_len = strlen(path);
+   int r = -1;
+
+   if (d) {
+      struct dirent *p;
+
+      r = 0;
+      while (!r && (p=readdir(d))) {
+          int r2 = -1;
+          char *buf;
+          size_t len;
+
+          /* Skip the names "." and ".." as we don't want to recurse on them. */
+          if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+             continue;
+
+          len = path_len + strlen(p->d_name) + 2; 
+          buf = malloc(len);
+
+          if (buf) {
+             struct stat statbuf;
+
+             snprintf(buf, len, "%s/%s", path, p->d_name);
+             if (!stat(buf, &statbuf)) {
+                if (S_ISDIR(statbuf.st_mode))
+                   r2 = remove_directory(buf);
+                else
+                   r2 = unlink(buf);
+             }
+             free(buf);
+          }
+          r = r2;
+      }
+      closedir(d);
+   }
+
+   if (!r)
+      r = rmdir(path);
+
+   return r;
+}
+
+void clean_sd() {
+	printf("Nettoyage de la SD...\n");
+	// remove_directory("test");
+	// remove("test.txt");
+	DIR *dir = opendir("atmosphere/titles");
+	if (dir) {
+		closedir(dir);
+		
+		DIR *dir2 = opendir("atmosphere/contents");
+		if (dir2) {
+			closedir(dir2);
+			remove_directory("atmosphere/titles");
+		} else {
+			rename("atmosphere/titles", "atmosphere/contents");
+		}
+	}
+	remove_directory("atmosphere/contents/010000000000000D");
+	remove_directory("atmosphere/contents/010000000000002B");
+	remove_directory("atmosphere/contents/010000000000003C");
+	remove_directory("atmosphere/contents/0100000000000008");
+	remove_directory("atmosphere/contents/0100000000000032");
+	remove_directory("atmosphere/contents/0100000000000034");
+	remove_directory("atmosphere/contents/0100000000000036");
+	remove_directory("atmosphere/contents/0100000000000037");
+	remove_directory("atmosphere/contents/0100000000000042");
+	remove("nettoyage_sd.bat");
+	remove("atmosphere/BCT.ini");
+	remove("atmosphere/loader.ini");
+	remove("atmosphere/system_settings.ini");
+	remove("atmosphere/hekate_kips/loader.kip");
+	remove_directory("sept");
+	remove_directory("switch/atmosphere-updater");
+	remove_directory("switch/sigpatch-updater");
+	remove_directory("switch/sigpatches-updater");
+	remove_directory("switch/DeepSea-Toolbox");
+	remove("switch/GagOrder.nro");
+	remove_directory("atmosphere/exefs_patches/Signature_Patches_by_br4z0rf_and_Jakibaki");
+	remove_directory("switch/appstore/res");
+	remove("BCT.ini");
+	remove("fusee-secondary.bin");
+	remove("bootlogo.bmp");
+	remove("hekate_ipl.ini");
+	remove_directory("switch/CFWSettings");
+	remove_directory("switch/CFW-Settings");
+	remove("modules/atmosphere/fs_mitm.kip");
+	remove_directory("atmosphere/titles/010000000000100D");
+	remove("atmosphere/fusee-mtc.bin");
+	remove_directory("atmosphere/kip_patches/default_nogc");
+	remove("atmosphere/config/BCT.ini");
+	remove("atmosphere/config_templates/BCT.ini");
+	remove("atmosphere/fusee-secondary.bin");
+	remove("atmosphere/flags/clean_stratosphere_for_0.19.0.flag");
+	remove("Atmosphere_fusee-primary.bin");
+	remove_directory("switch/KosmosToolbox");
+	remove_directory("switch/KosmosUpdater");
+	remove_directory("switch/HekateToolbox");
+	remove("bootloader/hekate_ipl.ini.old");
+	remove("switch/DeepSea-Updater/DeepSeaUpdater.nro");
+	remove_directory("switch/ChoiDuJourNX");
+	remove("switch/ChoiDuJourNX.nro");
+	printf("Nettoyage de la SD terminé.\n\n");
+}
+
 int unzip(const char *output)
 {
     // FILE *logfile = fopen("log.txt", "w");
-    // Define your first sub-folder in the zip with the last "/" explicitly, set to empty if you don't have a sub-folder in your zip
-    char project_subfolder_in_zip[] = "switch_AIO_LS_pack-main/";
+    // first sub-folder path in the zip, set to "" if you don't have sub-folder to ignore in your zip. The sub-folders must only contain one folder in each else this won't work properly, this is only intended to localize the real root of the project. The last "/" separator is optional.
+    // const char subfolder_in_zip[] = "test-main/";
+    const char subfolder_in_zip[] = "switch_AIO_LS_pack-main/";
+    char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
+    strcpy(project_subfolder_in_zip, subfolder_in_zip);
     unzFile zfile = unzOpen(output);
     unz_global_info gi = {0};
     unzGetGlobalInfo(zfile, &gi);
     int first_subfolder_passed = 0;
-    if (strcmp(project_subfolder_in_zip, "") == 0) {
-        first_subfolder_passed = 1;
+    if (strcmp(project_subfolder_in_zip, "") != 0) {
+        for(int i = 0; project_subfolder_in_zip[i] != '\0'; i++) {
+            if(project_subfolder_in_zip[i] == '/') {
+                first_subfolder_passed++;
+            }
+        }
+    if ((project_subfolder_in_zip[strlen(project_subfolder_in_zip) - 1]) != '/') {
+        strcat(project_subfolder_in_zip, "/");
+        first_subfolder_passed++;
     }
+    }
+    // fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
 
     for (int i = 0; i < gi.number_entry; i++)
     {
@@ -44,8 +173,8 @@ int unzip(const char *output)
         filename_on_sd[k] = '\0';
         // printf("Test nom du fichier sur la SD: %s\n", filename_on_sd);
         // fputs (filename_on_sd, logfile);
-        if (strcmp(filename_inzip, project_subfolder_in_zip) == 0 && first_subfolder_passed == 0){
-            first_subfolder_passed = 1;
+        // fputs ("\n", logfile);
+        if (first_subfolder_passed > i){
             unzCloseCurrentFile(zfile);
             unzGoToNextFile(zfile);
             consoleUpdate(NULL);
@@ -122,6 +251,6 @@ int unzip(const char *output)
     consoleUpdate(NULL);
 
     sleep(5);
-// fclose(logfile);
+    // fclose(logfile);
     return 0;
 }

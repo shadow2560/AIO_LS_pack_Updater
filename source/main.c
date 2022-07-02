@@ -107,7 +107,8 @@ int main(int argc, char **argv)
             {
             case UP_CFW:
                 if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
-                    unzip("/switch/AtmoPackUpdater/temp.zip");
+                    clean_sd();
+                    unzip("/switch/AIO_LS_pack_Updater/temp.zip");
                     rebootNow();
                 }
                 
@@ -115,7 +116,6 @@ int main(int argc, char **argv)
                 {
                     printDisplay("Une erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\n");
                 }
-
                 break;
 
             case UP_APP:
