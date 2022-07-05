@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	PoloNX, modified by shadow256
-APP_VERSION := 	1.0.0
+APP_VERSION := 	1.1.0
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build

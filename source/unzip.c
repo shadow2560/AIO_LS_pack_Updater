@@ -9,45 +9,45 @@
 #include "unzip.h"
 
 #define WRITEBUFFERSIZE 0x100000 // 4KiB 
-#define MAXFILENAME     0x301
+#define MAXFILENAME	 0x301
 
 bool prefix(const char* pre, const char *str){
-    return strncmp(pre, str, strlen(pre)) == 0;
+	return strncmp(pre, str, strlen(pre)) == 0;
 }
 
 void cp(char *filein, char *fileout) {
-    FILE *exein, *exeout;
-    exein = fopen(filein, "rb");
-    if (exein == NULL) {
-        /* handle error */
-        perror("file open for reading");
-        exit(EXIT_FAILURE);
-    }
-    exeout = fopen(fileout, "wb");
-    if (exeout == NULL) {
-        /* handle error */
-        perror("file open for writing");
-        exit(EXIT_FAILURE);
-    }
-    size_t n, m;
-    unsigned char buff[8192];
-    do {
-        n = fread(buff, 1, sizeof buff, exein);
-        if (n) m = fwrite(buff, 1, n, exeout);
-        else   m = 0;
-    }
-    while ((n > 0) && (n == m));
-    if (m) perror("copy");
-    if (fclose(exeout)) perror("close output file");
-    if (fclose(exein)) perror("close input file");
+	FILE *exein, *exeout;
+	exein = fopen(filein, "rb");
+	if (exein == NULL) {
+		/* handle error */
+		perror("file open for reading");
+		exit(EXIT_FAILURE);
+	}
+	exeout = fopen(fileout, "wb");
+	if (exeout == NULL) {
+		/* handle error */
+		perror("file open for writing");
+		exit(EXIT_FAILURE);
+	}
+	size_t n, m;
+	unsigned char buff[8192];
+	do {
+		n = fread(buff, 1, sizeof buff, exein);
+		if (n) m = fwrite(buff, 1, n, exeout);
+		else   m = 0;
+	}
+	while ((n > 0) && (n == m));
+	if (m) perror("copy");
+	if (fclose(exeout)) perror("close output file");
+	if (fclose(exein)) perror("close input file");
 }
 
 int check(unsigned const char type) {
-    if(type == DT_REG)
-        return 1;
-    if(type == DT_DIR)
-        return 0;
-    return -1;
+	if(type == DT_REG)
+		return 1;
+	if(type == DT_DIR)
+		return 0;
+	return -1;
 }
 
 int remove_directory(const char *path) {
@@ -56,40 +56,40 @@ int remove_directory(const char *path) {
    int r = -1;
 
    if (d) {
-      struct dirent *p;
+	  struct dirent *p;
 
-      r = 0;
-      while (!r && (p=readdir(d))) {
-          int r2 = -1;
-          char *buf;
-          size_t len;
+	  r = 0;
+	  while (!r && (p=readdir(d))) {
+		  int r2 = -1;
+		  char *buf;
+		  size_t len;
 
-          /* Skip the names "." and ".." as we don't want to recurse on them. */
-          if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
-             continue;
+		  /* Skip the names "." and ".." as we don't want to recurse on them. */
+		  if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+			 continue;
 
-          len = path_len + strlen(p->d_name) + 2; 
-          buf = malloc(len);
+		  len = path_len + strlen(p->d_name) + 2; 
+		  buf = malloc(len);
 
-          if (buf) {
-             struct stat statbuf;
+		  if (buf) {
+			 struct stat statbuf;
 
-             snprintf(buf, len, "%s/%s", path, p->d_name);
-             if (!stat(buf, &statbuf)) {
-                if (S_ISDIR(statbuf.st_mode))
-                   r2 = remove_directory(buf);
-                else
-                   r2 = unlink(buf);
-             }
-             free(buf);
-          }
-          r = r2;
-      }
-      closedir(d);
+			 snprintf(buf, len, "%s/%s", path, p->d_name);
+			 if (!stat(buf, &statbuf)) {
+				if (S_ISDIR(statbuf.st_mode))
+				   r2 = remove_directory(buf);
+				else
+				   r2 = unlink(buf);
+			 }
+			 free(buf);
+		  }
+		  r = r2;
+	  }
+	  closedir(d);
    }
 
    if (!r)
-      r = rmdir(path);
+	  r = rmdir(path);
 
    return r;
 }
@@ -165,155 +165,155 @@ void clean_sd() {
 
 int unzip(const char *output)
 {
-    // FILE *logfile = fopen("log.txt", "w");
-    char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
-    strcpy(project_subfolder_in_zip, subfolder_in_zip);
-    unzFile zfile = unzOpen(output);
-    unz_global_info gi = {0};
-    unzGetGlobalInfo(zfile, &gi);
-    int first_subfolder_passed = 0;
-    if (strcmp(project_subfolder_in_zip, "") != 0) {
-        for(int i = 0; project_subfolder_in_zip[i] != '\0'; i++) {
-            if(project_subfolder_in_zip[i] == '/') {
-                first_subfolder_passed++;
-            }
-        }
-    if ((project_subfolder_in_zip[strlen(project_subfolder_in_zip) - 1]) != '/') {
-        strcat(project_subfolder_in_zip, "/");
-        first_subfolder_passed++;
-    }
-    }
-    // fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
+	// FILE *logfile = fopen("log.txt", "w");
+	char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
+	strcpy(project_subfolder_in_zip, subfolder_in_zip);
+	unzFile zfile = unzOpen(output);
+	unz_global_info gi = {0};
+	unzGetGlobalInfo(zfile, &gi);
+	int first_subfolder_passed = 0;
+	if (strcmp(project_subfolder_in_zip, "") != 0) {
+		for(int i = 0; project_subfolder_in_zip[i] != '\0'; i++) {
+			if(project_subfolder_in_zip[i] == '/') {
+				first_subfolder_passed++;
+			}
+		}
+	if ((project_subfolder_in_zip[strlen(project_subfolder_in_zip) - 1]) != '/') {
+		strcat(project_subfolder_in_zip, "/");
+		first_subfolder_passed++;
+	}
+	}
+	// fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
 
-    for (int i = 0; i < gi.number_entry; i++)
-    {
-        char filename_inzip[MAXFILENAME] = {0};
-        unz_file_info file_info = {0};
-        unzOpenCurrentFile(zfile);
-        unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
+	for (int i = 0; i < gi.number_entry; i++)
+	{
+		char filename_inzip[MAXFILENAME] = {0};
+		unz_file_info file_info = {0};
+		unzOpenCurrentFile(zfile);
+		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 
-        char filename_on_sd[MAXFILENAME];
-        int k = 0;
-        for (int j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
-         {
-            filename_on_sd[k] = filename_inzip[j];
-            k++;
-        }
-        filename_on_sd[k] = '\0';
-        // printf("Test nom du fichier sur la SD: %s\n", filename_on_sd);
-        // fputs (filename_on_sd, logfile);
-        // fputs ("\n", logfile);
-        if (first_subfolder_passed > i){
-            unzCloseCurrentFile(zfile);
-            unzGoToNextFile(zfile);
-            consoleUpdate(NULL);
-            continue;
-        }
-        // check if the string ends with a /, if so, then its a directory.
-        else if ((filename_inzip[strlen(filename_inzip) - 1]) == '/')
-        {
-            // check if directory exists
-            DIR *dir = opendir(filename_on_sd);
-            if (dir) closedir(dir);
-            else
-            {
-                printf("Création du répertoir: %s\n", filename_on_sd);
-                mkdir(filename_on_sd, 0777);
-                consoleUpdate(NULL);
-            }
-        }    
+		char filename_on_sd[MAXFILENAME];
+		int k = 0;
+		for (int j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
+		 {
+			filename_on_sd[k] = filename_inzip[j];
+			k++;
+		}
+		filename_on_sd[k] = '\0';
+		// printf("Test nom du fichier sur la SD: %s\n", filename_on_sd);
+		// fputs (filename_on_sd, logfile);
+		// fputs ("\n", logfile);
+		if (first_subfolder_passed > i){
+			unzCloseCurrentFile(zfile);
+			unzGoToNextFile(zfile);
+			consoleUpdate(NULL);
+			continue;
+		}
+		// check if the string ends with a /, if so, then its a directory.
+		else if ((filename_inzip[strlen(filename_inzip) - 1]) == '/')
+		{
+			// check if directory exists
+			DIR *dir = opendir(filename_on_sd);
+			if (dir) closedir(dir);
+			else
+			{
+				printf("Création du répertoir: %s\n", filename_on_sd);
+				mkdir(filename_on_sd, 0777);
+				consoleUpdate(NULL);
+			}
+		}	
 
-        else if (strcmp(filename_on_sd, "payload.bin") == 0){
-            FILE *outfile = fopen("payload.bin.temp", "wb");
-            void *buf = malloc(WRITEBUFFERSIZE);
+		else if (strcmp(filename_on_sd, "payload.bin") == 0){
+			FILE *outfile = fopen("payload.bin.temp", "wb");
+			void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf ("\033[0;31mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-            consoleUpdate(NULL);
-            sleep(2);
+			printf ("\033[0;31mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			consoleUpdate(NULL);
+			sleep(2);
 
-            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-                fwrite(buf, 1, j, outfile);
+			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+				fwrite(buf, 1, j, outfile);
 
-            fclose(outfile);
-            free(buf);
-        }
+			fclose(outfile);
+			free(buf);
+		}
 
-        else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
-            FILE *outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
-            void *buf = malloc(WRITEBUFFERSIZE);
+		else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
+			FILE *outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
+			void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf ("\033[0;31mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-            consoleUpdate(NULL);
-            sleep(2);
+			printf ("\033[0;31mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			consoleUpdate(NULL);
+			sleep(2);
 
-            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-                fwrite(buf, 1, j, outfile);
+			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+				fwrite(buf, 1, j, outfile);
 
-            fclose(outfile);
-            free(buf);
-        }
+			fclose(outfile);
+			free(buf);
+		}
 
-        else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
-            FILE *outfile = fopen("atmosphere/package3.temp", "wb");
-            void *buf = malloc(WRITEBUFFERSIZE);
+		else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
+			FILE *outfile = fopen("atmosphere/package3.temp", "wb");
+			void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf ("\033[0;31mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-            consoleUpdate(NULL);
-            sleep(2);
+			printf ("\033[0;31mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			consoleUpdate(NULL);
+			sleep(2);
 
-            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-                fwrite(buf, 1, j, outfile);
+			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+				fwrite(buf, 1, j, outfile);
 
-            fclose(outfile);
-            free(buf);
-        }
+			fclose(outfile);
+			free(buf);
+		}
 
-        else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
-            FILE *outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
-            void *buf = malloc(WRITEBUFFERSIZE);
+		else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
+			FILE *outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
+			void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf ("\033[0;31mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-            consoleUpdate(NULL);
-            sleep(2);
+			printf ("\033[0;31mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			consoleUpdate(NULL);
+			sleep(2);
 
-            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-                fwrite(buf, 1, j, outfile);
+			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+				fwrite(buf, 1, j, outfile);
 
-            fclose(outfile);
-            free(buf);
-        }
+			fclose(outfile);
+			free(buf);
+		}
 
-        else
-        {
-            const char *write_filename = filename_on_sd;
-            FILE *outfile = fopen(write_filename, "wb");
-            void *buf = malloc(WRITEBUFFERSIZE);
+		else
+		{
+			const char *write_filename = filename_on_sd;
+			FILE *outfile = fopen(write_filename, "wb");
+			void *buf = malloc(WRITEBUFFERSIZE);
 
-            printf("Extraction de: %s\n", filename_on_sd);
-            consoleUpdate(NULL);
+			printf("Extraction de: %s\n", filename_on_sd);
+			consoleUpdate(NULL);
 
-            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-                fwrite(buf, 1, j, outfile);
+			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+				fwrite(buf, 1, j, outfile);
 
-            fclose(outfile);
-            free(buf);
-        }
+			fclose(outfile);
+			free(buf);
+		}
 
-        unzCloseCurrentFile(zfile);
-        unzGoToNextFile(zfile);
-        consoleUpdate(NULL);
-    }
+		unzCloseCurrentFile(zfile);
+		unzGoToNextFile(zfile);
+		consoleUpdate(NULL);
+	}
 
-    unzClose(zfile);
-    //remove(output);
-    
-    printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\n");
-    consoleUpdate(NULL);
-    remove("payload.bin");
-    cp("romfs:/payload/ams_rcm.bin", "payload.bin");
-    consoleUpdate(NULL);
+	unzClose(zfile);
+	//remove(output);
+	
+	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\n");
+	consoleUpdate(NULL);
+	remove("payload.bin");
+	cp("romfs:/payload/ams_rcm.bin", "payload.bin");
+	consoleUpdate(NULL);
 
-    sleep(5);
-    // fclose(logfile);
-    return 0;
+	sleep(5);
+	// fclose(logfile);
+	return 0;
 }

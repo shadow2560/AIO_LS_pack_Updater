@@ -7,6 +7,7 @@
 
 #define UP_APP          0
 #define UP_CFW          1
+#define UP_90dns          2
 
 void cp(char *filein, char *fileout);
 void clean_sd();
