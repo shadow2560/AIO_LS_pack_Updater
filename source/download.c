@@ -63,6 +63,8 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 
 bool downloadFile(const char *url, const char *output, int api)
 {
+    printf("\nTelechargement de\n%s\n", url);
+    consoleUpdate(NULL);
     CURL *curl = curl_easy_init();
     if (curl)
     {

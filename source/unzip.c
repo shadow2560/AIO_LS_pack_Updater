@@ -3,7 +3,6 @@
 #include <string.h>
 #include <dirent.h>
 #include <switch.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -14,6 +13,33 @@
 
 bool prefix(const char* pre, const char *str){
     return strncmp(pre, str, strlen(pre)) == 0;
+}
+
+void cp(char *filein, char *fileout) {
+    FILE *exein, *exeout;
+    exein = fopen(filein, "rb");
+    if (exein == NULL) {
+        /* handle error */
+        perror("file open for reading");
+        exit(EXIT_FAILURE);
+    }
+    exeout = fopen(fileout, "wb");
+    if (exeout == NULL) {
+        /* handle error */
+        perror("file open for writing");
+        exit(EXIT_FAILURE);
+    }
+    size_t n, m;
+    unsigned char buff[8192];
+    do {
+        n = fread(buff, 1, sizeof buff, exein);
+        if (n) m = fwrite(buff, 1, n, exeout);
+        else   m = 0;
+    }
+    while ((n > 0) && (n == m));
+    if (m) perror("copy");
+    if (fclose(exeout)) perror("close output file");
+    if (fclose(exein)) perror("close input file");
 }
 
 int check(unsigned const char type) {
@@ -70,6 +96,7 @@ int remove_directory(const char *path) {
 
 void clean_sd() {
 	printf("Nettoyage de la SD...\n");
+	consoleUpdate(NULL);
 	// remove_directory("test");
 	// remove("test.txt");
 	DIR *dir = opendir("atmosphere/titles");
@@ -128,15 +155,17 @@ void clean_sd() {
 	remove("switch/DeepSea-Updater/DeepSeaUpdater.nro");
 	remove_directory("switch/ChoiDuJourNX");
 	remove("switch/ChoiDuJourNX.nro");
+	remove_directory("nsp_forwaders");
+	remove("readme.html");
+	remove("readme.md");
+	remove("bootloader/bootlogo.bmp");
 	printf("Nettoyage de la SD terminé.\n\n");
+		consoleUpdate(NULL);
 }
 
 int unzip(const char *output)
 {
     // FILE *logfile = fopen("log.txt", "w");
-    // first sub-folder path in the zip, set to "" if you don't have sub-folder to ignore in your zip. The sub-folders must only contain one folder in each else this won't work properly, this is only intended to localize the real root of the project. The last "/" separator is optional.
-    // const char subfolder_in_zip[] = "test-main/";
-    const char subfolder_in_zip[] = "switch_AIO_LS_pack-main/";
     char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
     strcpy(project_subfolder_in_zip, subfolder_in_zip);
     unzFile zfile = unzOpen(output);
@@ -190,8 +219,39 @@ int unzip(const char *output)
             {
                 printf("Création du répertoir: %s\n", filename_on_sd);
                 mkdir(filename_on_sd, 0777);
+                consoleUpdate(NULL);
             }
         }    
+
+        else if (strcmp(filename_on_sd, "payload.bin") == 0){
+            FILE *outfile = fopen("payload.bin.temp", "wb");
+            void *buf = malloc(WRITEBUFFERSIZE);
+
+            printf ("\033[0;31mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+            consoleUpdate(NULL);
+            sleep(2);
+
+            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+                fwrite(buf, 1, j, outfile);
+
+            fclose(outfile);
+            free(buf);
+        }
+
+        else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
+            FILE *outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
+            void *buf = malloc(WRITEBUFFERSIZE);
+
+            printf ("\033[0;31mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+            consoleUpdate(NULL);
+            sleep(2);
+
+            for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+                fwrite(buf, 1, j, outfile);
+
+            fclose(outfile);
+            free(buf);
+        }
 
         else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
             FILE *outfile = fopen("atmosphere/package3.temp", "wb");
@@ -248,6 +308,9 @@ int unzip(const char *output)
     //remove(output);
     
     printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\n");
+    consoleUpdate(NULL);
+    remove("payload.bin");
+    cp("romfs:/payload/ams_rcm.bin", "payload.bin");
     consoleUpdate(NULL);
 
     sleep(5);

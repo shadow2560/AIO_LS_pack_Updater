@@ -55,7 +55,7 @@ static void reboot_to_payload(void) {
 
 void rebootNow() //0 = hekate, 1 = ams, 2 = lockpick, 3 = udpih
 {
-    Result rc = splInitialize();
+    splInitialize();
     chdir("romfs:/");
     FILE *f = fopen("payload/ams_rcm.bin", "rb");
 

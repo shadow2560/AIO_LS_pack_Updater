@@ -12,21 +12,21 @@
 #define APP_PATH                "/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT              "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION             "0.0.2"
+#define APP_VERSION             "1.0.0"
 #define CURSOR_LIST_MAX         1
 
 
 const char *OPTION_LIST[] =
 {
-    "= Update le CFW",
-    "= Update l'application"
+    "= Mise à jour de l'application",
+    "= Mise à jour du pack switch_AIO_LS_pack"
 };
 
 void refreshScreen(int cursor)
 {
     consoleClear();
 
-    printf("\x1B[36mAtmoPackUpdater: v%s.\x1B[37m\n\n\n", APP_VERSION);
+    printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
     printf("Appuyez sur (A) pour selectionner une option\n\n");
     printf("Appuyez sur (+) pour quitter l'application\n\n\n");
 
@@ -109,12 +109,14 @@ int main(int argc, char **argv)
                 if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
                     clean_sd();
                     unzip("/switch/AIO_LS_pack_Updater/temp.zip");
+                    remove(TEMP_FILE);
                     rebootNow();
                 }
                 
                 else
                 {
                     printDisplay("Une erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\n");
+                    remove(TEMP_FILE);
                 }
                 break;
 
@@ -122,12 +124,17 @@ int main(int argc, char **argv)
                 if (downloadFile(APP_URL, TEMP_FILE, OFF))
                 {
                     remove("/switch/AIO_LS_pack_Updater.nro");
-                    remove(APP_OUTPUT);
-                    rename(TEMP_FILE, APP_OUTPUT);
+                    cp("romfs:/nro/aiosu-forwarder.nro", "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
+                    printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'app dans 5 secondes:)\n");
+                    sleep(5);
+                    envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+                    appExit();
+                    return 0;
                 }
                 else
                 {
-                    printDisplay("Une erreure est survenue lors du telechargement de l'app\n");
+                    printDisplay("Une erreure est survenue lors du telechargement de l'application\n");
+                    remove(TEMP_FILE);
                 }
                 break;
             }

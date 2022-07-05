@@ -37,33 +37,32 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-APP_TITLE   := 	AIO_LS_pack_Updater
-APP_AUTHOR  := 	PoloNX, modified by shadow256
-APP_VERSION := 	1.0.0
-
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source lib/zipper/source
+SOURCES		:=	source
 DATA		:=	data
-INCLUDES	:=	includes lib/zipper/include
-ROMFS		:=	romfs
+INCLUDES	:=	include
+APP_TITLE	:=	aio-switch-updater forwarder
+APP_AUTHOR	:=	HamletDuFromage
+APP_VERSION :=  1.0
+#ROMFS	:=	romfs
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
+CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:=  -lcurl -lminizip -lz -lnx
+LIBS	:= -lnx
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
