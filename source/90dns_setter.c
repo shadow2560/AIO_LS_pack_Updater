@@ -15,6 +15,13 @@ const char *regions[] = {
     "China",
 };
 
+void rebootSystem(){
+    spsmInitialize();
+    spsmShutdown(true);
+    spsmExit();
+    printf("Something went wrong while rebooting!");
+}
+
 int set_90dns()
 {
 	Result res = 0;
@@ -40,27 +47,27 @@ int set_90dns()
 		else {
 			res = setGetRegionCode(&region);
 			if (res){
-				printf("Echec de la récupération de la région! Err %x\n", res);
+				printf("Echec de la recupération de la region! Err %x\n", res);
 				consoleUpdate(NULL);
 				return 1;
 			}
 			else {
 				if (region <= SetRegion_CHN){
-					printf("Région %s détectée\n", regions[region]);
+					printf("eégion %s détectee\n", regions[region]);
 					consoleUpdate(NULL);
 					if (region == SetRegion_USA){
-						printf("American dns will be used as primary\n");
+						printf("Le DNS americain sera utilise en tant que DNS primaire\n");
 						primaryDns = americaDns;
 						secondaryDns = europeDns;
 					}
 					else {
-						printf("Europe dns will be used as primary\n");
+						printf("Le DNS europeen sera utilise en tant que DNS primaire\n");
 						primaryDns = europeDns;
 						secondaryDns = americaDns;
 					}
 				}
 				else {
-					printf("Unknown region? Europe dns will be used as primary\n");
+					printf("Region inconnue? Le DNS americain sera utilise en tant que DNS primaire\n");
 					primaryDns = europeDns;
 					secondaryDns = americaDns;
 				}
@@ -69,7 +76,7 @@ int set_90dns()
 		}
 	}
 
-	printf("\nApplication de 90dns sur les réseaux wifi...\n");
+	printf("\nApplication de 90dns sur les reseaux wifi...\n");
 	consoleUpdate(NULL);
 	SetSysNetworkSettings* wifiSettings = malloc(sizeof(SetSysNetworkSettings) * 0x200);
 
@@ -77,11 +84,11 @@ int set_90dns()
 		s32 entryCount = 0;
 		res = setsysGetNetworkSettings(&entryCount, wifiSettings, 0x200);
 		if (res){
-			printf("Echec de la récupération des réseaux wifi! Err %x\n", res);
+			printf("Echec de la recupération des reseaux wifi! Err %x\n", res);
 			consoleUpdate(NULL);
 		}
 		else {
-			printf("Réseau wifi trouvé: %d\n", entryCount);
+			printf("Reseau wifi trouve: %d\n", entryCount);
 			consoleUpdate(NULL);
 			for (int i = 0; i < entryCount; i++){
 				wifiSettings[i].primary_dns = primaryDns;
@@ -92,11 +99,11 @@ int set_90dns()
 			if (entryCount){
 				res = setsysSetNetworkSettings(wifiSettings, entryCount);
 				if (res){
-					printf("Echec de la configuration du réseau wifi! Err %x\n", res);
+					printf("Echec de la configuration du reseau wifi! Err %x\n", res);
 					consoleUpdate(NULL);
 				}
 				else {
-					printf("Terminé!\nLa console sera redémarrée pour appliquer les changements\n");
+					printf("Fini!\nLa console sera redemarree pour appliquer les changements\n");
 					consoleUpdate(NULL);
 				}
 			}

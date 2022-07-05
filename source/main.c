@@ -18,9 +18,9 @@
 
 const char *OPTION_LIST[] =
 {
-	"= Mise à jour de l'application",
-	"= Mise à jour du pack switch_AIO_LS_pack",
-	"= Application de la protection DNS sur tous les réseaux Wifi déjà configurés"
+	"= Mise a jour de l'application",
+	"= Mise a jour du pack switch_AIO_LS_pack",
+	"= Application de la protection DNS sur tous les reseaux Wifi deja configures"
 };
 
 void refreshScreen(int cursor)
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 					clean_sd();
 					unzip("/switch/AIO_LS_pack_Updater/temp.zip");
 					remove(TEMP_FILE);
-					rebootNow();
+					rebootAms_rcm();
 				}
 				
 				else
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 			case UP_90dns:
 				set_90dns();
 				sleep(5);
-				rebootNow();
+				rebootSystem();
 				break;
 
 			}

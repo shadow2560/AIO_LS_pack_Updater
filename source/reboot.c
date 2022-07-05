@@ -53,7 +53,7 @@ static void reboot_to_payload(void) {
 }
 
 
-void rebootNow() //0 = hekate, 1 = ams, 2 = lockpick, 3 = udpih
+void rebootAms_rcm()
 {
 	splInitialize();
 	chdir("romfs:/");

@@ -1,4 +1,4 @@
 #pragma once
 #include <switch.h>
 
-void rebootNow();
+void rebootAms_rcm();

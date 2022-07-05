@@ -159,7 +159,7 @@ void clean_sd() {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
-	printf("Nettoyage de la SD terminé.\n\n");
+	printf("Nettoyage de la SD termine.\n\n");
 		consoleUpdate(NULL);
 }
 
@@ -217,7 +217,7 @@ int unzip(const char *output)
 			if (dir) closedir(dir);
 			else
 			{
-				printf("Création du répertoir: %s\n", filename_on_sd);
+				printf("Creation du repertoir: %s\n", filename_on_sd);
 				mkdir(filename_on_sd, 0777);
 				consoleUpdate(NULL);
 			}
