@@ -69,7 +69,6 @@ int main(int argc, char **argv)
 	appInit();
 	PadState pad;
 	padInitializeDefault(&pad);
-	mkdir(APP_PATH, 0777);
 
 	// change directory to root (defaults to /switch/)
 	chdir(ROOT);
@@ -107,6 +106,7 @@ int main(int argc, char **argv)
 			switch (cursor)
 			{
 			case UP_CFW:
+				mkdir(APP_PATH, 0777);
 				if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
 					set_90dns();
 					clean_sd();
@@ -123,6 +123,7 @@ int main(int argc, char **argv)
 				break;
 
 			case UP_APP:
+				mkdir(APP_PATH, 0777);
 				if (downloadFile(APP_URL, TEMP_FILE, OFF))
 				{
 					cp("romfs:/nro/aiosu-forwarder.nro", "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
