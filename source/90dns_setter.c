@@ -22,7 +22,7 @@ void rebootSystem(){
     printf("Something went wrong while rebooting!");
 }
 
-int set_90dns()
+bool set_90dns()
 {
 	Result res = 0;
 	SetRegion region;
@@ -35,25 +35,31 @@ int set_90dns()
 	if (res){
 		printf("Echec de l'initialisation de set! Err %x\n", res);
 		consoleUpdate(NULL);
-		return 1;
+		setExit();
+		setsysExit();
+		return false;
 	}
 	else {
 		res = setsysInitialize();
 		if (res){
 			printf("Echec de l'initialisation de setsys! Err %x\n", res);
 			consoleUpdate(NULL);
-			return 1;
+			setExit();
+			setsysExit();
+			return false;
 		}
 		else {
 			res = setGetRegionCode(&region);
 			if (res){
 				printf("Echec de la recupération de la region! Err %x\n", res);
 				consoleUpdate(NULL);
-				return 1;
+				setExit();
+				setsysExit();
+				return false;
 			}
 			else {
 				if (region <= SetRegion_CHN){
-					printf("eégion %s détectee\n", regions[region]);
+					printf("Region %s detectee\n", regions[region]);
 					consoleUpdate(NULL);
 					if (region == SetRegion_USA){
 						printf("Le DNS americain sera utilise en tant que DNS primaire\n");
@@ -86,6 +92,10 @@ int set_90dns()
 		if (res){
 			printf("Echec de la recupération des reseaux wifi! Err %x\n", res);
 			consoleUpdate(NULL);
+			free(wifiSettings);
+			setExit();
+			setsysExit();
+			return false;
 		}
 		else {
 			printf("Reseau wifi trouve: %d\n", entryCount);
@@ -101,6 +111,10 @@ int set_90dns()
 				if (res){
 					printf("Echec de la configuration du reseau wifi! Err %x\n", res);
 					consoleUpdate(NULL);
+					free(wifiSettings);
+					setExit();
+					setsysExit();
+					return false;
 				}
 				else {
 					printf("Fini!\nLa console sera redemarree pour appliquer les changements\n");
@@ -114,5 +128,5 @@ int set_90dns()
 	// Deinitialize and clean up resources used by the console (important!)
 	setExit();
 	setsysExit();
-	return 0;
+	return true;
 }

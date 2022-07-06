@@ -140,9 +140,12 @@ int main(int argc, char **argv)
 				break;
 
 			case UP_90dns:
-				set_90dns();
-				sleep(5);
-				rebootSystem();
+				if (set_90dns()) {
+					sleep(5);
+					rebootSystem();
+				} else {
+						printDisplay("Une erreur s'est produite durant l'application des paramètres DNS.");
+				}
 				break;
 
 			}
