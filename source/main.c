@@ -3,18 +3,25 @@
 #include <unistd.h> // chdir
 #include <dirent.h> // mkdir
 #include <switch.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "90dns_setter.h"
 #include "download.h"
 #include "unzip.h"
 #include "reboot.h"
+#include "ini.h"
 
 #define ROOT					"/"
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "1.1.0"
+#define APP_VERSION			 "2.0.0"
 #define CURSOR_LIST_MAX		 2
+
+	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
+	char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 
 const char *OPTION_LIST[] =
 {
@@ -22,6 +29,53 @@ const char *OPTION_LIST[] =
 	"= Mise a jour du pack switch_AIO_LS_pack",
 	"= Application de la protection DNS sur tous les reseaux Wifi deja configures"
 };
+
+// define a structure for holding the values in "config" section of the ini file.
+typedef struct{
+	const char* dl_pack;
+	const char* subfolder_in_zip_pack;
+	const char* dl_app;
+} config_section;
+
+// define a structure for holding all of the config.
+typedef struct
+{
+	config_section s1;
+} configuration;
+
+static int config_handler(void* config, const char* section, const char* name, const char* value)
+{
+	// config instance for filling in the values.
+	configuration* pconfig = (configuration*)config;
+
+	// define a macro for checking Sections and keys under the sections.
+	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+
+	// fill the values in config struct for Section 1.
+	if(MATCH("config", "dl_pack_adress")){
+		if (value != 0) {
+			pconfig->s1.dl_pack = strdup(value);
+		} else {
+			pconfig->s1.dl_pack = "";
+		}
+	}else if(MATCH("config", "subfolder_of_pack_in_zip")){
+		if (value != 0) {
+			pconfig->s1.subfolder_in_zip_pack = strdup(value);
+		} else {
+			pconfig->s1.subfolder_in_zip_pack = "";
+		}
+	}else if(MATCH("config", "dl_app_adress")){
+		if (value != 0) {
+			pconfig->s1.dl_app = strdup(value);
+		} else {
+			pconfig->s1.dl_app = "";
+		}
+	}else{
+		return 0;
+	}
+
+	return 1;
+}
 
 void refreshScreen(int cursor)
 {
@@ -67,6 +121,33 @@ int main(int argc, char **argv)
 {
 	// init stuff
 	appInit();
+	// config for holding ini file values.
+	configuration config;
+	config.s1.dl_pack = "";
+	config.s1.subfolder_in_zip_pack = "";
+	config.s1.dl_app = "";
+	FILE *test_ini;
+	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
+	if (test_ini != NULL) {
+		fclose(test_ini);
+		// parse the .ini file
+		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
+			if (strcmp(config.s1.dl_pack, "") != 0) {
+				strcpy(CFW_URL, config.s1.dl_pack);
+				free((void*)config.s1.dl_pack);
+			}
+			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
+				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
+				free((void*)config.s1.subfolder_in_zip_pack);
+			} else {
+				strcpy(subfolder_in_zip, "");
+			}
+			if (strcmp(config.s1.dl_app, "") != 0) {
+				strcpy(APP_URL, config.s1.dl_app);
+				free((void*)config.s1.dl_app);
+			}
+		}
+	}
 	PadState pad;
 	padInitializeDefault(&pad);
 

@@ -166,6 +166,7 @@ void clean_sd() {
 int unzip(const char *output)
 {
 	// FILE *logfile = fopen("log.txt", "w");
+	extern char subfolder_in_zip[1003];
 	char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
 	strcpy(project_subfolder_in_zip, subfolder_in_zip);
 	unzFile zfile = unzOpen(output);
@@ -184,6 +185,7 @@ int unzip(const char *output)
 	}
 	}
 	// fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
+int detected_payload_bin = 0;
 
 	for (int i = 0; i < gi.number_entry; i++)
 	{
@@ -224,6 +226,7 @@ int unzip(const char *output)
 		}	
 
 		else if (strcmp(filename_on_sd, "payload.bin") == 0){
+			detected_payload_bin = 1;
 			FILE *outfile = fopen("payload.bin.temp", "wb");
 			void *buf = malloc(WRITEBUFFERSIZE);
 
@@ -307,6 +310,7 @@ int unzip(const char *output)
 	unzClose(zfile);
 	//remove(output);
 	
+	if (detected_payload_bin == 0) rename("payload.bin", "payload.bin.temp");
 	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\n");
 	consoleUpdate(NULL);
 	remove("payload.bin");

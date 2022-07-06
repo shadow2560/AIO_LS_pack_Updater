@@ -38,8 +38,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
-APP_AUTHOR  := 	PoloNX, modified by shadow256
-APP_VERSION := 	1.1.0
+APP_AUTHOR  := 	shadow256
+APP_VERSION := 	2.0.0
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
