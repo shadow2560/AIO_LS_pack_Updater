@@ -16,8 +16,11 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.0.0"
+#define APP_VERSION			 "2.1.0"
 #define CURSOR_LIST_MAX		 2
+#define UP_APP          0
+#define UP_CFW          1
+#define UP_90dns          2
 
 	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
@@ -37,7 +40,7 @@ typedef struct{
 	const char* dl_app;
 } config_section;
 
-// define a structure for holding all of the config.
+// define a structure for holding all of the config of the ini file.
 typedef struct
 {
 	config_section s1;
@@ -85,9 +88,13 @@ void refreshScreen(int cursor)
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
 	printf("Appuyez sur (+) pour quitter l'application\n\n\n");
 
-	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++)
-		printf("[%c] %s\n\n", cursor == i ? 'X' : ' ', OPTION_LIST[i]);
-
+	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
+		if (cursor == i) {
+			printf("\033[0;31m[X] %s\033[0;37m\n\n", OPTION_LIST[i]);
+		} else {
+			printf("[ ] %s\n\n", OPTION_LIST[i]);
+		}
+	}
 	consoleUpdate(NULL);
 }
 
@@ -160,7 +167,7 @@ int main(int argc, char **argv)
 	// main menu
 	refreshScreen(cursor);
 
-	// muh loooooop
+	// Loop for the menu
 	while(appletMainLoop())
 	{
 		padUpdate(&pad);
@@ -198,7 +205,7 @@ int main(int argc, char **argv)
 				
 				else
 				{
-					printDisplay("Une erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\n");
+					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
 				break;
@@ -208,7 +215,7 @@ int main(int argc, char **argv)
 				if (downloadFile(APP_URL, TEMP_FILE, OFF))
 				{
 					cp("romfs:/nro/aiosu-forwarder.nro", "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
-					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'app dans 5 secondes:)\n");
+					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'application dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
 					appExit();
@@ -216,7 +223,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					printDisplay("Une erreure est survenue lors du telechargement de l'application\n");
+					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement de l'application\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
 				break;
@@ -226,7 +233,7 @@ int main(int argc, char **argv)
 					sleep(5);
 					rebootSystem();
 				} else {
-						printDisplay("Une erreur s'est produite durant l'application des paramètres DNS.");
+						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des paramètres DNS.\033[0;37m\n");
 				}
 				break;
 

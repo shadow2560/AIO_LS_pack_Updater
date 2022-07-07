@@ -63,7 +63,7 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 
 bool downloadFile(const char *url, const char *output, int api)
 {
-	printf("\nTelechargement de\n%s\n", url);
+	printf("\n\033[0;32mTelechargement de\n%s\033[0;37m\n", url);
 	consoleUpdate(NULL);
 	CURL *curl = curl_easy_init();
 	if (curl)
@@ -108,14 +108,14 @@ bool downloadFile(const char *url, const char *output, int api)
 
 			if (res == CURLE_OK)
 			{
-				printf("\n\nTelechargement complete\n\n");
+				printf("\n\n\033[0;32mTelechargement complete\033[0;37m\n\n");
 				consoleUpdate(NULL);
 				return true;
 			}
 		}
 	}
 	
-	printf("\n\nErreur de telechargement\n\n");
+	printf("\n\n\033[0;31mErreur de telechargement\033[0;37m\n\n");
 	consoleUpdate(NULL);
 	return false;
 }

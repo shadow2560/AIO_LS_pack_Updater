@@ -60,7 +60,7 @@ void rebootAms_rcm()
 	FILE *f = fopen("payload/ams_rcm.bin", "rb");
 
 	if (f == NULL) {
-		printf("Payload not found\n");
+		printf("\033[0;31mPayload non trouve\033[0;37m\n");
 	}
 
 	fread(g_reboot_payload, 1, sizeof(g_reboot_payload), f);

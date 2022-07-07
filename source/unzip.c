@@ -8,7 +8,7 @@
 
 #include "unzip.h"
 
-#define WRITEBUFFERSIZE 0x100000 // 4KiB 
+#define WRITEBUFFERSIZE 0x100000
 #define MAXFILENAME	 0x301
 
 bool prefix(const char* pre, const char *str){
@@ -95,10 +95,8 @@ int remove_directory(const char *path) {
 }
 
 void clean_sd() {
-	printf("Nettoyage de la SD...\n");
+	printf("\033[0;32mNettoyage de la SD...\033[0;37m\n");
 	consoleUpdate(NULL);
-	// remove_directory("test");
-	// remove("test.txt");
 	DIR *dir = opendir("atmosphere/titles");
 	if (dir) {
 		closedir(dir);
@@ -159,7 +157,7 @@ void clean_sd() {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
-	printf("Nettoyage de la SD termine.\n\n");
+	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
 		consoleUpdate(NULL);
 }
 
@@ -185,7 +183,7 @@ int unzip(const char *output)
 	}
 	}
 	// fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
-int detected_payload_bin = 0;
+bool detected_payload_bin = false;
 
 	for (int i = 0; i < gi.number_entry; i++)
 	{
@@ -193,6 +191,9 @@ int detected_payload_bin = 0;
 		unz_file_info file_info = {0};
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
+
+		FILE *outfile;
+		void *buf;
 
 		char filename_on_sd[MAXFILENAME];
 		int k = 0;
@@ -202,13 +203,11 @@ int detected_payload_bin = 0;
 			k++;
 		}
 		filename_on_sd[k] = '\0';
-		// printf("Test nom du fichier sur la SD: %s\n", filename_on_sd);
 		// fputs (filename_on_sd, logfile);
 		// fputs ("\n", logfile);
 		if (first_subfolder_passed > i){
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
-			consoleUpdate(NULL);
 			continue;
 		}
 		// check if the string ends with a /, if so, then its a directory.
@@ -216,103 +215,63 @@ int detected_payload_bin = 0;
 		{
 			// check if directory exists
 			DIR *dir = opendir(filename_on_sd);
-			if (dir) closedir(dir);
-			else
-			{
-				printf("Creation du repertoir: %s\n", filename_on_sd);
+			if (dir) {
+				closedir(dir);
+			} else {
+				printf("\033[0;34mCreation du repertoir: %s\033[0;37m\n", filename_on_sd);
 				mkdir(filename_on_sd, 0777);
 				consoleUpdate(NULL);
 			}
+			unzCloseCurrentFile(zfile);
+			unzGoToNextFile(zfile);
+			continue;
 		}	
 
 		else if (strcmp(filename_on_sd, "payload.bin") == 0){
-			detected_payload_bin = 1;
-			FILE *outfile = fopen("payload.bin.temp", "wb");
-			void *buf = malloc(WRITEBUFFERSIZE);
+			detected_payload_bin = true;
+			outfile = fopen("payload.bin.temp", "wb");
 
-			printf ("\033[0;31mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf ("\033[0;33mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
 			consoleUpdate(NULL);
 			sleep(2);
+		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
+			outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
 
-			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-				fwrite(buf, 1, j, outfile);
-
-			fclose(outfile);
-			free(buf);
-		}
-
-		else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
-			FILE *outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
-			void *buf = malloc(WRITEBUFFERSIZE);
-
-			printf ("\033[0;31mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf ("\033[0;33mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
 			consoleUpdate(NULL);
 			sleep(2);
+		} else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
+			outfile = fopen("atmosphere/package3.temp", "wb");
 
-			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-				fwrite(buf, 1, j, outfile);
-
-			fclose(outfile);
-			free(buf);
-		}
-
-		else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
-			FILE *outfile = fopen("atmosphere/package3.temp", "wb");
-			void *buf = malloc(WRITEBUFFERSIZE);
-
-			printf ("\033[0;31mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf ("\033[0;33mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
 			consoleUpdate(NULL);
 			sleep(2);
+		} else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
+			outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
 
-			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-				fwrite(buf, 1, j, outfile);
-
-			fclose(outfile);
-			free(buf);
-		}
-
-		else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
-			FILE *outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
-			void *buf = malloc(WRITEBUFFERSIZE);
-
-			printf ("\033[0;31mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf ("\033[0;33mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
 			consoleUpdate(NULL);
 			sleep(2);
+		} else {
+			outfile = fopen(filename_on_sd, "wb");
 
-			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-				fwrite(buf, 1, j, outfile);
-
-			fclose(outfile);
-			free(buf);
-		}
-
-		else
-		{
-			const char *write_filename = filename_on_sd;
-			FILE *outfile = fopen(write_filename, "wb");
-			void *buf = malloc(WRITEBUFFERSIZE);
-
-			printf("Extraction de: %s\n", filename_on_sd);
+			printf("\033[0;36mExtraction de: %s\033[0;37m\n", filename_on_sd);
 			consoleUpdate(NULL);
-
-			for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-				fwrite(buf, 1, j, outfile);
-
-			fclose(outfile);
-			free(buf);
 		}
+		buf = malloc(WRITEBUFFERSIZE);
+		for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
+			fwrite(buf, 1, j, outfile);
 
+		fclose(outfile);
+		free(buf);
 		unzCloseCurrentFile(zfile);
 		unzGoToNextFile(zfile);
-		consoleUpdate(NULL);
 	}
 
 	unzClose(zfile);
-	//remove(output);
-	
-	if (detected_payload_bin == 0) rename("payload.bin", "payload.bin.temp");
-	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\n");
-	consoleUpdate(NULL);
+	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
+	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
+	remove(output);
 	remove("payload.bin");
 	cp("romfs:/payload/ams_rcm.bin", "payload.bin");
 	consoleUpdate(NULL);

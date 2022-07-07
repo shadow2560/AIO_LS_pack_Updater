@@ -19,7 +19,7 @@ void rebootSystem(){
     spsmInitialize();
     spsmShutdown(true);
     spsmExit();
-    printf("Something went wrong while rebooting!");
+    printf("\033[0;31mSomething went wrong while rebooting!\033[0;37m\n");
 }
 
 bool set_90dns()
@@ -33,7 +33,7 @@ bool set_90dns()
 	u32 secondaryDns = 0;
 	res = setInitialize();
 	if (res){
-		printf("Echec de l'initialisation de set! Err %x\n", res);
+		printf("\033[0;31mEchec de l'initialisation de set! Err %x\033[0;37m\n", res);
 		consoleUpdate(NULL);
 		setExit();
 		setsysExit();
@@ -42,7 +42,7 @@ bool set_90dns()
 	else {
 		res = setsysInitialize();
 		if (res){
-			printf("Echec de l'initialisation de setsys! Err %x\n", res);
+			printf("\033[0;31mEchec de l'initialisation de setsys! Err %x\033[0;37m\n", res);
 			consoleUpdate(NULL);
 			setExit();
 			setsysExit();
@@ -51,7 +51,7 @@ bool set_90dns()
 		else {
 			res = setGetRegionCode(&region);
 			if (res){
-				printf("Echec de la recupération de la region! Err %x\n", res);
+				printf("\033[0;31mEchec de la recupération de la region! Err %x\033[0;37m\n", res);
 				consoleUpdate(NULL);
 				setExit();
 				setsysExit();
@@ -62,18 +62,18 @@ bool set_90dns()
 					printf("Region %s detectee\n", regions[region]);
 					consoleUpdate(NULL);
 					if (region == SetRegion_USA){
-						printf("Le DNS americain sera utilise en tant que DNS primaire\n");
+						printf("\033[0;32mLe DNS americain sera utilise en tant que DNS primaire\033[0;37m\n");
 						primaryDns = americaDns;
 						secondaryDns = europeDns;
 					}
 					else {
-						printf("Le DNS europeen sera utilise en tant que DNS primaire\n");
+						printf("\033[0;32mLe DNS europeen sera utilise en tant que DNS primaire\033[0;37m\n");
 						primaryDns = europeDns;
 						secondaryDns = americaDns;
 					}
 				}
 				else {
-					printf("Region inconnue? Le DNS americain sera utilise en tant que DNS primaire\n");
+					printf("\033[0;32mRegion inconnue? Le DNS americain sera utilise en tant que DNS primaire\033[0;37m\n");
 					primaryDns = europeDns;
 					secondaryDns = americaDns;
 				}
@@ -90,7 +90,7 @@ bool set_90dns()
 		s32 entryCount = 0;
 		res = setsysGetNetworkSettings(&entryCount, wifiSettings, 0x200);
 		if (res){
-			printf("Echec de la recupération des reseaux wifi! Err %x\n", res);
+			printf("\033[0;31mEchec de la recupération des reseaux wifi! Err %x\033[0;37m\n", res);
 			consoleUpdate(NULL);
 			free(wifiSettings);
 			setExit();
@@ -109,7 +109,7 @@ bool set_90dns()
 			if (entryCount){
 				res = setsysSetNetworkSettings(wifiSettings, entryCount);
 				if (res){
-					printf("Echec de la configuration du reseau wifi! Err %x\n", res);
+					printf("\033[0;31mEchec de la configuration du reseau wifi! Err %x\033[0;37m\n", res);
 					consoleUpdate(NULL);
 					free(wifiSettings);
 					setExit();
@@ -117,7 +117,7 @@ bool set_90dns()
 					return false;
 				}
 				else {
-					printf("Fini!\nLa console sera redemarree pour appliquer les changements\n");
+					printf("\033[0;32mFini!\nLa console sera redemarree pour appliquer les changements\033[0;37m\n");
 					consoleUpdate(NULL);
 				}
 			}
