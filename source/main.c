@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.2.0"
+#define APP_VERSION			 "2.2.1"
 #define CURSOR_LIST_MAX		 2
 #define UP_APP          0
 #define UP_CFW          1
@@ -218,25 +218,29 @@ int main(int argc, char **argv)
 	{
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		// u64 kHeld = padGetButtons(&pad);
 
 		// move cursor down...
-		if (kDown & HidNpadButton_Down)
+		if (kDown & HidNpadButton_StickLDown || kDown & HidNpadButton_StickRDown || kDown & HidNpadButton_Down) // Could be replaced by HidNpadButton_AnyDown
 		{
 			if (cursor == CURSOR_LIST_MAX) cursor = 0;
 			else cursor++;
+			logs_console_clear();
 			refreshScreen(cursor);
 		}
 
 		// move cursor up...
-		if (kDown & HidNpadButton_Up)
+		else if (kDown & HidNpadButton_StickLUp || kDown & HidNpadButton_StickRUp || kDown & HidNpadButton_Up) // Could be replaced by HidNpadButton_AnyUp
 		{
 			if (cursor == 0) cursor = CURSOR_LIST_MAX;
 			else cursor--;
+			logs_console_clear();
 			refreshScreen(cursor);
 		}
 
-		if (kDown & HidNpadButton_A)
+		else if (kDown & HidNpadButton_A)
 		{
+			logs_console_clear();
 			switch (cursor)
 			{
 			case UP_CFW:
@@ -293,7 +297,9 @@ int main(int argc, char **argv)
 		}
 		
 		// exit...
-		if (kDown & HidNpadButton_Plus) break;
+		else if (kDown & HidNpadButton_Plus) {
+			break;
+		}
 	}
 
 	// cleanup then exit
