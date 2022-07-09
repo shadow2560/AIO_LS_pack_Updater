@@ -9,6 +9,8 @@
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
 #define IRAM_PAYLOAD_BASE 0x40010000
 
+extern PrintConsole logs_console;
+
  alignas(0x1000) u8 g_reboot_payload[IRAM_PAYLOAD_MAX_SIZE];
  alignas(0x1000) u8 g_ff_page[0x1000];
  alignas(0x1000) u8 g_work_page[0x1000];
@@ -61,6 +63,7 @@ void rebootAms_rcm()
 
 	if (f == NULL) {
 		printf("\033[0;31mPayload non trouve\033[0;37m\n");
+		consoleUpdate(&logs_console);
 	}
 
 	fread(g_reboot_payload, 1, sizeof(g_reboot_payload), f);

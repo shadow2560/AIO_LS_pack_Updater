@@ -11,6 +11,8 @@
 #define WRITEBUFFERSIZE 0x100000
 #define MAXFILENAME	 0x301
 
+extern PrintConsole logs_console;
+
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
 }
@@ -69,7 +71,7 @@ int remove_directory(const char *path) {
 			 continue;
 
 		  len = path_len + strlen(p->d_name) + 2; 
-		  buf = malloc(len);
+		  buf = (char*) malloc(len);
 
 		  if (buf) {
 			 struct stat statbuf;
@@ -96,7 +98,7 @@ int remove_directory(const char *path) {
 
 void clean_sd() {
 	printf("\033[0;32mNettoyage de la SD...\033[0;37m\n");
-	consoleUpdate(NULL);
+	consoleUpdate(&logs_console);
 	DIR *dir = opendir("atmosphere/titles");
 	if (dir) {
 		closedir(dir);
@@ -158,7 +160,7 @@ void clean_sd() {
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
 	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
-		consoleUpdate(NULL);
+		consoleUpdate(&logs_console);
 }
 
 int unzip(const char *output)
@@ -170,7 +172,7 @@ int unzip(const char *output)
 	unzFile zfile = unzOpen(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);
-	int first_subfolder_passed = 0;
+	uLong first_subfolder_passed = 0;
 	if (strcmp(project_subfolder_in_zip, "") != 0) {
 		for(int i = 0; project_subfolder_in_zip[i] != '\0'; i++) {
 			if(project_subfolder_in_zip[i] == '/') {
@@ -185,7 +187,7 @@ int unzip(const char *output)
 	// fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
 bool detected_payload_bin = false;
 
-	for (int i = 0; i < gi.number_entry; i++)
+	for (uLong i = 0; i < gi.number_entry; i++)
 	{
 		char filename_inzip[MAXFILENAME] = {0};
 		unz_file_info file_info = {0};
@@ -197,7 +199,7 @@ bool detected_payload_bin = false;
 
 		char filename_on_sd[MAXFILENAME];
 		int k = 0;
-		for (int j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
+		for (uLong j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
 		 {
 			filename_on_sd[k] = filename_inzip[j];
 			k++;
@@ -220,7 +222,7 @@ bool detected_payload_bin = false;
 			} else {
 				printf("\033[0;34mCreation du repertoir: %s\033[0;37m\n", filename_on_sd);
 				mkdir(filename_on_sd, 0777);
-				consoleUpdate(NULL);
+				consoleUpdate(&logs_console);
 			}
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
@@ -232,31 +234,31 @@ bool detected_payload_bin = false;
 			outfile = fopen("payload.bin.temp", "wb");
 
 			printf ("\033[0;33mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(NULL);
+			consoleUpdate(&logs_console);
 			sleep(2);
 		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
 			outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
 
 			printf ("\033[0;33mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(NULL);
+			consoleUpdate(&logs_console);
 			sleep(2);
 		} else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
 			outfile = fopen("atmosphere/package3.temp", "wb");
 
 			printf ("\033[0;33mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(NULL);
+			consoleUpdate(&logs_console);
 			sleep(2);
 		} else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
 			outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
 
 			printf ("\033[0;33mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(NULL);
+			consoleUpdate(&logs_console);
 			sleep(2);
 		} else {
 			outfile = fopen(filename_on_sd, "wb");
 
 			printf("\033[0;36mExtraction de: %s\033[0;37m\n", filename_on_sd);
-			consoleUpdate(NULL);
+			consoleUpdate(&logs_console);
 		}
 		buf = malloc(WRITEBUFFERSIZE);
 		for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
@@ -273,8 +275,8 @@ bool detected_payload_bin = false;
 	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
 	remove(output);
 	remove("payload.bin");
-	cp("romfs:/payload/ams_rcm.bin", "payload.bin");
-	consoleUpdate(NULL);
+	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
+	consoleUpdate(&logs_console);
 
 	sleep(5);
 	// fclose(logfile);

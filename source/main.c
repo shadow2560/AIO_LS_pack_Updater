@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.1.0"
+#define APP_VERSION			 "2.2.0"
 #define CURSOR_LIST_MAX		 2
 #define UP_APP          0
 #define UP_CFW          1
@@ -25,6 +25,16 @@
 	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
 	char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+
+PrintConsole menu_console;
+PrintConsole logs_console;
+/* ConsoleFont custom_font;
+custom_font->gfx=;
+custom_font->asciiOffset=;
+custom_font->numChars=;
+custom_font->tileWidth=;
+custom_font->tileHeight=;
+*/
 
 const char *OPTION_LIST[] =
 {
@@ -95,7 +105,7 @@ void refreshScreen(int cursor)
 			printf("[ ] %s\n\n", OPTION_LIST[i]);
 		}
 	}
-	consoleUpdate(NULL);
+	consoleUpdate(&menu_console);
 }
 
 void printDisplay(const char *text, ...)
@@ -104,12 +114,39 @@ void printDisplay(const char *text, ...)
 	va_start(v, text);
 	vfprintf(stdout, text, v);
 	va_end(v);
-	consoleUpdate(NULL);
+	consoleUpdate(&logs_console);
 }
 
 int appInit()
 {
-	consoleInit(NULL);
+	// menu_console = consoleGetDefault();
+	consoleInit(&menu_console);
+	consoleSetWindow(&menu_console, 0, 0, 80, 15);
+	/*
+	logs_console.font = menu_console->font;
+	logs_console.renderer = NULL;
+	logs_console.cursorX = 0;
+	logs_console.cursorY = 0;
+	logs_console.prevCursorX = 0;
+	logs_console.prevCursorY = 0;
+	*/
+	logs_console.consoleWidth = 80;
+	logs_console.consoleHeight = 25;
+	logs_console.windowX = 0;
+	logs_console.windowY = 17;
+	logs_console.windowWidth = 80;
+	logs_console.windowHeight = 25;
+	logs_console.bg = 6;
+	/*
+	logs_console.tabSize = 3;
+	logs_console.fg = 7;
+	logs_console.flags = 0;
+	*/
+	consoleInit(&logs_console);
+	consoleSetWindow(&logs_console, 0, 17, 80, 25);
+	consoleSelect(&menu_console);
+	// menu_console->font = default_font_bin;
+	// consoleSetFont(menu_console, custom_font);
 	socketInitializeDefault();
 	nxlinkStdio();
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
@@ -118,10 +155,19 @@ int appInit()
 	return 0;
 }
 
+void logs_console_clear() {
+	consoleSelect(&logs_console);
+	consoleClear();
+	consoleUpdate(&logs_console);
+	consoleSelect(&menu_console);
+	
+}
+
 void appExit()
 {
 	socketExit();
-	consoleExit(NULL);
+	consoleExit(&logs_console);
+	consoleExit(&menu_console);
 }
 
 int main(int argc, char **argv)
@@ -194,6 +240,7 @@ int main(int argc, char **argv)
 			switch (cursor)
 			{
 			case UP_CFW:
+				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
 				if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
 					set_90dns();
@@ -208,13 +255,15 @@ int main(int argc, char **argv)
 					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
+				consoleSelect(&menu_console);
 				break;
 
 			case UP_APP:
+				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
 				if (downloadFile(APP_URL, TEMP_FILE, OFF))
 				{
-					cp("romfs:/nro/aiosu-forwarder.nro", "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
+					cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
 					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'application dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
@@ -226,15 +275,18 @@ int main(int argc, char **argv)
 					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement de l'application\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
+				consoleSelect(&menu_console);
 				break;
 
 			case UP_90dns:
+				consoleSelect(&logs_console);
 				if (set_90dns()) {
 					sleep(5);
 					rebootSystem();
 				} else {
 						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des paramètres DNS.\033[0;37m\n");
 				}
+				consoleSelect(&menu_console);
 				break;
 
 			}

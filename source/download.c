@@ -13,6 +13,8 @@
 #define API_AGENT "PoloNX"
 #define _1MiB   0x100000
 
+extern PrintConsole logs_console;
+
 typedef struct
 {
 	char *memory;
@@ -46,16 +48,18 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 
 int download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-	if (dltotal <= 0.0) return 0;
-
 	struct timeval tv = {0};
 	gettimeofday(&tv, NULL);
 	int counter = round(tv.tv_usec / 100000);
 
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8)
 	{
-		printf("* Telechargement: %.2fMB sur %.2fMB *\r", dlnow / _1MiB, dltotal / _1MiB);
-		consoleUpdate(NULL);
+		if (dltotal <= 0.0) {
+			printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
+		} else {
+			printf("* Telechargement: %.2fMB sur %.2fMB *\r", dlnow / _1MiB, dltotal / _1MiB);
+		}
+		consoleUpdate(&logs_console);
 	}
 
 	return 0;
@@ -63,8 +67,8 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 
 bool downloadFile(const char *url, const char *output, int api)
 {
-	printf("\n\033[0;32mTelechargement de\n%s\033[0;37m\n", url);
-	consoleUpdate(NULL);
+	printf("\n\033[0;32mTelechargement de\n%s\nVeuillez patienter...\033[0;37m\n", url);
+	consoleUpdate(&logs_console);
 	CURL *curl = curl_easy_init();
 	if (curl)
 	{
@@ -74,7 +78,7 @@ bool downloadFile(const char *url, const char *output, int api)
 			printf("\n");
 
 			ntwrk_struct_t chunk = {0};
-			chunk.data = malloc(_1MiB);
+			chunk.data = (u_int8_t*) malloc(_1MiB);
 			chunk.data_size = _1MiB;
 			chunk.out = fp;
 
@@ -109,13 +113,13 @@ bool downloadFile(const char *url, const char *output, int api)
 			if (res == CURLE_OK)
 			{
 				printf("\n\n\033[0;32mTelechargement complete\033[0;37m\n\n");
-				consoleUpdate(NULL);
+				consoleUpdate(&logs_console);
 				return true;
 			}
 		}
 	}
 	
 	printf("\n\n\033[0;31mErreur de telechargement\033[0;37m\n\n");
-	consoleUpdate(NULL);
+	consoleUpdate(&logs_console);
 	return false;
 }
