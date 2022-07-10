@@ -105,21 +105,31 @@ bool downloadFile(const char *url, const char *output, int api)
 			if (chunk.offset)
 			  fwrite(chunk.data, 1, chunk.offset, fp);
 
-			// clean
 			curl_easy_cleanup(curl);
 			free(chunk.data);
 			fclose(chunk.out);
-
+			fclose(fp);
 			if (res == CURLE_OK)
 			{
 				printf("\n\n\033[0;32mTelechargement complete\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 				return true;
+			} else {
+				printf("\n\n\033[0;31mErreur Durant le telechargement, verifiez votre connexion internet ainsi que l'espace restant sur votre SD puis tentez de relancer le telechargement.\033[0;37m\n\n");
+				consoleUpdate(&logs_console);
+				return false;
 			}
+		} else {
+			curl_easy_cleanup(curl);
+			printf("\n\n\033[0;31mErreur d'ouverture du fichier temporaire, tentez de relancer le telechargement.\033[0;37m\n\n");
+			consoleUpdate(&logs_console);
+			return false;
 		}
+	} else {
+		printf("\n\n\033[0;31mErreur, l'initialisation de curl a echouee, tentez de relancer le telechargement.\033[0;37m\n\n");
+		consoleUpdate(&logs_console);
+		return false;
 	}
-	
-	printf("\n\n\033[0;31mErreur de telechargement\033[0;37m\n\n");
-	consoleUpdate(&logs_console);
+
 	return false;
 }

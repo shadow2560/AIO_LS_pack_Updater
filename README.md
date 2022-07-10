@@ -20,7 +20,9 @@ To build the project you have to download devkitPro, install devkitPro and follo
  
 ## Issues 🚩 
 
-There is no issue :o (For how long?)
+<ul>
+<li>If you update the application two times without exiting totaly HBMenu the third time no download will work but if you relaunch the download directly after the error it will work properly.</li>
+</ul>
 
 ## Credits 📜 
 
