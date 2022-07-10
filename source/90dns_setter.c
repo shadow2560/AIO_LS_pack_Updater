@@ -120,7 +120,7 @@ bool set_90dns()
 					return false;
 				}
 				else {
-					printf("\033[0;32mFini!\nLa console sera redemarree pour appliquer les changements\033[0;37m\n");
+					printf("\033[0;32mConfiguration de 90DNS terminee!\nLa console sera redemarree pour appliquer les changements\033[0;37m\n");
 					consoleUpdate(&logs_console);
 				}
 			}

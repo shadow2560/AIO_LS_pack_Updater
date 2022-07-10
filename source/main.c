@@ -16,11 +16,12 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.2.1"
-#define CURSOR_LIST_MAX		 2
+#define APP_VERSION			 "2.3.0"
+#define CURSOR_LIST_MAX		 3
 #define UP_APP          0
 #define UP_CFW          1
 #define UP_90dns          2
+#define UP_atmo_protect_configs          3
 
 	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
@@ -40,7 +41,8 @@ const char *OPTION_LIST[] =
 {
 	"= Mise a jour de l'application",
 	"= Mise a jour du pack switch_AIO_LS_pack",
-	"= Application de la protection DNS sur tous les reseaux Wifi deja configures"
+	"= Application de la protection DNS sur tous les reseaux Wifi deja configures",
+	"= Application de configurations pour tenter de proteger au mieux la console lancee sous Atmosphere (90DNS, Incognito temporaire, configure Hekate)"
 };
 
 // define a structure for holding the values in "config" section of the ini file.
@@ -285,11 +287,30 @@ int main(int argc, char **argv)
 			case UP_90dns:
 				consoleSelect(&logs_console);
 				if (set_90dns()) {
+					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
 					rebootSystem();
 				} else {
 						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des paramètres DNS.\033[0;37m\n");
 				}
+				consoleSelect(&menu_console);
+				break;
+
+			case UP_atmo_protect_configs:
+				consoleSelect(&logs_console);
+				printDisplay("\033[0;32mApplication des configurations de protection...\033[0;37m\n");
+				mkdir((char*) "/atmosphere", 0777);
+				mkdir((char*) "/atmosphere/config", 0777);
+				mkdir((char*) "/atmosphere/hosts", 0777);
+				mkdir((char*) "/bootloader", 0777);
+				cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini");
+				cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini");
+				cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt");
+				cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini");
+				set_90dns();
+				printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
+				sleep(5);
+				rebootSystem();
 				consoleSelect(&menu_console);
 				break;
 
