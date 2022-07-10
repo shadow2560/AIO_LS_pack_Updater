@@ -17,19 +17,19 @@ bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-void cp(char *filein, char *fileout) {
+bool cp(char *filein, char *fileout) {
 	FILE *exein, *exeout;
 	exein = fopen(filein, "rb");
 	if (exein == NULL) {
 		/* handle error */
 		perror("file open for reading");
-		exit(EXIT_FAILURE);
+		return false;
 	}
 	exeout = fopen(fileout, "wb");
 	if (exeout == NULL) {
 		/* handle error */
 		perror("file open for writing");
-		exit(EXIT_FAILURE);
+		return false;
 	}
 	size_t n, m;
 	unsigned char buff[8192];
@@ -39,9 +39,19 @@ void cp(char *filein, char *fileout) {
 		else   m = 0;
 	}
 	while ((n > 0) && (n == m));
-	if (m) perror("copy");
-	if (fclose(exeout)) perror("close output file");
-	if (fclose(exein)) perror("close input file");
+	if (m) {
+		perror("copy");
+		return false;
+	}
+	if (fclose(exeout)) {
+		perror("close output file");
+		return false;
+	}
+	if (fclose(exein)) {
+		perror("close input file");
+		return false;
+	}
+	return true;
 }
 
 int check(unsigned const char type) {

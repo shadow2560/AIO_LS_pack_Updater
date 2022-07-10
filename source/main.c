@@ -258,7 +258,7 @@ int main(int argc, char **argv)
 				
 				else
 				{
-					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw. etes vous connecte a internet ?\033[0;37m\n");
+					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw.\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
 				consoleSelect(&menu_console);
@@ -274,7 +274,6 @@ int main(int argc, char **argv)
 					sleep(5);
 					appExit();
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-					return 0;
 				}
 				else
 				{
@@ -303,14 +302,19 @@ int main(int argc, char **argv)
 				mkdir((char*) "/atmosphere/config", 0777);
 				mkdir((char*) "/atmosphere/hosts", 0777);
 				mkdir((char*) "/bootloader", 0777);
-				cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini");
-				cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini");
-				cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt");
-				cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini");
-				set_90dns();
-				printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
-				sleep(5);
-				rebootSystem();
+				bool test_cp = true;
+				if (!cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini")) test_cp = false;
+				if (!cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini")) test_cp = false;
+				if (!cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt")) test_cp = false;
+				if (!cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
+				if (!set_90dns()) test_cp = false;
+				if (test_cp) {
+					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
+					sleep(5);
+					rebootSystem();
+				} else {
+					printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");
+				}
 				consoleSelect(&menu_console);
 				break;
 
