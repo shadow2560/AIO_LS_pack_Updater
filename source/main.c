@@ -123,7 +123,7 @@ int appInit()
 {
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
-	consoleSetWindow(&menu_console, 0, 0, 80, 15);
+	consoleSetWindow(&menu_console, 0, 0, 80, 20);
 	/*
 	logs_console.font = menu_console->font;
 	logs_console.renderer = NULL;
@@ -133,11 +133,11 @@ int appInit()
 	logs_console.prevCursorY = 0;
 	*/
 	logs_console.consoleWidth = 80;
-	logs_console.consoleHeight = 25;
+	logs_console.consoleHeight = 23;
 	logs_console.windowX = 0;
-	logs_console.windowY = 17;
+	logs_console.windowY = 21;
 	logs_console.windowWidth = 80;
-	logs_console.windowHeight = 25;
+	logs_console.windowHeight = 23;
 	logs_console.bg = 6;
 	/*
 	logs_console.tabSize = 3;
@@ -145,7 +145,7 @@ int appInit()
 	logs_console.flags = 0;
 	*/
 	consoleInit(&logs_console);
-	consoleSetWindow(&logs_console, 0, 17, 80, 25);
+	consoleSetWindow(&logs_console, 0, 21, 80, 23);
 	consoleSelect(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
