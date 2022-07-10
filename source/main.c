@@ -42,7 +42,7 @@ const char *OPTION_LIST[] =
 	"= Mise a jour de l'application",
 	"= Mise a jour du pack switch_AIO_LS_pack",
 	"= Application de la protection DNS sur tous les reseaux Wifi deja configures",
-	"= Application de configurations pour tenter de proteger au mieux la console lancee sous Atmosphere (90DNS, Incognito temporaire, configure Hekate)"
+	"= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 requis pour que cela fonctionne correctement)"
 };
 
 // define a structure for holding the values in "config" section of the ini file.
