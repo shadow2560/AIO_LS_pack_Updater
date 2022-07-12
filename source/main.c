@@ -274,6 +274,7 @@ int main(int argc, char **argv)
 					sleep(5);
 					appExit();
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+return 0;
 				}
 				else
 				{
