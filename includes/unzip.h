@@ -2,7 +2,7 @@
 #define _UNZIP_H_
 
 bool cp(char *filein, char *fileout);
-void clean_sd();
+void clean_sd(bool clean_theme);
 int unzip(const char *output);
 
 #endif

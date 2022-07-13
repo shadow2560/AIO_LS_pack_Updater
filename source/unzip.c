@@ -106,7 +106,7 @@ int remove_directory(const char *path) {
    return r;
 }
 
-void clean_sd() {
+void clean_sd(bool clean_theme) {
 	printf("\033[0;32mNettoyage de la SD:\033[0;37m\n");
 	printf("Nettoyage des fichiers inutiles...");
 	consoleUpdate(&logs_console);
@@ -170,15 +170,17 @@ void clean_sd() {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
-	// Full theme deletion, helped  with code from nx-theme-installer
-	printf("Suppression d'un eventuel theme...\n");
-	consoleUpdate(&logs_console);
-	remove_directory("atmosphere/contents/0100000000001000");
-	remove_directory("atmosphere/contents/0100000000001013");
-	remove_directory("atmosphere/contents/0100000000001007"); //Player select
-	remove_directory("atmosphere/contents/0100000000000811"); //Custom font
-	remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
-	// End full theme deletion
+	if (clean_theme) {
+		// Full theme deletion, helped  with code from nx-theme-installer
+		printf("Suppression d'un eventuel theme...\n");
+		consoleUpdate(&logs_console);
+		remove_directory("atmosphere/contents/0100000000001000");
+		remove_directory("atmosphere/contents/0100000000001013");
+		remove_directory("atmosphere/contents/0100000000001007"); //Player select
+		remove_directory("atmosphere/contents/0100000000000811"); //Custom font
+		remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
+		// End full theme deletion
+	}
 	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
 }

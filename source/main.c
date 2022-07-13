@@ -274,12 +274,32 @@ int main(int argc, char **argv)
 			case UP_CFW:
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
+				printf("Souhaitez-vous nettoyer les fichiers du thème, util si mise à jour du firmware?\n");
+				printf("[A]: OUI          [B]: NON\n");
+				consoleUpdate(&logs_console);
+				bool clean_theme=false;
+				while(1) {
+					padUpdate(&pad);
+					u64 kDown2 = padGetButtonsDown(&pad);
+					if (kDown2 & HidNpadButton_A) {
+						clean_theme = true;
+						break;
+					} else if (kDown2 & HidNpadButton_B) {
+						break;
+					}
+				}
+				logs_console_clear();
+				consoleSelect(&logs_console);
 				if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
 					if (get_sd_size_left() <= pack_size) {
 						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 					} else {
 						set_90dns();
-						clean_sd();
+						if (clean_theme) {
+							clean_sd(true);
+						} else {
+							clean_sd(false);
+						}
 						if (0 == unzip("/switch/AIO_LS_pack_Updater/temp.zip")) {
 							remove(TEMP_FILE);
 							rebootAms_rcm();
