@@ -69,6 +69,7 @@ bool downloadFile(const char *url, const char *output, int api)
 {
 	printf("\n\033[0;32mTelechargement de\n%s\nVeuillez patienter...\033[0;37m\n", url);
 	consoleUpdate(&logs_console);
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl)
 	{
@@ -106,6 +107,7 @@ bool downloadFile(const char *url, const char *output, int api)
 			  fwrite(chunk.data, 1, chunk.offset, fp);
 
 			curl_easy_cleanup(curl);
+			curl_global_cleanup();
 			free(chunk.data);
 			fclose(chunk.out);
 			fclose(fp);
@@ -123,13 +125,16 @@ bool downloadFile(const char *url, const char *output, int api)
 			curl_easy_cleanup(curl);
 			printf("\n\n\033[0;31mErreur d'ouverture du fichier temporaire, tentez de relancer le telechargement.\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
+			curl_global_cleanup();
 			return false;
 		}
 	} else {
 		printf("\n\n\033[0;31mErreur, l'initialisation de curl a echouee, tentez de relancer le telechargement.\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
+		curl_global_cleanup();
 		return false;
 	}
 
+	curl_global_cleanup();
 	return false;
 }

@@ -6,6 +6,7 @@
 // Include the main libnx system header, for Switch development
 #include <switch.h>
 
+extern PrintConsole menu_console;
 extern PrintConsole logs_console;
 
 const char *regions[] = {
@@ -19,10 +20,12 @@ const char *regions[] = {
 
 void rebootSystem(){
     spsmInitialize();
+	socketExit();
+	romfsExit();
+	consoleExit(&logs_console);
+	consoleExit(&menu_console);
     spsmShutdown(true);
     spsmExit();
-    printf("\033[0;31mSomething went wrong while rebooting!\033[0;37m\n");
-	consoleUpdate(&logs_console);
 }
 
 bool set_90dns()

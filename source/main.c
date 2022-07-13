@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.4.0"
+#define APP_VERSION			 "2.5.0"
 #define CURSOR_LIST_MAX		 3
 #define UP_APP          0
 #define UP_CFW          1
@@ -168,6 +168,7 @@ void logs_console_clear() {
 void appExit()
 {
 	socketExit();
+	romfsExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
 }
@@ -274,7 +275,7 @@ int main(int argc, char **argv)
 					sleep(5);
 					appExit();
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-return 0;
+					return 0;
 				}
 				else
 				{
@@ -289,6 +290,7 @@ return 0;
 				if (set_90dns()) {
 					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
+					appExit();
 					rebootSystem();
 				} else {
 						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des paramètres DNS.\033[0;37m\n");
@@ -312,6 +314,7 @@ return 0;
 				if (test_cp) {
 					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
+					appExit();
 					rebootSystem();
 				} else {
 					printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");

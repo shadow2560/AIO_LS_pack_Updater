@@ -9,6 +9,7 @@
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
 #define IRAM_PAYLOAD_BASE 0x40010000
 
+extern PrintConsole menu_console;
 extern PrintConsole logs_console;
 
  alignas(0x1000) u8 g_reboot_payload[IRAM_PAYLOAD_MAX_SIZE];
@@ -71,5 +72,10 @@ void rebootAms_rcm()
 
 	reboot_to_payload();
  	spsmInitialize();
+	socketExit();
+	romfsExit();
+	consoleExit(&logs_console);
+	consoleExit(&menu_console);
 	spsmShutdown(true);
+	spsmExit();
 }
