@@ -103,8 +103,18 @@ bool downloadFile(const char *url, const char *output, int api)
 			CURLcode res = curl_easy_perform(curl);
 
 			// write from mem to file
-			if (chunk.offset)
-			  fwrite(chunk.data, 1, chunk.offset, fp);
+			if (chunk.offset) {
+				if (chunk.offset != fwrite(chunk.data, 1, chunk.offset, fp)) {
+					printf("\033[0;31mErreur d'ecriture du fichier telecharge, verifiez l'espace libre sur la SD.\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					curl_easy_cleanup(curl);
+					curl_global_cleanup();
+					free(chunk.data);
+					fclose(chunk.out);
+					fclose(fp);
+					return false;
+				}
+			}
 
 			curl_easy_cleanup(curl);
 			curl_global_cleanup();

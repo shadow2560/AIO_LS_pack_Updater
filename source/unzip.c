@@ -107,7 +107,8 @@ int remove_directory(const char *path) {
 }
 
 void clean_sd() {
-	printf("\033[0;32mNettoyage de la SD...\033[0;37m\n");
+	printf("\033[0;32mNettoyage de la SD:\033[0;37m\n");
+	printf("Nettoyage des fichiers inutiles...");
 	consoleUpdate(&logs_console);
 	DIR *dir = opendir("atmosphere/titles");
 	if (dir) {
@@ -169,6 +170,15 @@ void clean_sd() {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
+	// Full theme deletion, helped  with code from nx-theme-installer
+	printf("Suppression d'un eventuel theme...\n");
+	consoleUpdate(&logs_console);
+	remove_directory("atmosphere/contents/0100000000001000");
+	remove_directory("atmosphere/contents/0100000000001013");
+	remove_directory("atmosphere/contents/0100000000001007"); //Player select
+	remove_directory("atmosphere/contents/0100000000000811"); //Custom font
+	remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
+	// End full theme deletion
 	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
 }
@@ -271,8 +281,13 @@ bool detected_payload_bin = false;
 			consoleUpdate(&logs_console);
 		}
 		buf = malloc(WRITEBUFFERSIZE);
-		for (int j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE))
-			fwrite(buf, 1, j, outfile);
+		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
+			if (j != fwrite(buf, 1, j, outfile)) {
+				printf("\033[0;31mErreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\033[0;37m\n", filename_on_sd);
+				consoleUpdate(&logs_console);
+				return 1;
+			}
+		}
 
 		fclose(outfile);
 		free(buf);

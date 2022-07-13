@@ -25,7 +25,10 @@
 
 	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
+	s64 pack_size = 1000000000;
 	char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+
+FsFileSystem *fs_sd;
 
 PrintConsole menu_console;
 PrintConsole logs_console;
@@ -49,6 +52,7 @@ const char *OPTION_LIST[] =
 typedef struct{
 	const char* dl_pack;
 	const char* subfolder_in_zip_pack;
+	s64 pack_size;
 	const char* dl_app;
 } config_section;
 
@@ -84,6 +88,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.dl_app = strdup(value);
 		} else {
 			pconfig->s1.dl_app = "";
+		}
+	}else if(MATCH("config", "pack_size")){
+		if (value != 0) {
+			pconfig->s1.pack_size = atoll(value);
+		} else {
+			pconfig->s1.pack_size = 0;
 		}
 	}else{
 		return 0;
@@ -153,6 +163,7 @@ int appInit()
 	nxlinkStdio();
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	romfsInit();	//Init of romfs
+	fs_sd = fsdevGetDeviceFileSystem("sdmc");
 
 	return 0;
 }
@@ -173,6 +184,16 @@ void appExit()
 	consoleExit(&menu_console);
 }
 
+s64 get_sd_size_left() {
+	s64 fs_sd_size;
+	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
+	// nsInitialize();
+	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
+	// nsExit();
+		// printf("%ld\n", fs_sd_size);
+		return fs_sd_size;
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
@@ -182,6 +203,7 @@ int main(int argc, char **argv)
 	config.s1.dl_pack = "";
 	config.s1.subfolder_in_zip_pack = "";
 	config.s1.dl_app = "";
+	config.s1.pack_size = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
 	if (test_ini != NULL) {
@@ -201,6 +223,9 @@ int main(int argc, char **argv)
 			if (strcmp(config.s1.dl_app, "") != 0) {
 				strcpy(APP_URL, config.s1.dl_app);
 				free((void*)config.s1.dl_app);
+			}
+			if (config.s1.pack_size != 0) {
+				pack_size = config.s1.pack_size;
 			}
 		}
 	}
@@ -250,11 +275,18 @@ int main(int argc, char **argv)
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
 				if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
-					set_90dns();
-					clean_sd();
-					unzip("/switch/AIO_LS_pack_Updater/temp.zip");
-					remove(TEMP_FILE);
-					rebootAms_rcm();
+					if (get_sd_size_left() <= pack_size) {
+						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+					} else {
+						set_90dns();
+						clean_sd();
+						if (0 == unzip("/switch/AIO_LS_pack_Updater/temp.zip")) {
+							remove(TEMP_FILE);
+							rebootAms_rcm();
+						} else {
+							remove(TEMP_FILE);
+						}
+					}
 				}
 				
 				else
@@ -270,12 +302,16 @@ int main(int argc, char **argv)
 				mkdir(APP_PATH, 0777);
 				if (downloadFile(APP_URL, TEMP_FILE, OFF))
 				{
-					cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
-					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'application dans 5 secondes:)\033[0;37m\n");
-					sleep(5);
-					appExit();
-					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-					return 0;
+					if (get_sd_size_left() <= 2000000) {
+						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+					} else {
+						cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
+						printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'application dans 5 secondes:)\033[0;37m\n");
+						sleep(5);
+						appExit();
+						envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+						return 0;
+					}
 				}
 				else
 				{
@@ -301,23 +337,27 @@ int main(int argc, char **argv)
 			case UP_atmo_protect_configs:
 				consoleSelect(&logs_console);
 				printDisplay("\033[0;32mApplication des configurations de protection...\033[0;37m\n");
-				mkdir((char*) "/atmosphere", 0777);
-				mkdir((char*) "/atmosphere/config", 0777);
-				mkdir((char*) "/atmosphere/hosts", 0777);
-				mkdir((char*) "/bootloader", 0777);
-				bool test_cp = true;
-				if (!cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini")) test_cp = false;
-				if (!cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini")) test_cp = false;
-				if (!cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt")) test_cp = false;
-				if (!cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
-				if (!set_90dns()) test_cp = false;
-				if (test_cp) {
-					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
-					sleep(5);
-					appExit();
-					rebootSystem();
+				if (get_sd_size_left() <= 100000) {
+					printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 				} else {
-					printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");
+					mkdir((char*) "/atmosphere", 0777);
+					mkdir((char*) "/atmosphere/config", 0777);
+					mkdir((char*) "/atmosphere/hosts", 0777);
+					mkdir((char*) "/bootloader", 0777);
+					bool test_cp = true;
+					if (!cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini")) test_cp = false;
+					if (!cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini")) test_cp = false;
+					if (!cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt")) test_cp = false;
+					if (!cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
+					if (!set_90dns()) test_cp = false;
+					if (test_cp) {
+						printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
+						sleep(5);
+						appExit();
+						rebootSystem();
+					} else {
+						printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");
+					}
 				}
 				consoleSelect(&menu_console);
 				break;
