@@ -16,18 +16,22 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.6.0"
+#define APP_VERSION			 "2.7.0"
 #define CURSOR_LIST_MAX		 3
 #define UP_APP          0
 #define UP_CFW          1
 #define UP_90dns          2
 #define UP_atmo_protect_configs          3
 
-	char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
-	char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
-	s64 pack_size = 1000000000;
-	char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+	char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
+	char pack_version_local_filepath[1003] = "/version.txt";
+char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
+s64 pack_size = 1000000000;
+char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 
+char pack_version[15] = "inconnue";
+char last_pack_version[15] = "inconnue";
 FsFileSystem *fs_sd;
 
 PrintConsole menu_console;
@@ -51,6 +55,8 @@ const char *OPTION_LIST[] =
 // define a structure for holding the values in "config" section of the ini file.
 typedef struct{
 	const char* dl_pack;
+	const char* dl_pack_version;
+	const char* pack_version_local_filepath;
 	const char* subfolder_in_zip_pack;
 	s64 pack_size;
 	const char* dl_app;
@@ -76,6 +82,18 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.dl_pack = strdup(value);
 		} else {
 			pconfig->s1.dl_pack = "";
+		}
+	} else 	if(MATCH("config", "pack_version_adress")){
+		if (value != 0) {
+			pconfig->s1.dl_pack_version = strdup(value);
+		} else {
+			pconfig->s1.dl_pack_version = "";
+		}
+		} else 	if(MATCH("config", "pack_version_local_filepath")){
+		if (value != 0) {
+			pconfig->s1.pack_version_local_filepath = strdup(value);
+		} else {
+			pconfig->s1.pack_version_local_filepath = "";
 		}
 	}else if(MATCH("config", "subfolder_of_pack_in_zip")){
 		if (value != 0) {
@@ -107,6 +125,9 @@ void refreshScreen(int cursor)
 	consoleClear();
 
 	printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
+	
+	printf("Version actuelle du pack: %s\n", pack_version);
+	printf("Derniere version du pack: %s\n", last_pack_version);
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
 	printf("Appuyez sur (+) pour quitter l'application\n\n\n");
 
@@ -133,7 +154,7 @@ int appInit()
 {
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
-	consoleSetWindow(&menu_console, 0, 0, 80, 20);
+	consoleSetWindow(&menu_console, 0, 0, 80, 22);
 	/*
 	logs_console.font = menu_console->font;
 	logs_console.renderer = NULL;
@@ -143,11 +164,11 @@ int appInit()
 	logs_console.prevCursorY = 0;
 	*/
 	logs_console.consoleWidth = 80;
-	logs_console.consoleHeight = 23;
+	logs_console.consoleHeight = 21;
 	logs_console.windowX = 0;
-	logs_console.windowY = 21;
+	logs_console.windowY = 23;
 	logs_console.windowWidth = 80;
-	logs_console.windowHeight = 23;
+	logs_console.windowHeight = 21;
 	logs_console.bg = 6;
 	/*
 	logs_console.tabSize = 3;
@@ -155,7 +176,7 @@ int appInit()
 	logs_console.flags = 0;
 	*/
 	consoleInit(&logs_console);
-	consoleSetWindow(&logs_console, 0, 21, 80, 23);
+	consoleSetWindow(&logs_console, 0, 23, 80, 21);
 	consoleSelect(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
@@ -194,6 +215,62 @@ s64 get_sd_size_left() {
 		return fs_sd_size;
 }
 
+void get_version_pack() {
+	FILE *pack_version_file;
+	pack_version_file = fopen(pack_version_local_filepath, "r");
+	if (pack_version_file == NULL) {
+		return;
+	}
+		char * buffer = (char *) malloc( 15 );
+		fgets(buffer, 15, pack_version_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				pack_version[i] = buffer[i];
+			}
+			i++;
+		}
+		while (i <= 15) {
+			pack_version[i] = '\0';
+			i++;
+		}
+		free( buffer );
+	fclose(pack_version_file);
+}
+
+void get_last_version_pack() {
+	FILE *pack_version_file;
+	consoleSelect(&logs_console);
+	if (downloadFile(pack_version_url, TEMP_FILE, OFF)) {
+		logs_console_clear();
+		pack_version_file = fopen(TEMP_FILE, "r");
+		if (pack_version_file == NULL) {
+			consoleSelect(&menu_console);
+			return;
+		}
+		char * buffer = (char *) malloc( 15 );
+		fgets(buffer, 15, pack_version_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				last_pack_version[i] = buffer[i];
+			}
+			i++;
+		}
+		while (i <= 15) {
+			last_pack_version[i] = '\0';
+			i++;
+		}
+		free(buffer);
+		fclose(pack_version_file);
+	}
+	consoleSelect(&menu_console);
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
@@ -201,6 +278,8 @@ int main(int argc, char **argv)
 	// config for holding ini file values.
 	configuration config;
 	config.s1.dl_pack = "";
+	config.s1.dl_pack_version = "";
+	config.s1.pack_version_local_filepath = "";
 	config.s1.subfolder_in_zip_pack = "";
 	config.s1.dl_app = "";
 	config.s1.pack_size = 0;
@@ -213,6 +292,14 @@ int main(int argc, char **argv)
 			if (strcmp(config.s1.dl_pack, "") != 0) {
 				strcpy(CFW_URL, config.s1.dl_pack);
 				free((void*)config.s1.dl_pack);
+			}
+			if (strcmp(config.s1.dl_pack_version, "") != 0) {
+				strcpy(pack_version_url, config.s1.dl_pack_version);
+				free((void*)config.s1.dl_pack_version);
+			}
+			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
+				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
+				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
 				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
@@ -237,6 +324,10 @@ int main(int argc, char **argv)
 
 	// set the cursor position to 0
 	short cursor = 0;
+
+	get_version_pack();
+	get_last_version_pack();
+	remove(TEMP_FILE);
 
 	// main menu
 	refreshScreen(cursor);

@@ -57,7 +57,15 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 		if (dltotal <= 0.0) {
 			printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
 		} else {
-			printf("* Telechargement: %.2fMB sur %.2fMB *\r", dlnow / _1MiB, dltotal / _1MiB);
+			int numberOfEqual = (dlnow * 100) / dltotal / 10;
+			printf("\r* [");
+			for (int i = 0; i < numberOfEqual; i++) {
+				printf("=");
+			}
+			for (int i = 0; i < 10 - numberOfEqual; i++) {
+				printf(" ");
+			}
+			printf("]   Telechargement: %.2fMB sur %.2fMB *", dlnow / _1MiB, dltotal / _1MiB);
 		}
 		consoleUpdate(&logs_console);
 	}
