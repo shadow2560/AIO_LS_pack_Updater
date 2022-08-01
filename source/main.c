@@ -243,7 +243,7 @@ void get_version_pack() {
 void get_last_version_pack() {
 	FILE *pack_version_file;
 	consoleSelect(&logs_console);
-	if (downloadFile(pack_version_url, TEMP_FILE, OFF)) {
+	if (downloadFile(pack_version_url, TEMP_FILE, OFF, false)) {
 		logs_console_clear();
 		pack_version_file = fopen(TEMP_FILE, "r");
 		if (pack_version_file == NULL) {
@@ -381,7 +381,7 @@ int main(int argc, char **argv)
 				}
 				logs_console_clear();
 				consoleSelect(&logs_console);
-				if (downloadFile(CFW_URL, TEMP_FILE, OFF)){
+				if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
 					if (get_sd_size_left() <= pack_size) {
 						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 					} else {
@@ -411,7 +411,7 @@ int main(int argc, char **argv)
 			case UP_APP:
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
-				if (downloadFile(APP_URL, TEMP_FILE, OFF))
+				if (downloadFile(APP_URL, TEMP_FILE, OFF, true))
 				{
 					if (get_sd_size_left() <= 2000000) {
 						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");

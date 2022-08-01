@@ -10,6 +10,6 @@
 #include <stdbool.h>
 
 //
-bool downloadFile(const char *url, const char *output, int api);
+bool downloadFile(const char *url, const char *output, int api, bool display_log);
 
 #endif
