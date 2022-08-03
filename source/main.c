@@ -16,26 +16,34 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "2.7.0"
-#define CURSOR_LIST_MAX		 3
+#define APP_VERSION			 "3.0.0"
+#define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
-#define UP_90dns          2
-#define UP_atmo_protect_configs          3
+#define UP_FW          2
+#define UP_90dns          3
+#define UP_atmo_protect_configs          4
 
 char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 	char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
-	char pack_version_local_filepath[1003] = "/version.txt";
-char subfolder_in_zip[1003] = "switch_AIO_LS_pack-main/";
+	char pack_version_local_filepath[FS_MAX_PATH] = "/version.txt";
+char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
 s64 pack_size = 1000000000;
 char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 
 char pack_version[15] = "inconnue";
 char last_pack_version[15] = "inconnue";
+char firmware_version[50] = "inconnue";
+char atmosphere_version_without_hash[50];
+char atmosphere_version[50] = "inconnue";
+char emummc_value[10] = "inconnue";
 FsFileSystem *fs_sd;
+PadState pad;
 
 PrintConsole menu_console;
 PrintConsole logs_console;
+// PrintConsole infos_console;
 /* ConsoleFont custom_font;
 custom_font->gfx=;
 custom_font->asciiOffset=;
@@ -47,7 +55,8 @@ custom_font->tileHeight=;
 const char *OPTION_LIST[] =
 {
 	"= Mise a jour de l'application",
-	"= Mise a jour du pack switch_AIO_LS_pack",
+	"= Mise a jour du pack",
+	"= Mise a jour du firmware",
 	"= Application de la protection DNS sur tous les reseaux Wifi deja configures",
 	"= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"
 };
@@ -60,6 +69,7 @@ typedef struct{
 	const char* subfolder_in_zip_pack;
 	s64 pack_size;
 	const char* dl_app;
+	const char *firmware_path;
 } config_section;
 
 // define a structure for holding all of the config of the ini file.
@@ -107,6 +117,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.dl_app = "";
 		}
+	}else if(MATCH("config", "firmware_path")){
+		if (value != 0) {
+			pconfig->s1.firmware_path = strdup(value);
+		} else {
+			pconfig->s1.dl_app = "";
+		}
 	}else if(MATCH("config", "pack_size")){
 		if (value != 0) {
 			pconfig->s1.pack_size = atoll(value);
@@ -116,7 +132,6 @@ static int config_handler(void* config, const char* section, const char* name, c
 	}else{
 		return 0;
 	}
-
 	return 1;
 }
 
@@ -125,10 +140,8 @@ void refreshScreen(int cursor)
 	consoleClear();
 
 	printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
-	
-	printf("Version actuelle du pack: %s\n", pack_version);
-	printf("Derniere version du pack: %s\n", last_pack_version);
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
+	printf("Appuyez sur (X) pour afficher diverses informations\n\n");
 	printf("Appuyez sur (+) pour quitter l'application\n\n\n");
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
@@ -150,11 +163,10 @@ void printDisplay(const char *text, ...)
 	consoleUpdate(&logs_console);
 }
 
-int appInit()
-{
+int appInit() {
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
-	consoleSetWindow(&menu_console, 0, 0, 80, 22);
+	consoleSetWindow(&menu_console, 0, 0, 80, 24);
 	/*
 	logs_console.font = menu_console->font;
 	logs_console.renderer = NULL;
@@ -164,11 +176,11 @@ int appInit()
 	logs_console.prevCursorY = 0;
 	*/
 	logs_console.consoleWidth = 80;
-	logs_console.consoleHeight = 21;
+	logs_console.consoleHeight = 20;
 	logs_console.windowX = 0;
-	logs_console.windowY = 23;
+	logs_console.windowY = 25;
 	logs_console.windowWidth = 80;
-	logs_console.windowHeight = 21;
+	logs_console.windowHeight = 20;
 	logs_console.bg = 6;
 	/*
 	logs_console.tabSize = 3;
@@ -176,7 +188,7 @@ int appInit()
 	logs_console.flags = 0;
 	*/
 	consoleInit(&logs_console);
-	consoleSetWindow(&logs_console, 0, 23, 80, 21);
+	consoleSetWindow(&logs_console, 0, 25, 80, 20);
 	consoleSelect(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
@@ -185,7 +197,8 @@ int appInit()
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	romfsInit();	//Init of romfs
 	fs_sd = fsdevGetDeviceFileSystem("sdmc");
-
+hiddbgInitialize();
+hiddbgDeactivateHomeButton();
 	return 0;
 }
 
@@ -201,6 +214,7 @@ void appExit()
 {
 	socketExit();
 	romfsExit();
+	hiddbgExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
 }
@@ -271,6 +285,101 @@ void get_last_version_pack() {
 	consoleSelect(&menu_console);
 }
 
+void get_fw_version() {
+	setsysInitialize();
+	Result ret = 0;
+	SetSysFirmwareVersion ver;
+
+	if (R_FAILED(ret = setsysGetFirmwareVersion(&ver)))
+    {
+		printf("GetFirmwareVersion() failed: 0x%x.\n\n", ret);
+		return;
+	}
+
+    char sysVersionBuffer[20];
+	snprintf(sysVersionBuffer, 20, "%u.%u.%u", ver.major, ver.minor, ver.micro);
+    snprintf(firmware_version, sizeof(firmware_version), "%s", sysVersionBuffer);
+	setsysExit();
+}
+
+u32 EncodeVersion(u32 major, u32 minor, u32 micro, u32 relstep) {
+	return ((major & 0xFF) << 24) | ((minor & 0xFF) << 16) | ((micro & 0xFF) << 8) | ((relstep & 0xFF) << 8);
+}
+
+void get_ams_version() {
+	splInitialize();
+	u32 ExosphereApiVersionConfigItem = 65000;
+	u32 ExosphereEmummcType		   = 65007;
+	u64 version;
+	Result rc = 0;
+	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereApiVersionConfigItem), &version))) {
+		return;
+	}
+	const u32 version_micro = (version >> 40) & 0xff;
+	const u32 version_minor = (version >> 48) & 0xff;
+	const u32 version_major = (version >> 56) & 0xff;
+	char sysVersionBuffer[50];
+	snprintf(sysVersionBuffer, 50, "%u.%u.%u", version_major, version_minor, version_micro);
+	snprintf(atmosphere_version, sizeof(atmosphere_version), "%s", sysVersionBuffer);
+	u64 is_emummc;
+	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
+		return;
+	}
+	if (is_emummc) {
+		strcpy(emummc_value, "Emunand");
+	} else {
+		strcpy(emummc_value,"Sysnand");
+	}
+	splExit();
+}
+
+bool ask_question(char *question_text) {
+	bool rc;
+	consoleSelect(&logs_console);
+	printf("%s\n", question_text);
+	printf("[A]: OUI          [B]: NON\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_A) {
+			rc = true;
+			break;
+		} else if (kDown & HidNpadButton_B) {
+			rc = false;
+			break;
+		}
+	}
+	logs_console_clear();
+	consoleSelect(&logs_console);
+	return rc;
+}
+
+void display_infos() {
+	// consoleInit(&infos_console);
+	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
+	consoleSelect(&logs_console);
+	printf("Informations:\n\n");
+	printf("Version actuelle du pack : %s\n", pack_version);
+	printf("Derniere version du pack : %s\n", last_pack_version);
+	printf("Version actuelle du firmware : %s\n", firmware_version);
+	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	printf("Type de systeme : %s\n", emummc_value);
+	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
+	consoleUpdate(&logs_console);
+	/*
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_B) {
+			break;
+		}
+	}
+	*/
+	// consoleExit(&infos_console);
+	consoleSelect(&menu_console);
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
@@ -282,6 +391,7 @@ int main(int argc, char **argv)
 	config.s1.pack_version_local_filepath = "";
 	config.s1.subfolder_in_zip_pack = "";
 	config.s1.dl_app = "";
+	config.s1.firmware_path = "";
 	config.s1.pack_size = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
@@ -290,33 +400,36 @@ int main(int argc, char **argv)
 		// parse the .ini file
 		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
 			if (strcmp(config.s1.dl_pack, "") != 0) {
-				strcpy(CFW_URL, config.s1.dl_pack);
+				strncpy(CFW_URL, config.s1.dl_pack, sizeof(CFW_URL));
 				free((void*)config.s1.dl_pack);
 			}
 			if (strcmp(config.s1.dl_pack_version, "") != 0) {
-				strcpy(pack_version_url, config.s1.dl_pack_version);
+				strncpy(pack_version_url, config.s1.dl_pack_version, sizeof(pack_version_url));
 				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
-				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
+				strncpy(pack_version_local_filepath, config.s1.pack_version_local_filepath, sizeof(pack_version_local_filepath));
 				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
-				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
+				strncpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack, sizeof(subfolder_in_zip));
 				free((void*)config.s1.subfolder_in_zip_pack);
 			} else {
 				strcpy(subfolder_in_zip, "");
 			}
 			if (strcmp(config.s1.dl_app, "") != 0) {
-				strcpy(APP_URL, config.s1.dl_app);
+				strncpy(APP_URL, config.s1.dl_app, sizeof(APP_URL));
 				free((void*)config.s1.dl_app);
+			}
+			if (strcmp(config.s1.firmware_path, "") != 0) {
+				strncpy(firmware_path, config.s1.firmware_path, sizeof(firmware_path));
+				free((void*)config.s1.firmware_path);
 			}
 			if (config.s1.pack_size != 0) {
 				pack_size = config.s1.pack_size;
 			}
 		}
 	}
-	PadState pad;
 	padInitializeDefault(&pad);
 
 	// change directory to root (defaults to /switch/)
@@ -327,6 +440,8 @@ int main(int argc, char **argv)
 
 	get_version_pack();
 	get_last_version_pack();
+	get_fw_version();
+	get_ams_version();
 	remove(TEMP_FILE);
 
 	// main menu
@@ -362,48 +477,77 @@ int main(int argc, char **argv)
 			logs_console_clear();
 			switch (cursor)
 			{
+			case UP_FW:
+				consoleSelect(&logs_console);
+				bool update_firmware2 = false;
+				DIR *dir2;
+				update_firmware2 = ask_question("Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?");
+				if (update_firmware2) {
+					if ((dir2 = opendir(firmware_path)) != NULL) {
+						closedir(dir2);
+						fnc_clean_theme();
+						cp((char*) "romfs:/nro/daybreak_auto.nro", (char*) "/switch/AIO_LS_pack_Updater/daybreak_auto.nro");
+						char temp_setting[FS_MAX_PATH+100]= "";
+						strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/daybreak_auto.nro\" \""), firmware_path), "\"");
+					appExit();
+						envSetNextLoad("/switch/AIO_LS_pack_Updater/daybreak_auto.nro", temp_setting);
+						return 0;
+					} else {
+						printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\nLe dossier contenant le firmware est le dossier \"%s\".\n", firmware_path);
+					}
+				}
+				consoleSelect(&menu_console);
+				break;
 			case UP_CFW:
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
-				printf("Souhaitez-vous nettoyer les fichiers du thème, util si mise à jour du firmware?\n");
-				printf("[A]: OUI          [B]: NON\n");
-				consoleUpdate(&logs_console);
-				bool clean_theme=false;
-				while(1) {
-					padUpdate(&pad);
-					u64 kDown2 = padGetButtonsDown(&pad);
-					if (kDown2 & HidNpadButton_A) {
-						clean_theme = true;
-						break;
-					} else if (kDown2 & HidNpadButton_B) {
-						break;
-					}
-				}
-				logs_console_clear();
-				consoleSelect(&logs_console);
-				if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
-					if (get_sd_size_left() <= pack_size) {
-						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
-					} else {
-						set_90dns();
-						if (clean_theme) {
-							clean_sd(true);
-						} else {
-							clean_sd(false);
-						}
-						if (0 == unzip("/switch/AIO_LS_pack_Updater/temp.zip")) {
-							remove(TEMP_FILE);
-							rebootAms_rcm();
-						} else {
-							remove(TEMP_FILE);
-						}
-					}
+				bool update_firmware = false;
+				bool clean_theme = false;
+				DIR *dir;
+				update_firmware = ask_question("Souhaitez-vous mettre a jour le firmware vers la derniere version compatible (si oui les fichiers du theme seront aussi nettoyes)?");
+				if (update_firmware) {
+					clean_theme = true;
+				} else {
+					clean_theme = ask_question("Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?");
 				}
 				
-				else
-				{
+				bool validate_choice = ask_question("Souhaitez-vous vraiment continuer?");
+				if (validate_choice) {
+					if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
+						if (get_sd_size_left() <= pack_size) {
+							printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+						} else {
+							set_90dns();
+							if (clean_theme) {
+								clean_sd(true);
+							} else {
+								clean_sd(false);
+							}
+							if (0 == unzip("/switch/AIO_LS_pack_Updater/temp.zip")) {
+								remove(TEMP_FILE);
+								if (update_firmware) {
+									if ((dir = opendir(firmware_path)) != NULL) {
+										closedir(dir);
+										cp((char*) "romfs:/nro/daybreak_auto.nro", (char*) "/switch/AIO_LS_pack_Updater/daybreak_auto.nro");
+										char temp_setting[FS_MAX_PATH+100]= "";
+										strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/daybreak_auto.nro\" \""), firmware_path), "\"");
+										appExit();
+										envSetNextLoad("/switch/AIO_LS_pack_Updater/daybreak_auto.nro", temp_setting);
+										return 0;
+									} else {
+										printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\nRedemarrage de la console dans 5 secondes.\n");
+										sleep(5);
+									}
+								}
+								rebootAms_rcm();
+							} else {
+								remove(TEMP_FILE);
+							}
+						}
+					} else {
 					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw.\033[0;37m\n");
 					remove(TEMP_FILE);
+				}
 				}
 				consoleSelect(&menu_console);
 				break;
@@ -440,7 +584,7 @@ int main(int argc, char **argv)
 					appExit();
 					rebootSystem();
 				} else {
-						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des paramètres DNS.\033[0;37m\n");
+						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des parametres DNS.\033[0;37m\n");
 				}
 				consoleSelect(&menu_console);
 				break;
@@ -474,10 +618,13 @@ int main(int argc, char **argv)
 				break;
 
 			}
-		}
-		
+
+		} else if (kDown & HidNpadButton_X) {
+			logs_console_clear();
+			display_infos();
+
 		// exit...
-		else if (kDown & HidNpadButton_Plus) {
+		} else if (kDown & HidNpadButton_Plus) {
 			break;
 		}
 	}

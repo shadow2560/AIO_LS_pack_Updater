@@ -12,6 +12,7 @@
 #define MAXFILENAME	 0x301
 
 extern PrintConsole logs_console;
+extern char firmware_path[FS_MAX_PATH];
 
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
@@ -106,6 +107,18 @@ int remove_directory(const char *path) {
    return r;
 }
 
+void fnc_clean_theme() {
+		// Full theme deletion, helped  with code from nx-theme-installer
+		printf("Suppression d'un eventuel theme...\n");
+		consoleUpdate(&logs_console);
+		remove_directory("atmosphere/contents/0100000000001000");
+		remove_directory("atmosphere/contents/0100000000001013");
+		remove_directory("atmosphere/contents/0100000000001007"); //Player select
+		remove_directory("atmosphere/contents/0100000000000811"); //Custom font
+		remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
+		// End full theme deletion
+}
+
 void clean_sd(bool clean_theme) {
 	printf("\033[0;32mNettoyage de la SD:\033[0;37m\n");
 	printf("Nettoyage des fichiers inutiles...");
@@ -170,16 +183,10 @@ void clean_sd(bool clean_theme) {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
+	remove_directory("Firmware 14.1.2");
+	remove_directory(firmware_path);
 	if (clean_theme) {
-		// Full theme deletion, helped  with code from nx-theme-installer
-		printf("Suppression d'un eventuel theme...\n");
-		consoleUpdate(&logs_console);
-		remove_directory("atmosphere/contents/0100000000001000");
-		remove_directory("atmosphere/contents/0100000000001013");
-		remove_directory("atmosphere/contents/0100000000001007"); //Player select
-		remove_directory("atmosphere/contents/0100000000000811"); //Custom font
-		remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
-		// End full theme deletion
+		fnc_clean_theme();
 	}
 	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
@@ -188,7 +195,7 @@ void clean_sd(bool clean_theme) {
 int unzip(const char *output)
 {
 	// FILE *logfile = fopen("log.txt", "w");
-	extern char subfolder_in_zip[1003];
+	extern char subfolder_in_zip[FS_MAX_PATH];
 	char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
 	strcpy(project_subfolder_in_zip, subfolder_in_zip);
 	unzFile zfile = unzOpen(output);
