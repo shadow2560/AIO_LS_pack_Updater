@@ -55,7 +55,6 @@ static void reboot_to_payload(void) {
 	splSetConfig((SplConfigItem)65001, 2);
 }
 
-
 void rebootAms_rcm()
 {
 	splInitialize();
@@ -76,6 +75,8 @@ void rebootAms_rcm()
 	romfsExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
-	spsmShutdown(true);
+	if (R_FAILED(appletRequestToReboot())) {
+		spsmShutdown(true);
+	}
 	spsmExit();
 }

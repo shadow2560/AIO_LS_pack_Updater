@@ -13,18 +13,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <algorithm>
-#include <cstdarg>
+// #include <algorithm>
+// #include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <limits>
 #include <dirent.h>
-#include "assert.hpp"
-#include <optional>
+// #include <optional>
 #include <unistd.h>
 #include <switch.h>
 #include "ams_su.h"
 #include "reboot.hpp"
+
+const char app_version[] = "1.1.0";
 
 PadState pad;
 
@@ -61,7 +62,7 @@ enum class InstallState {
 static constexpr size_t UpdateTaskBufferSize = 0x100000;
 InstallState m_install_state;
 AsyncResult m_prepare_result;
-float m_progress_percent;
+float m_progress_percent = 0.0f;
 
 void custom_pause() {
 	printf("Press \"A\" key to continue...\n");
@@ -75,16 +76,72 @@ void custom_pause() {
 	}
 }
 
-void force_reboot() {
+bool cp(char *filein, char *fileout) {
+	FILE *exein, *exeout;
+	exein = fopen(filein, "rb");
+	if (exein == NULL) {
+		/* handle error */
+		perror("file open for reading");
+		return false;
+	}
+	exeout = fopen(fileout, "wb");
+	if (exeout == NULL) {
+		/* handle error */
+		perror("file open for writing");
+		return false;
+	}
+	size_t n, m;
+	unsigned char buff[8192];
+	do {
+		n = fread(buff, 1, sizeof buff, exein);
+		if (n) m = fwrite(buff, 1, n, exeout);
+		else   m = 0;
+	}
+	while ((n > 0) && (n == m));
+	if (m) {
+		perror("copy");
+		return false;
+	}
+	if (fclose(exeout)) {
+		perror("close output file");
+		return false;
+	}
+	if (fclose(exein)) {
+		perror("close input file");
+		return false;
+	}
+	return true;
+}
+
+void force_reboot_to_payload() {
 	printf("Console will reboot in 5 secondes.");
 	consoleUpdate(NULL);
 	sleep(5);
 	rebootAms_rcm();
 }
 
+void force_reboot() {
+		FILE *payload_file;
+	payload_file = fopen("/payload.bin.temp", "rb");
+	if (payload_file) {
+		fclose(payload_file);
+	} else {
+		rename("/payload.bin", "/payload.bin.temp");
+		cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
+	}
+	printf("Console will reboot in 5 secondes.");
+	consoleUpdate(NULL);
+	sleep(5);
+	if (R_FAILED(appletRequestToReboot())) {
+		spsmShutdown(true);
+		}
+}
+
 u32 EncodeVersion(u32 major, u32 minor, u32 micro, u32 relstep = 0) {
 	return ((major & 0xFF) << 24) | ((minor & 0xFF) << 16) | ((micro & 0xFF) << 8) | ((relstep & 0xFF) << 8);
 }
+
+extern "C" {
 
 void userAppInit() {
 	Result rc = 0;
@@ -114,6 +171,19 @@ void userAppInit() {
 	}
 
 	consoleInit(NULL);
+}
+
+void userAppExit() {
+	hiddbgExit();
+	nsExit();
+	splExit();
+	plExit();
+	spsmExit();
+	romfsExit();
+	amssuExit();
+	consoleExit(NULL);
+}
+
 }
 
 bool InitializeMenu() {
@@ -159,17 +229,6 @@ bool InitializeMenu() {
 	}
 
 	return true;
-}
-
-void userAppExit() {
-	hiddbgExit();
-	nsExit();
-	splExit();
-	plExit();
-	spsmExit();
-	romfsExit();
-	amssuExit();
-	consoleExit(NULL);
 }
 
 Result GetUpdateInformation() {
@@ -246,114 +305,121 @@ void MarkForReboot() {
 	m_install_state = InstallState::AwaitingReboot;
 }
 
-    Result TransitionUpdateState() {
-        Result rc = 0;
-        if (m_install_state == InstallState::NeedsSetup) {
-            /* Setup the update. */
-            if (R_FAILED(rc = amssuSetupUpdate(nullptr, UpdateTaskBufferSize, g_update_path, g_use_exfat))) {
-                printf("Failed to setup update.\nResult: 0x%08x\n", rc);
-                MarkForReboot();
-                return rc;
-            }
+Result TransitionUpdateState() {
+	Result rc = 0;
+	if (m_install_state == InstallState::NeedsSetup) {
+		/* Setup the update. */
+		if (R_FAILED(rc = amssuSetupUpdate(nullptr, UpdateTaskBufferSize, g_update_path, g_use_exfat))) {
+			printf("Failed to setup update.\nResult: 0x%08x\n", rc);
+			MarkForReboot();
+			return rc;
+		}
 
-            /* Log setup completion. */
-            printf("Update setup complete.\n");
-            m_install_state = InstallState::NeedsPrepare;
-        } else if (m_install_state == InstallState::NeedsPrepare) {
-            /* Request update preparation. */
-            if (R_FAILED(rc = amssuRequestPrepareUpdate(&m_prepare_result))) {
-                printf("Failed to request update preparation.\nResult: 0x%08x\n", rc);
-                MarkForReboot();
-                return rc;
-            }
+		/* Log setup completion. */
+		printf("Update setup complete.\n");
+		m_install_state = InstallState::NeedsPrepare;
+	} else if (m_install_state == InstallState::NeedsPrepare) {
+		/* Request update preparation. */
+		if (R_FAILED(rc = amssuRequestPrepareUpdate(&m_prepare_result))) {
+			printf("Failed to request update preparation.\nResult: 0x%08x\n", rc);
+			MarkForReboot();
+			return rc;
+		}
 
-            /* Log awaiting prepare. */
-            printf("Preparing update...\n");
-            m_install_state = InstallState::AwaitingPrepare;
-        } else if (m_install_state == InstallState::AwaitingPrepare) {
-            /* Check if preparation has a result. */
-            if (R_FAILED(rc = asyncResultWait(&m_prepare_result, 0)) && rc != 0xea01) {
-                printf("Failed to check update preparation result.\nResult: 0x%08x\n", rc);
-                MarkForReboot();
-                return rc;
-            } else if (R_SUCCEEDED(rc)) {
-                if (R_FAILED(rc = asyncResultGet(&m_prepare_result))) {
-                    printf("Failed to prepare update.\nResult: 0x%08x\n", rc);
-                    MarkForReboot();
-                    return rc;
-                }
-            }
+		/* Log awaiting prepare. */
+		printf("Preparing update...\n");
+		m_install_state = InstallState::AwaitingPrepare;
+	} else if (m_install_state == InstallState::AwaitingPrepare) {
+		/* Check if preparation has a result. */
+		if (R_FAILED(rc = asyncResultWait(&m_prepare_result, 0)) && rc != 0xea01) {
+			printf("Failed to check update preparation result.\nResult: 0x%08x\n", rc);
+			MarkForReboot();
+			return rc;
+		} else if (R_SUCCEEDED(rc)) {
+			if (R_FAILED(rc = asyncResultGet(&m_prepare_result))) {
+				printf("Failed to prepare update.\nResult: 0x%08x\n", rc);
+				MarkForReboot();
+				return rc;
+			}
+		}
 
-            /* Check if the update has been prepared. */
-            bool prepared;
-            if (R_FAILED(rc = amssuHasPreparedUpdate(&prepared))) {
-                printf("Failed to check if update has been prepared.\nResult: 0x%08x\n", rc);
-                MarkForReboot();
-                return rc;
-            }
+		/* Check if the update has been prepared. */
+		bool prepared;
+		if (R_FAILED(rc = amssuHasPreparedUpdate(&prepared))) {
+			printf("Failed to check if update has been prepared.\nResult: 0x%08x\n", rc);
+			MarkForReboot();
+			return rc;
+		}
 
-            /* Mark for application if preparation complete. */
-            if (prepared) {
-                printf("Update preparation complete.\nApplying update...\n");
-                m_install_state = InstallState::NeedsApply;
-                return rc;
-            }
+		/* Mark for application if preparation complete. */
+		if (prepared) {
+			printf("\nUpdate preparation complete.\nApplying update...\n");
+			m_install_state = InstallState::NeedsApply;
+			return rc;
+		}
 
-            /* Check update progress. */
-            NsSystemUpdateProgress update_progress = {};
-            if (R_FAILED(rc = amssuGetPrepareUpdateProgress(&update_progress))) {
-                printf("Failed to check update progress.\nResult: 0x%08x\n", rc);
-                MarkForReboot();
-                return rc;
-            }
+		/* Check update progress. */
+		NsSystemUpdateProgress update_progress = {};
+		if (R_FAILED(rc = amssuGetPrepareUpdateProgress(&update_progress))) {
+			printf("Failed to check update progress.\nResult: 0x%08x\n", rc);
+			MarkForReboot();
+			return rc;
+		}
 
-            /* Update progress percent. */
-            if (update_progress.total_size > 0.0f) {
-                m_progress_percent = static_cast<float>(update_progress.current_size) / static_cast<float>(update_progress.total_size);
-				// printf("* Update progress : %f%s *\r", m_progress_percent, "%");
-				// consoleUpdate(NULL);
-            } else {
-                m_progress_percent = 0.0f;
-				// printf("* Update progress : %f%s *\r", m_progress_percent, "%");
-				// consoleUpdate(NULL);
-            }
-        } else if (m_install_state == InstallState::NeedsApply) {
-            /* Apply the prepared update. */
-            if (R_FAILED(rc = amssuApplyPreparedUpdate())) {
-                printf("Failed to apply update.\nResult: 0x%08x\n", rc);
-            } else {
-                /* Log success. */
-                printf("Update applied successfully.\n");
+		// Update progress percent.
+		if (static_cast<float>(update_progress.total_size) > 0.0f) {
+			m_progress_percent = (static_cast<float>(update_progress.current_size) / static_cast<float>(update_progress.total_size)) * 100.0f;
+			// printf("\r* Update progress : %3.0f %s *", m_progress_percent, "%");
+			// consoleUpdate(NULL);
+		} else {
+			m_progress_percent = 0.0f;
+			// printf("\r* Update progress : %3.0f %s *", m_progress_percent, "%");
+			// consoleUpdate(NULL);
+		}
+		// printf("\r* %10.0f on %10.0f  *", static_cast<float>(update_progress.current_size), static_cast<float>(update_progress.total_size));
+		// printf("\r* %i *", (static_cast<int>(update_progress.current_size) / static_cast<int>(update_progress.total_size)) * 100);
+		// printf("\r* Update progress : %3.0f %s *", m_progress_percent, "%");
+		// consoleUpdate(NULL);
+	} else if (m_install_state == InstallState::NeedsApply) {
+		/* Apply the prepared update. */
+		if (R_FAILED(rc = amssuApplyPreparedUpdate())) {
+			printf("Failed to apply update.\nResult: 0x%08x\n", rc);
+		} else {
+			/* Log success. */
+			printf("Update applied successfully.\n");
 
-                if (g_reset_to_factory) {
-                    if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
-                        /* Fallback on ResetToFactorySettings. */
-                        if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
-                            if (R_FAILED(rc = nsResetToFactorySettings())) {
-                                printf("Failed to reset to factory settings.\nResult: 0x%08x\n", rc);
-                                MarkForReboot();
-                                return rc;
-                            }
-                        } else {
-                            printf("Failed to reset to factory settings for refurbishment.\nResult: 0x%08x\n", rc);
-                            MarkForReboot();
-                            return rc;
-                        }
-                    }
+			if (g_reset_to_factory) {
+				if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
+					/* Fallback on ResetToFactorySettings. */
+					if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
+						if (R_FAILED(rc = nsResetToFactorySettings())) {
+							printf("Failed to reset to factory settings.\nResult: 0x%08x\n", rc);
+							MarkForReboot();
+							return rc;
+						}
+					} else {
+						printf("Failed to reset to factory settings for refurbishment.\nResult: 0x%08x\n", rc);
+						MarkForReboot();
+						return rc;
+					}
+				}
 
-                    printf("Successfully reset to factory settings.%d\n", rc);
-                }
-            }
+				printf("Successfully reset to factory settings.%d\n", rc);
+			}
+		}
 
-            MarkForReboot();
-            return rc;
-        }
+		MarkForReboot();
+		return rc;
+	}
 
-        return rc;
-    }
+	return rc;
+}
 
 int main(int argc, char **argv) {
 	userAppInit();
+	
+	printf("Daybreak-cli %s by shadow256, largely based on Daybreak  from Atmosphere.", app_version);
+	consoleUpdate(NULL);
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	padInitializeDefault(&pad);
 	if (!InitializeMenu()) {
@@ -469,18 +535,21 @@ int main(int argc, char **argv) {
 	}
 	if (m_install_state != InstallState::NeedsPrepare && m_install_state != InstallState::AwaitingReboot) {
 		while (1) {
-			if (m_install_state == InstallState::NeedsApply) {
+			if (m_install_state == InstallState::NeedsApply || m_install_state == InstallState::AwaitingReboot) {
 				break;
 			}
 			TransitionUpdateState();
+			// printf("\r* Update progress : %3.0f%s *", m_progress_percent, "%");
+			// consoleUpdate(NULL);
 		}
 	}
 	if (m_install_state != InstallState::AwaitingPrepare && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
 	}
+	if (is_erista) {
+		force_reboot_to_payload();
+	} else {
 	force_reboot();
-	if (R_FAILED(appletRequestToReboot())) {
-		spsmShutdown(true);
 	}
 	userAppExit();
 	return 0;

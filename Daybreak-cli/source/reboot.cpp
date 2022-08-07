@@ -72,6 +72,8 @@ void rebootAms_rcm()
 	socketExit();
 	romfsExit();
 	consoleExit(NULL);
-	spsmShutdown(true);
+	if (R_FAILED(appletRequestToReboot())) {
+		spsmShutdown(true);
+	}
 	spsmExit();
 }

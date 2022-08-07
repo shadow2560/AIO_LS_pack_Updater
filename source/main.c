@@ -35,9 +35,10 @@ char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char pack_version[15] = "inconnue";
 char last_pack_version[15] = "inconnue";
 char firmware_version[50] = "inconnue";
-char atmosphere_version_without_hash[50];
 char atmosphere_version[50] = "inconnue";
 char emummc_value[10] = "inconnue";
+char fusee_gelee_patch[15] = "inconnu";
+bool console_is_erista = false;
 FsFileSystem *fs_sd;
 PadState pad;
 
@@ -290,9 +291,7 @@ void get_fw_version() {
 	Result ret = 0;
 	SetSysFirmwareVersion ver;
 
-	if (R_FAILED(ret = setsysGetFirmwareVersion(&ver)))
-    {
-		printf("GetFirmwareVersion() failed: 0x%x.\n\n", ret);
+	if (R_FAILED(ret = setsysGetFirmwareVersion(&ver))) {
 		return;
 	}
 
@@ -333,6 +332,27 @@ void get_ams_version() {
 	splExit();
 }
 
+void get_fusee_gelee_exploit() {
+	splInitialize();
+	u32 ExosphereHasRcmBugPatch	   = 65004;
+	u64 hardware_type;
+	u64 has_rcm_bug_patch;
+	Result rc = 0;
+	if (R_FAILED(rc = splGetConfig(SplConfigItem_HardwareType, &hardware_type))) {
+		return;
+	}
+	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereHasRcmBugPatch), &has_rcm_bug_patch))) {
+		return;
+	}
+	console_is_erista = hardware_type == 0 || hardware_type == 1;
+	if (console_is_erista && !has_rcm_bug_patch) {
+		strcpy(fusee_gelee_patch, "Utilisable");
+	} else {
+		strcpy(fusee_gelee_patch, "Non utilisable");
+	}
+		splExit();
+}
+
 bool ask_question(char *question_text) {
 	bool rc;
 	consoleSelect(&logs_console);
@@ -365,6 +385,7 @@ void display_infos() {
 	printf("Version actuelle du firmware : %s\n", firmware_version);
 	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
 	printf("Type de systeme : %s\n", emummc_value);
+	printf("Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
 	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
 	consoleUpdate(&logs_console);
 	/*
@@ -378,6 +399,42 @@ void display_infos() {
 	*/
 	// consoleExit(&infos_console);
 	consoleSelect(&menu_console);
+}
+
+void force_reboot_to_payload() {
+	printf("Console will reboot in 5 secondes.");
+	consoleUpdate(NULL);
+	sleep(5);
+	appExit();
+	rebootAms_rcm();
+}
+
+void force_reboot() {
+		FILE *payload_file;
+	payload_file = fopen("/payload.bin.temp", "rb");
+	if (payload_file) {
+		fclose(payload_file);
+	} else {
+		rename("/payload.bin", "/payload.bin.temp");
+		cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
+	}
+	printf("Console will reboot in 5 secondes.");
+	consoleUpdate(NULL);
+	sleep(5);
+	appExit();
+	spsmInitialize();
+	if (R_FAILED(appletRequestToReboot())) {
+		spsmShutdown(true);
+	}
+	spsmExit();
+}
+
+void aply_reboot() {
+	if (console_is_erista) {
+		force_reboot_to_payload();
+	} else {
+		force_reboot();
+	}
 }
 
 int main(int argc, char **argv)
@@ -442,6 +499,7 @@ int main(int argc, char **argv)
 	get_last_version_pack();
 	get_fw_version();
 	get_ams_version();
+	get_fusee_gelee_exploit();
 	remove(TEMP_FILE);
 
 	// main menu
@@ -486,11 +544,11 @@ int main(int argc, char **argv)
 					if ((dir2 = opendir(firmware_path)) != NULL) {
 						closedir(dir2);
 						fnc_clean_theme();
-						cp((char*) "romfs:/nro/daybreak_auto.nro", (char*) "/switch/AIO_LS_pack_Updater/daybreak_auto.nro");
+						cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 						char temp_setting[FS_MAX_PATH+100]= "";
-						strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/daybreak_auto.nro\" \""), firmware_path), "\"");
+						strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\"");
 					appExit();
-						envSetNextLoad("/switch/AIO_LS_pack_Updater/daybreak_auto.nro", temp_setting);
+						envSetNextLoad("/switch/AIO_LS_pack_Updater/Daybreak-cli.nro", temp_setting);
 						return 0;
 					} else {
 						printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\nLe dossier contenant le firmware est le dossier \"%s\".\n", firmware_path);
@@ -528,24 +586,28 @@ int main(int argc, char **argv)
 								if (update_firmware) {
 									if ((dir = opendir(firmware_path)) != NULL) {
 										closedir(dir);
-										cp((char*) "romfs:/nro/daybreak_auto.nro", (char*) "/switch/AIO_LS_pack_Updater/daybreak_auto.nro");
+										cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 										char temp_setting[FS_MAX_PATH+100]= "";
-										strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/daybreak_auto.nro\" \""), firmware_path), "\"");
+										strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\"");
+										printf("\033[0;32m\nFinis!\nApplication de la mise a jour dans 5 secondes :)\033[0;37m\n");
+										consoleUpdate(&logs_console);
+										sleep(5);
 										appExit();
-										envSetNextLoad("/switch/AIO_LS_pack_Updater/daybreak_auto.nro", temp_setting);
+										envSetNextLoad("/switch/AIO_LS_pack_Updater/Daybreak-cli.nro", temp_setting);
 										return 0;
 									} else {
-										printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\nRedemarrage de la console dans 5 secondes.\n");
-										sleep(5);
+										printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\n");
 									}
 								}
-								rebootAms_rcm();
+								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
+								sleep(5);
+								aply_reboot();
 							} else {
 								remove(TEMP_FILE);
 							}
 						}
 					} else {
-					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du cfw.\033[0;37m\n");
+					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
 				}

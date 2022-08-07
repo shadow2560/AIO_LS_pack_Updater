@@ -306,13 +306,10 @@ bool detected_payload_bin = false;
 
 	unzClose(zfile);
 	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
-	printf("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
 	remove(output);
 	remove("payload.bin");
 	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
-	consoleUpdate(&logs_console);
 
-	sleep(5);
 	// fclose(logfile);
 	return 0;
 }

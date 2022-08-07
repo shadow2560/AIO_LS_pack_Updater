@@ -448,6 +448,7 @@ void ipl_main()
 		easy_rename("atmosphere/package3.temp", "atmosphere/package3");
 		easy_rename("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro");
 		f_unlink("switch/AIO_LS_pack_Updater/daybreak_auto.nro");
+		f_unlink("switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 		easy_rename("payload.bin.temp", "payload.bin");
 
 		// If the console is a patched or Mariko unit

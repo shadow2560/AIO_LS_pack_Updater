@@ -15,10 +15,10 @@ To build the project you have to download devkitPro, install devkitPro and follo
 ``cd ../aiosu-forwarder ``
 ``make``
 ``mv ./aiosu-forwarder.nro ../romfs/nro/aiosu-forwarder.nro``
-``cd ../daybreak_auto``
+``cd ../daybreak-cli``
 ``cp ../romfs/payload/ams_rcm.bin romfs/payload/ams_rcm.bin``
 make
-``mv ./daybreak_auto.nro ../romfs/nro/daybreak_auto.nro``
+``mv ./daybreak-cli.nro ../romfs/nro/daybreak-cli.nro``
 ``cd ..``
 ``make``  
  
