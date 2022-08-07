@@ -401,14 +401,6 @@ void display_infos() {
 	consoleSelect(&menu_console);
 }
 
-void force_reboot_to_payload() {
-	printf("Console will reboot in 5 secondes.");
-	consoleUpdate(NULL);
-	sleep(5);
-	appExit();
-	rebootAms_rcm();
-}
-
 void force_reboot() {
 		FILE *payload_file;
 	payload_file = fopen("/payload.bin.temp", "rb");
@@ -418,9 +410,15 @@ void force_reboot() {
 		rename("/payload.bin", "/payload.bin.temp");
 		cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
 	}
-	printf("Console will reboot in 5 secondes.");
-	consoleUpdate(NULL);
-	sleep(5);
+	appExit();
+	spsmInitialize();
+	if (R_FAILED(appletRequestToReboot())) {
+		spsmShutdown(true);
+	}
+	spsmExit();
+}
+
+void simple_reboot() {
 	appExit();
 	spsmInitialize();
 	if (R_FAILED(appletRequestToReboot())) {
@@ -431,7 +429,7 @@ void force_reboot() {
 
 void aply_reboot() {
 	if (console_is_erista) {
-		force_reboot_to_payload();
+		rebootAms_rcm();
 	} else {
 		force_reboot();
 	}
@@ -643,8 +641,7 @@ int main(int argc, char **argv)
 				if (set_90dns()) {
 					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
 					sleep(5);
-					appExit();
-					rebootSystem();
+					simple_reboot();
 				} else {
 						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des parametres DNS.\033[0;37m\n");
 				}
@@ -670,8 +667,7 @@ int main(int argc, char **argv)
 					if (test_cp) {
 						printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
 						sleep(5);
-						appExit();
-						rebootSystem();
+						simple_reboot();
 					} else {
 						printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");
 					}
