@@ -15,6 +15,12 @@
 
 extern PrintConsole logs_console;
 
+static time_t prevtime;
+time_t currtime;
+double dif;
+static bool first = true;
+double dlold;
+
 typedef struct {
 	char *memory;
 	size_t size;
@@ -43,13 +49,23 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 }
 
 int download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
+	if (first) {
+		time(&prevtime);
+		first = false;
+	}
+	time(&currtime);
+	dif = difftime(currtime, prevtime);
 	struct timeval tv = {0};
 	gettimeofday(&tv, NULL);
 	int counter = round(tv.tv_usec / 100000);
 
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
-			printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
+			if (dif > 1.2f) {
+				printf("* Telechargement: %.2fMB a %.2f MB/s *\r", dlnow / _1MiB, (dlnow - dlold) / dif);
+			} else {
+				printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
+			}
 		} else {
 			int numberOfEqual = (dlnow * 100) / dltotal / 10;
 			printf("\r* [");
@@ -59,11 +75,17 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 			for (int i = 0; i < 10 - numberOfEqual; i++) {
 				printf(" ");
 			}
-			printf("]   Telechargement: %.2fMB sur %.2fMB *", dlnow / _1MiB, dltotal / _1MiB);
+			if (dif > 1.2f) {
+				
+			} else {
+				printf("]   Telechargement: %.2fMB sur %.2fMB a %.2f MB/s *", dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
+			}
 		}
 		consoleUpdate(&logs_console);
 	}
 
+	dlold = dlnow;
+	prevtime = currtime;
 	return 0;
 }
 

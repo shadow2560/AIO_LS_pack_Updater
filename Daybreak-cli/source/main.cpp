@@ -415,6 +415,25 @@ Result TransitionUpdateState() {
 	return rc;
 }
 
+bool ask_question(char *question_text) {
+	bool rc;
+	printf("%s\n", question_text);
+	printf("[A]: YES          [B]: NO\n");
+	consoleUpdate(NULL);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_A) {
+			rc = true;
+			break;
+		} else if (kDown & HidNpadButton_B) {
+			rc = false;
+			break;
+		}
+	}
+	return rc;
+}
+
 int main(int argc, char **argv) {
 	userAppInit();
 	
@@ -428,7 +447,7 @@ int main(int argc, char **argv) {
 		force_reboot();
 		return 1;
 	}
-	if (argc != 2) {
+	if (argc <= 2) {
 		printf("Bad program call.");
 		custom_pause();
 		force_reboot();
@@ -490,8 +509,27 @@ int main(int argc, char **argv) {
 	if (!g_exfat_supported) {
 		g_use_exfat = false;
 	}
+	if (g_exfat_supported && strcmp(argv[3], "true") == 0) {
+		g_use_exfat = true;
+	} else if (g_exfat_supported && argv[3] == NULL) {
+		g_use_exfat = ask_question((char *) "Do you want to use EXFAT driver (recommanded)?");
+	} else {
+		g_use_exfat = false;
+	}
+	bool choose_fat32_forced = false;
+	if (!g_exfat_supported && g_use_exfat) {
+		choose_fat32_forced = ask_question((char *) "Firmware doesn't have support for EXFAT, do you want to use FAT32 only?");
+		if (choose_fat32_forced) {
+			g_use_exfat = false;
+		} else {
+			printf("Update canceled.");
+			custom_pause();
+			force_reboot();
+			return 1;
+		}
+	}
 	/* Warn the user if they're updating with exFAT supposed to be supported but not present/corrupted. */
-	if (m_update_info.exfat_supported && R_FAILED(m_validation_info.exfat_result)) {
+	if (g_use_exfat == true && m_update_info.exfat_supported && R_FAILED(m_validation_info.exfat_result)) {
 		printf("Error: exFAT firmware is missing or corrupt.\n");
 		custom_pause();
 		force_reboot();
@@ -500,12 +538,25 @@ int main(int argc, char **argv) {
 	}
 	/* Warn the user if they're updating to a version higher than supported. */
 	const u32 version = m_validation_info.invalid_key.version;
+	bool force_update_not_supported = false;
 	if (EncodeVersion((version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf) > g_supported_version) {
-		printf("Error: firmware is too new and not known to be supported.\n");
-		custom_pause();
-		force_reboot();
-		return 1;
+		if (strcmp(argv[4], "true") == 0) {
+			printf("Forcing update on firmware not supported enabled.");
+			consoleUpdate(NULL);
+			force_update_not_supported = true;
+		} else if (argv[4] == NULL) {
+			force_update_not_supported = ask_question((char *) "Firmware is too new and not known to be supported.\nDo you want to install it anyway?");
+		} else {
+			force_update_not_supported = false;
+		}
+		if (!force_update_not_supported) {
+			printf("Error: firmware is too new and not forced for installation, update is canceled.\n");
+			custom_pause();
+			force_reboot();
+			return 1;
+		}
 	}
+	/*
 	if (g_exfat_supported) {
 		bool exfat_supported = false;
 		fsIsExFatSupported(&exfat_supported);
@@ -515,7 +566,14 @@ int main(int argc, char **argv) {
 			g_use_exfat = false;
 		}
 	}
-	g_reset_to_factory = false;
+	*/
+	if (strcmp(argv[2], "true") == 0) {
+		g_reset_to_factory = true;
+	} else if (argv[2] == NULL) {
+		g_reset_to_factory = ask_question((char *) "Do you want to reset to factory?");
+	} else {
+		g_reset_to_factory = false;
+	}
 	// printf("Installing steps...\n");
 	/* Prevent the home button from being pressed during installation. */
 	hiddbgDeactivateHomeButton();
