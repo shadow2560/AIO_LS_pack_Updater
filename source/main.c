@@ -200,6 +200,7 @@ int appInit() {
 	fs_sd = fsdevGetDeviceFileSystem("sdmc");
 hiddbgInitialize();
 appletBeginBlockingHomeButton(0);
+appletSetAutoSleepDisabled(true);
 // hiddbgDeactivateHomeButton();
 	return 0;
 }
@@ -215,6 +216,7 @@ void logs_console_clear() {
 void appExit()
 {
 	appletEndBlockingHomeButton();
+	appletSetAutoSleepDisabled(false);
 	hiddbgExit();
 	socketExit();
 	romfsExit();
