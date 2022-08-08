@@ -198,7 +198,7 @@ int appInit() {
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	romfsInit();	//Init of romfs
 	fs_sd = fsdevGetDeviceFileSystem("sdmc");
-hiddbgInitialize();
+// hiddbgInitialize();
 appletBeginBlockingHomeButton(0);
 appletSetAutoSleepDisabled(true);
 // hiddbgDeactivateHomeButton();
@@ -217,7 +217,7 @@ void appExit()
 {
 	appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
-	hiddbgExit();
+	// hiddbgExit();
 	socketExit();
 	romfsExit();
 	consoleExit(&logs_console);

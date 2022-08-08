@@ -183,6 +183,7 @@ void clean_sd(bool clean_theme) {
 	remove("readme.html");
 	remove("readme.md");
 	remove("bootloader/bootlogo.bmp");
+	remove("nsp_forwarders/Tinfoil V14.nsp");
 	remove_directory("Firmware 14.1.2");
 	remove_directory(firmware_path);
 	if (clean_theme) {
