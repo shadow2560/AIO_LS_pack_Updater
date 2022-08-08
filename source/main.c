@@ -199,7 +199,8 @@ int appInit() {
 	romfsInit();	//Init of romfs
 	fs_sd = fsdevGetDeviceFileSystem("sdmc");
 hiddbgInitialize();
-hiddbgDeactivateHomeButton();
+appletBeginBlockingHomeButton(0);
+// hiddbgDeactivateHomeButton();
 	return 0;
 }
 
@@ -213,9 +214,10 @@ void logs_console_clear() {
 
 void appExit()
 {
+	appletEndBlockingHomeButton();
+	hiddbgExit();
 	socketExit();
 	romfsExit();
-	hiddbgExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
 }
