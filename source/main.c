@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.0.0"
+#define APP_VERSION			 "3.1.0"
 #define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
@@ -37,7 +37,12 @@ char last_pack_version[15] = "inconnue";
 char firmware_version[50] = "inconnue";
 char atmosphere_version[50] = "inconnue";
 char emummc_value[10] = "inconnue";
+char emummc_type[10] = "inconnu";
 char fusee_gelee_patch[15] = "inconnu";
+char console_model[50] = "inconnu";
+u64 console_id = 0;
+SetSysSerialNumber console_serial;
+bool sd_is_exfat = false;
 bool console_is_erista = false;
 FsFileSystem *fs_sd;
 PadState pad;
@@ -78,6 +83,47 @@ typedef struct
 {
 	config_section s1;
 } configuration;
+
+// define a structure for holding the values in "emummc" section of the emummc ini file.
+typedef struct{
+	int enabled;
+	u32 id;
+	u32 sector;
+	const char* path;
+	const char* nintendo_path;
+} emummc_config_section;
+
+// define a structure for holding all of the config of the ini file.
+typedef struct
+{
+	emummc_config_section e1;
+} emummc_configuration;
+
+// function directly taken from Atmosphere
+u32 ParseHexInteger(const char *s) {
+            u32 x = 0;
+            if (s[0] == '0' && s[1] == 'x') {
+                s += 2;
+            }
+
+            while (true) {
+                const char c = *(s++);
+
+                if (c == '\x00') {
+                    return x;
+                } else {
+                    x <<= 4;
+
+                    if ('0' <= c && c <= '9') {
+                        x |= (c - '0');
+                    } else if ('a' <= c && c <= 'f') {
+                        x |= (c - 'a') + 10;
+                    } else if ('A' <= c && c <= 'F') {
+                        x |= (c - 'A') + 10;
+                    }
+                }
+            }
+        }
 
 static int config_handler(void* config, const char* section, const char* name, const char* value)
 {
@@ -136,6 +182,82 @@ static int config_handler(void* config, const char* section, const char* name, c
 	return 1;
 }
 
+static int emummc_config_handler(void* config, const char* section, const char* name, const char* value)
+{
+	// config instance for filling in the values.
+	emummc_configuration* pconfig = (emummc_configuration*)config;
+
+	// define a macro for checking Sections and keys under the sections.
+	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+
+	// fill the values in config struct for emummc 1.
+	if(MATCH("emummc", "enabled")){
+		if (value != 0) {
+			pconfig->e1.enabled = atoll(value);
+		} else {
+			pconfig->e1.enabled = 0;
+		}
+	} else 	if(MATCH("emummc", "id")){
+		if (value != 0) {
+			pconfig->e1.id = ParseHexInteger(value);
+		} else {
+			pconfig->e1.id = 0;
+		}
+		} else 	if(MATCH("emummc", "sector")){
+		if (value != 0) {
+			pconfig->e1.sector = ParseHexInteger(value);;
+		} else {
+			pconfig->e1.sector = 0;
+		}
+	}else if(MATCH("emummc", "path")){
+		if (value != 0) {
+			pconfig->e1.path = strdup(value);
+		} else {
+			pconfig->e1.path = "";
+		}
+	}else if(MATCH("emummc", "nintendo_path")){
+		if (value != 0) {
+			pconfig->e1.nintendo_path = strdup(value);
+		} else {
+			pconfig->e1.nintendo_path = "";
+		}
+	}else{
+		return 0;
+	}
+	return 1;
+}
+
+void get_emunand_type() {
+	if (strcmp(emummc_value, "Emunand") != 0) {
+		strcpy(emummc_type, "");
+		return;
+	}
+	// config for holding ini file values.
+	emummc_configuration config;
+	config.e1.enabled = 0;
+	config.e1.sector = 0;
+	config.e1.id = 0;
+	config.e1.path = "";
+	config.e1.nintendo_path = "";
+	FILE *test_ini;
+	test_ini = fopen("/emuMMC/emummc.ini", "r");
+	if (test_ini != NULL) {
+		fclose(test_ini);
+		// parse the .ini file
+		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &config) == 0) {
+			if (config.e1.sector == 0) {
+				if (strcmp(config.e1.path, "") != 0) {
+					strcpy(emummc_type, "fichiers");
+				}
+			} else {
+				strcpy(emummc_type, "partition");
+			}
+		}
+	}
+	free((void*)config.e1.path);
+	free((void*)config.e1.nintendo_path);
+}
+
 void refreshScreen(int cursor)
 {
 	consoleClear();
@@ -143,7 +265,8 @@ void refreshScreen(int cursor)
 	printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
 	printf("Appuyez sur (X) pour afficher diverses informations\n\n");
-	printf("Appuyez sur (+) pour quitter l'application\n\n\n");
+	printf("Appuyez sur (Y) pour enregistrer diverses informations dans un fichier\n\n");
+	printf("Appuyez sur (+) pour quitter l'application\n\n");
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
 		if (cursor == i) {
@@ -231,6 +354,7 @@ s64 get_sd_size_left() {
 	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
 	// nsExit();
 		// printf("%ld\n", fs_sd_size);
+		sd_is_exfat = fsIsExFatSupported(&sd_is_exfat);
 		return fs_sd_size;
 }
 
@@ -294,8 +418,8 @@ void get_fw_version() {
 	setsysInitialize();
 	Result ret = 0;
 	SetSysFirmwareVersion ver;
-
 	if (R_FAILED(ret = setsysGetFirmwareVersion(&ver))) {
+		setsysExit();
 		return;
 	}
 
@@ -316,6 +440,7 @@ void get_ams_version() {
 	u64 version;
 	Result rc = 0;
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereApiVersionConfigItem), &version))) {
+		splExit();
 		return;
 	}
 	const u32 version_micro = (version >> 40) & 0xff;
@@ -326,6 +451,7 @@ void get_ams_version() {
 	snprintf(atmosphere_version, sizeof(atmosphere_version), "%s", sysVersionBuffer);
 	u64 is_emummc;
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
+		splExit();
 		return;
 	}
 	if (is_emummc) {
@@ -343,18 +469,68 @@ void get_fusee_gelee_exploit() {
 	u64 has_rcm_bug_patch;
 	Result rc = 0;
 	if (R_FAILED(rc = splGetConfig(SplConfigItem_HardwareType, &hardware_type))) {
+		splExit();
 		return;
 	}
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereHasRcmBugPatch), &has_rcm_bug_patch))) {
+		splExit();
 		return;
 	}
 	console_is_erista = hardware_type == 0 || hardware_type == 1;
 	if (console_is_erista && !has_rcm_bug_patch) {
+		strcpy(console_model, "Switch Erista non patchée");
 		strcpy(fusee_gelee_patch, "Utilisable");
 	} else {
+		strcpy(console_model, "Switch Erista patchée");
 		strcpy(fusee_gelee_patch, "Non utilisable");
 	}
+	if (hardware_type == 0) {
+		if (!has_rcm_bug_patch) {
+			strcpy(console_model, "Switch Erista Icosa non patchée");
+		} else {
+			strcpy(console_model, "Switch Erista Icosa patchée");
+		}
+	}
+	if (hardware_type == 0) {
+		if (!has_rcm_bug_patch) {
+			strcpy(console_model, "Switch Erista Copper non patchée");
+		} else {
+			strcpy(console_model, "Switch Erista Copper patchée");
+		}
+	}
+	if (hardware_type == 2) {
+		strcpy(console_model, "Switch Mariko Hoag");
+	}
+	if (hardware_type == 3) {
+		strcpy(console_model, "Switch Mariko Iowa");
+	}
+	if (hardware_type == 4) {
+		strcpy(console_model, "Switch Lite");
+	}
+		if (hardware_type == 5) {
+		strcpy(console_model, "Switch OLED");
+	}
+	splExit();
+}
+
+void get_device_id() {
+	splInitialize();
+	Result rc = 0;
+	if (R_FAILED(rc = splGetConfig(SplConfigItem_DeviceId, &console_id))) {
 		splExit();
+		return;
+	}
+	splExit();
+}
+
+void get_serial_number() {
+	setsysInitialize();
+	Result rc = 0;
+	if (R_FAILED(rc = setsysGetSerialNumber(&console_serial))) {
+		setsysExit();
+		return;
+	}
+	setsysExit();
 }
 
 bool ask_question(char *question_text) {
@@ -386,10 +562,22 @@ void display_infos() {
 	printf("Informations:\n\n");
 	printf("Version actuelle du pack : %s\n", pack_version);
 	printf("Derniere version du pack : %s\n", last_pack_version);
+	printf("ID de la console : %li\n", console_id);
+	printf("Numero de serie de la console : %s\n", console_serial.number);
+	if (strcmp(emummc_value, "Emunand") != 0) {
+		printf("Type de systeme : %s\n", emummc_value);
+	} else {
+		printf("Type de systeme : %s via %s\n", emummc_value, emummc_type);
+	}
+	printf("Modele de la console : %s\n", console_model);
+	printf("Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+	if (sd_is_exfat) {
+		printf("Formatage de la SD: EXFAT\n");
+	} else {
+		printf("Formatage de la SD: FAT32\n");
+	}
 	printf("Version actuelle du firmware : %s\n", firmware_version);
 	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
-	printf("Type de systeme : %s\n", emummc_value);
-	printf("Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
 	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
 	consoleUpdate(&logs_console);
 	/*
@@ -403,6 +591,39 @@ void display_infos() {
 	*/
 	// consoleExit(&infos_console);
 	consoleSelect(&menu_console);
+}
+
+void record_infos() {
+	consoleSelect(&logs_console);
+	FILE *log_infos;
+	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
+	if ( log_infos == NULL ) {
+		printf("Le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\" n'a pas pu être enregistré.");
+		consoleUpdate(&logs_console);
+		return;
+	}
+	fprintf(log_infos, "Informations:\n\n");
+	fprintf(log_infos, "Version actuelle du pack : %s\n", pack_version);
+	fprintf(log_infos, "Derniere version du pack : %s\n", last_pack_version);
+	fprintf(log_infos, "ID de la console : %li\n", console_id);
+	fprintf(log_infos, "Numero de serie de la console : %s\n", console_serial.number);
+	if (strcmp(emummc_value, "Emunand") != 0) {
+		fprintf(log_infos, "Type de systeme : %s\n", emummc_value);
+	} else {
+		fprintf(log_infos, "Type de systeme : %s via %s\n", emummc_value, emummc_type);
+	}
+	fprintf(log_infos, "Modele de la console : %s\n", console_model);
+	fprintf(log_infos, "Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+	if (sd_is_exfat) {
+		fprintf(log_infos, "Formatage de la SD: EXFAT\n");
+	} else {
+		fprintf(log_infos, "Formatage de la SD: FAT32\n");
+	}
+	fprintf(log_infos, "Version actuelle du firmware : %s\n", firmware_version);
+	fprintf(log_infos, "Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	printf("Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\".");
+	consoleUpdate(&logs_console);
+	fclose(log_infos);
 }
 
 void force_reboot() {
@@ -424,8 +645,8 @@ void force_reboot() {
 
 void simple_reboot() {
 	appExit();
-	spsmInitialize();
 	if (R_FAILED(appletRequestToReboot())) {
+		spsmInitialize();
 		spsmShutdown(true);
 	}
 	spsmExit();
@@ -502,6 +723,9 @@ int main(int argc, char **argv)
 	get_fw_version();
 	get_ams_version();
 	get_fusee_gelee_exploit();
+	get_device_id();
+	get_serial_number();
+	get_emunand_type();
 	remove(TEMP_FILE);
 
 	// main menu
@@ -684,6 +908,10 @@ int main(int argc, char **argv)
 		} else if (kDown & HidNpadButton_X) {
 			logs_console_clear();
 			display_infos();
+
+		} else if (kDown & HidNpadButton_Y) {
+			logs_console_clear();
+			record_infos();
 
 		// exit...
 		} else if (kDown & HidNpadButton_Plus) {

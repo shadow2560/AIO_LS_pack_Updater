@@ -49,7 +49,7 @@ ROMFS		:=	romfs
 
 APP_TITLE     := Daybreak-cli
 APP_AUTHOR    := shadow256
-APP_VERSION   := 1.1.0
+APP_VERSION   := 2.0.0
 
 #---------------------------------------------------------------------------------
 # options for code generation

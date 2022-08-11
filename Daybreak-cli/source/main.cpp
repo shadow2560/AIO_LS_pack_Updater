@@ -25,7 +25,7 @@
 #include "ams_su.h"
 #include "reboot.hpp"
 
-const char app_version[] = "1.1.0";
+const char app_version[] = "2.0.0";
 
 PadState pad;
 
@@ -559,7 +559,7 @@ int main(int argc, char **argv) {
 	/*
 	if (g_exfat_supported) {
 		bool exfat_supported = false;
-		fsIsExFatSupported(&exfat_supported);
+		exfat_supported = fsIsExFatSupported(&exfat_supported);
 		if (exfat_supported) {
 			g_use_exfat = true;
 		} else {
