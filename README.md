@@ -1,6 +1,8 @@
 ## AIO_LS_pack_Updater 🖥️
 
-AIO_LS_pack_Updater is an homebrew for Nintendo Switch which update your cfw with the pack of [shadow2560](https://github.com/shadow2560/)
+AIO_LS_pack_Updater is an homebrew for Nintendo Switch which update your cfw with the pack of [shadow2560](https://github.com/shadow2560/) by default but this can also be configured with a "AIO_LS_pack_Updater.ini" file placed in the "switch/AIO_LS_pack_Updater".
+
+The app can also auto-update itself, aply some protection for Atmosphere to be able to connect to internet with your CFW, get some usful informations about the console and install a firmware.
 
 ## How to build 🏗️
 
