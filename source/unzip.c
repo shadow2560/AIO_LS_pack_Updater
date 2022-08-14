@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <minizip/unzip.h>
 #include <string.h>
+#include <assert.h>
 #include <dirent.h>
 #include <switch.h>
 #include <sys/types.h>
@@ -9,7 +10,6 @@
 #include "unzip.h"
 
 #define WRITEBUFFERSIZE 0x100000
-#define MAXFILENAME	 0x301
 
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
@@ -193,60 +193,83 @@ void clean_sd(bool clean_theme) {
 		consoleUpdate(&logs_console);
 }
 
+char * substr(char * s, int x, int y) {
+	char * ret = malloc(strlen(s) + 1);
+	char * p = ret;
+	char * q = &s[x];
+
+	assert(ret != NULL);
+
+	while(x  < y) {
+	*p++ = *q++;
+		x ++; 
+	}
+
+	*p++ = '\0';
+
+	return ret;
+}
+
 int unzip(const char *output)
 {
 	// FILE *logfile = fopen("log.txt", "w");
 	extern char subfolder_in_zip[FS_MAX_PATH];
-	char project_subfolder_in_zip[strlen(subfolder_in_zip) + 2];
-	strcpy(project_subfolder_in_zip, subfolder_in_zip);
 	unzFile zfile = unzOpen(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);
 	uLong first_subfolder_passed = 0;
-	if (strcmp(project_subfolder_in_zip, "") != 0) {
-		for(int i = 0; project_subfolder_in_zip[i] != '\0'; i++) {
-			if(project_subfolder_in_zip[i] == '/') {
+	uLong subfolder_in_zip_length;
+	if (strcmp(subfolder_in_zip, "") != 0 && strcmp(subfolder_in_zip, "/") != 0) {
+		for(int i = 0; subfolder_in_zip[i] != '\0'; i++) {
+			if(subfolder_in_zip[i] == '/') {
 				first_subfolder_passed++;
 			}
 		}
-	if ((project_subfolder_in_zip[strlen(project_subfolder_in_zip) - 1]) != '/') {
-		strcat(project_subfolder_in_zip, "/");
+	if ((subfolder_in_zip[strlen(subfolder_in_zip) - 1]) != '/') {
+		strcat(subfolder_in_zip, "/");
 		first_subfolder_passed++;
 	}
+	subfolder_in_zip_length = strlen(subfolder_in_zip);
+	} else {
+		strcpy(subfolder_in_zip, "/");
+		subfolder_in_zip_length = 0;
 	}
-	// fputs(strcat(project_subfolder_in_zip, "\n"), logfile);
-bool detected_payload_bin = false;
+	// fprintf(logfile, "%s\n", subfolder_in_zip);
+	// fprintf(logfile, "%ld\n\n", strlen(subfolder_in_zip));
+	bool detected_payload_bin = false;
+	char filename_inzip[FS_MAX_PATH] = {0};
+	char filename_on_sd[FS_MAX_PATH] = {0};
+	unz_file_info file_info = {0};
+	DIR *dir;
+	FILE *outfile;
+	void *buf;
 
-	for (uLong i = 0; i < gi.number_entry; i++)
-	{
-		char filename_inzip[MAXFILENAME] = {0};
-		unz_file_info file_info = {0};
+	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 
-		FILE *outfile;
-		void *buf;
-
-		char filename_on_sd[MAXFILENAME];
+		// fprintf(logfile, "%s\n", filename_inzip);
+		char *c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
+		strcpy(filename_on_sd, c1);
+		free(c1);
+		/*
 		int k = 0;
-		for (uLong j = strlen(project_subfolder_in_zip); j < strlen(filename_inzip); j++)
-		 {
+		for (uLong j = subfolder_in_zip_length; j < strlen(filename_inzip); j++) {
 			filename_on_sd[k] = filename_inzip[j];
 			k++;
 		}
 		filename_on_sd[k] = '\0';
-		// fputs (filename_on_sd, logfile);
-		// fputs ("\n", logfile);
+		*/
+		// fprintf(logfile, "%s\n", filename_on_sd);
+		// fprintf(logfile, "%s\n\n", filename_inzip);
 		if (first_subfolder_passed > i){
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
 			continue;
-		}
 		// check if the string ends with a /, if so, then its a directory.
-		else if ((filename_inzip[strlen(filename_inzip) - 1]) == '/')
-		{
+		} else if ((filename_on_sd[strlen(filename_on_sd) - 1]) == '/') {
 			// check if directory exists
-			DIR *dir = opendir(filename_on_sd);
+			dir = opendir(filename_on_sd);
 			if (dir) {
 				closedir(dir);
 			} else {
@@ -257,33 +280,18 @@ bool detected_payload_bin = false;
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
 			continue;
-		}	
 
-		else if (strcmp(filename_on_sd, "payload.bin") == 0){
+		} else if (strcmp(filename_on_sd, "payload.bin") == 0){
 			detected_payload_bin = true;
-			outfile = fopen("payload.bin.temp", "wb");
+			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
-			printf ("\033[0;33mDANS payload.bin! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
 			consoleUpdate(&logs_console);
-			sleep(2);
-		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0){
-			outfile = fopen("switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro.temp", "wb");
+		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
+			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
-			printf ("\033[0;33mDANS AIO_LS_pack_Updater.nro! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
+			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
 			consoleUpdate(&logs_console);
-			sleep(2);
-		} else if (strcmp(filename_on_sd, "atmosphere/package3") == 0){
-			outfile = fopen("atmosphere/package3.temp", "wb");
-
-			printf ("\033[0;33mDANS PACKAGE3! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(&logs_console);
-			sleep(2);
-		} else if (strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
-			outfile = fopen("atmosphere/stratosphere.romfs.temp", "wb");
-
-			printf ("\033[0;33mDANS STRATOSPHERE.ROMFS! NE PAS ETEINDRE LA CONSOLE!\033[0;37m\n");
-			consoleUpdate(&logs_console);
-			sleep(2);
 		} else {
 			outfile = fopen(filename_on_sd, "wb");
 
@@ -293,8 +301,13 @@ bool detected_payload_bin = false;
 		buf = malloc(WRITEBUFFERSIZE);
 		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
 			if (j != fwrite(buf, 1, j, outfile)) {
+				// fprintf(logfile, "Erreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\n", filename_on_sd);
 				printf("\033[0;31mErreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\033[0;37m\n", filename_on_sd);
 				consoleUpdate(&logs_console);
+				fclose(outfile);
+				unzCloseCurrentFile(zfile);
+				free(buf);
+				unzClose(zfile);
 				return 1;
 			}
 		}
@@ -307,7 +320,7 @@ bool detected_payload_bin = false;
 
 	unzClose(zfile);
 	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
-	remove(output);
+	// remove(output);
 	remove("payload.bin");
 	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
 

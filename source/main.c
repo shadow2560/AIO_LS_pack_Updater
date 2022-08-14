@@ -24,12 +24,16 @@
 #define UP_90dns          3
 #define UP_atmo_protect_configs          4
 
-char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
-	char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
-	char pack_version_local_filepath[FS_MAX_PATH] = "/version.txt";
-char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
+char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
+// char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
+// char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
+char pack_version_local_filepath[FS_MAX_PATH] = "/version.txt";
+char subfolder_in_zip[FS_MAX_PATH] = "/";
+// char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
 s64 pack_size = 1000000000;
-char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
+// char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 
 char pack_version[15] = "inconnue";
@@ -233,29 +237,29 @@ void get_emunand_type() {
 		return;
 	}
 	// config for holding ini file values.
-	emummc_configuration config;
-	config.e1.enabled = 0;
-	config.e1.sector = 0;
-	config.e1.id = 0;
-	config.e1.path = "";
-	config.e1.nintendo_path = "";
+	emummc_configuration emummc_config;
+	emummc_config.e1.enabled = 0;
+	emummc_config.e1.sector = 0;
+	emummc_config.e1.id = 0;
+	emummc_config.e1.path = "";
+	emummc_config.e1.nintendo_path = "";
 	FILE *test_ini;
 	test_ini = fopen("/emuMMC/emummc.ini", "r");
 	if (test_ini != NULL) {
 		fclose(test_ini);
 		// parse the .ini file
-		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &config) == 0) {
-			if (config.e1.sector == 0) {
-				if (strcmp(config.e1.path, "") != 0) {
+		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
+			if (emummc_config.e1.sector == 0) {
+				if (strcmp(emummc_config.e1.path, "") != 0) {
 					strcpy(emummc_type, "fichiers");
+					free((void*)emummc_config.e1.path);
 				}
 			} else {
 				strcpy(emummc_type, "partition");
 			}
 		}
 	}
-	free((void*)config.e1.path);
-	free((void*)config.e1.nintendo_path);
+	free((void*)emummc_config.e1.nintendo_path);
 }
 
 void refreshScreen(int cursor)
@@ -354,7 +358,7 @@ s64 get_sd_size_left() {
 	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
 	// nsExit();
 		// printf("%ld\n", fs_sd_size);
-		sd_is_exfat = fsIsExFatSupported(&sd_is_exfat);
+		fsIsExFatSupported(&sd_is_exfat);
 		return fs_sd_size;
 }
 
@@ -635,12 +639,12 @@ void force_reboot() {
 		rename("/payload.bin", "/payload.bin.temp");
 		cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
 	}
-	appExit();
 	spsmInitialize();
 	if (R_FAILED(appletRequestToReboot())) {
 		spsmShutdown(true);
 	}
 	spsmExit();
+	appExit();
 }
 
 void simple_reboot() {
@@ -680,29 +684,27 @@ int main(int argc, char **argv)
 		// parse the .ini file
 		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
 			if (strcmp(config.s1.dl_pack, "") != 0) {
-				strncpy(CFW_URL, config.s1.dl_pack, sizeof(CFW_URL));
+				strcpy(CFW_URL, config.s1.dl_pack);
 				free((void*)config.s1.dl_pack);
 			}
 			if (strcmp(config.s1.dl_pack_version, "") != 0) {
-				strncpy(pack_version_url, config.s1.dl_pack_version, sizeof(pack_version_url));
+				strcpy(pack_version_url, config.s1.dl_pack_version);
 				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
-				strncpy(pack_version_local_filepath, config.s1.pack_version_local_filepath, sizeof(pack_version_local_filepath));
+				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
 				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
-				strncpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack, sizeof(subfolder_in_zip));
+				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
 				free((void*)config.s1.subfolder_in_zip_pack);
-			} else {
-				strcpy(subfolder_in_zip, "");
 			}
 			if (strcmp(config.s1.dl_app, "") != 0) {
-				strncpy(APP_URL, config.s1.dl_app, sizeof(APP_URL));
+				strcpy(APP_URL, config.s1.dl_app);
 				free((void*)config.s1.dl_app);
 			}
 			if (strcmp(config.s1.firmware_path, "") != 0) {
-				strncpy(firmware_path, config.s1.firmware_path, sizeof(firmware_path));
+				strcpy(firmware_path, config.s1.firmware_path);
 				free((void*)config.s1.firmware_path);
 			}
 			if (config.s1.pack_size != 0) {
@@ -719,14 +721,14 @@ int main(int argc, char **argv)
 	short cursor = 0;
 
 	get_version_pack();
-	get_last_version_pack();
+	// get_last_version_pack();
 	get_fw_version();
 	get_ams_version();
 	get_fusee_gelee_exploit();
 	get_device_id();
 	get_serial_number();
 	get_emunand_type();
-	remove(TEMP_FILE);
+	// remove(TEMP_FILE);
 
 	// main menu
 	refreshScreen(cursor);
@@ -794,10 +796,9 @@ int main(int argc, char **argv)
 				} else {
 					clean_theme = ask_question("Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?");
 				}
-				
 				bool validate_choice = ask_question("Souhaitez-vous vraiment continuer?");
 				if (validate_choice) {
-					if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
+					// if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
 						if (get_sd_size_left() <= pack_size) {
 							printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 						} else {
@@ -807,8 +808,8 @@ int main(int argc, char **argv)
 							} else {
 								clean_sd(false);
 							}
-							if (0 == unzip("/switch/AIO_LS_pack_Updater/temp.zip")) {
-								remove(TEMP_FILE);
+							if (0 == unzip(TEMP_FILE)) {
+								// remove(TEMP_FILE);
 								if (update_firmware) {
 									if ((dir = opendir(firmware_path)) != NULL) {
 										closedir(dir);
@@ -826,16 +827,16 @@ int main(int argc, char **argv)
 									}
 								}
 								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
-								sleep(5);
-								aply_reboot();
+								// sleep(5);
+								// aply_reboot();
 							} else {
-								remove(TEMP_FILE);
+								// remove(TEMP_FILE);
 							}
 						}
-					} else {
-					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
-					remove(TEMP_FILE);
-				}
+					// } else {
+						// printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
+						// remove(TEMP_FILE);
+					// }
 				}
 				consoleSelect(&menu_console);
 				break;
