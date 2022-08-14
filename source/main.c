@@ -24,16 +24,16 @@
 #define UP_90dns          3
 #define UP_atmo_protect_configs          4
 
-char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
-// char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
-char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
-// char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
+// char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
+char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+// char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
+char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
 char pack_version_local_filepath[FS_MAX_PATH] = "/version.txt";
-char subfolder_in_zip[FS_MAX_PATH] = "/";
-// char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
+// char subfolder_in_zip[FS_MAX_PATH] = "/";
+char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
 s64 pack_size = 1000000000;
-char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
-// char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+// char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
+char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 
 char pack_version[15] = "inconnue";
@@ -721,14 +721,14 @@ int main(int argc, char **argv)
 	short cursor = 0;
 
 	get_version_pack();
-	// get_last_version_pack();
+	get_last_version_pack();
 	get_fw_version();
 	get_ams_version();
 	get_fusee_gelee_exploit();
 	get_device_id();
 	get_serial_number();
 	get_emunand_type();
-	// remove(TEMP_FILE);
+	remove(TEMP_FILE);
 
 	// main menu
 	refreshScreen(cursor);
@@ -798,7 +798,7 @@ int main(int argc, char **argv)
 				}
 				bool validate_choice = ask_question("Souhaitez-vous vraiment continuer?");
 				if (validate_choice) {
-					// if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
+					if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
 						if (get_sd_size_left() <= pack_size) {
 							printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 						} else {
@@ -809,7 +809,7 @@ int main(int argc, char **argv)
 								clean_sd(false);
 							}
 							if (0 == unzip(TEMP_FILE)) {
-								// remove(TEMP_FILE);
+								remove(TEMP_FILE);
 								if (update_firmware) {
 									if ((dir = opendir(firmware_path)) != NULL) {
 										closedir(dir);
@@ -827,16 +827,16 @@ int main(int argc, char **argv)
 									}
 								}
 								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
-								// sleep(5);
-								// aply_reboot();
+								sleep(5);
+								aply_reboot();
 							} else {
-								// remove(TEMP_FILE);
+								remove(TEMP_FILE);
 							}
 						}
-					// } else {
-						// printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
-						// remove(TEMP_FILE);
-					// }
+					} else {
+						printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
+						remove(TEMP_FILE);
+					}
 				}
 				consoleSelect(&menu_console);
 				break;
