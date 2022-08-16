@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.1.0"
+#define APP_VERSION			 "3.2.2"
 #define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
@@ -24,17 +24,22 @@
 #define UP_90dns          3
 #define UP_atmo_protect_configs          4
 
-// char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
-char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
-// char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
-char pack_version_url[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
-char pack_version_local_filepath[FS_MAX_PATH] = "/version.txt";
-// char subfolder_in_zip[FS_MAX_PATH] = "/";
-char subfolder_in_zip[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
+char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
+char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
+char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
+char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
+char pack_version_local_filepath_beta[FS_MAX_PATH] = "/pack_version.txt";
+char subfolder_in_zip[FS_MAX_PATH] = "";
+char subfolder_in_zip_beta[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
 s64 pack_size = 1000000000;
-// char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
-char APP_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+s64 pack_size_beta = 1000000000;
+char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
+char APP_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
+char firmware_path_beta[FS_MAX_PATH] = "/dernier_firmware_compatible";
+char atmo_logo_dir[FS_MAX_PATH] = "/atmosphere/exefs_patches/logo";
+char atmo_logo_dir_beta[FS_MAX_PATH] = "/atmosphere/exefs_patches/logo";
 
 char pack_version[15] = "inconnue";
 char last_pack_version[15] = "inconnue";
@@ -48,6 +53,7 @@ u64 console_id = 0;
 SetSysSerialNumber console_serial;
 bool sd_is_exfat = false;
 bool console_is_erista = false;
+bool beta_mode = false;
 FsFileSystem *fs_sd;
 PadState pad;
 
@@ -80,6 +86,7 @@ typedef struct{
 	s64 pack_size;
 	const char* dl_app;
 	const char *firmware_path;
+	const char *atmo_logo_dir;
 } config_section;
 
 // define a structure for holding all of the config of the ini file.
@@ -174,6 +181,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.dl_app = "";
 		}
+	}else if(MATCH("config", "atmo_logo_dir")){
+		if (value != 0) {
+			pconfig->s1.atmo_logo_dir = strdup(value);
+		} else {
+			pconfig->s1.atmo_logo_dir = "";
+		}
 	}else if(MATCH("config", "pack_size")){
 		if (value != 0) {
 			pconfig->s1.pack_size = atoll(value);
@@ -265,11 +278,19 @@ void get_emunand_type() {
 void refreshScreen(int cursor)
 {
 	consoleClear();
-
-	printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
+	if (!beta_mode) {
+		printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
+	} else {
+		printf("\x1B[31mAIO_LS_pack_Updater: v%s (BETA MODE)\x1B[37m\n\n", APP_VERSION);
+	}
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
-	printf("Appuyez sur (X) pour afficher diverses informations\n\n");
-	printf("Appuyez sur (Y) pour enregistrer diverses informations dans un fichier\n\n");
+	printf("Appuyez sur (X) pour afficher diverses informations\n");
+	printf("Appuyez sur (Y) pour enregistrer diverses informations dans un fichier\n");
+	if (!beta_mode) {
+		printf("Appuyez sur (-) pour passer en mode beta\n\n");
+	} else {
+		printf("Appuyez sur (-) pour passer en mode stable\n\n");
+	}
 	printf("Appuyez sur (+) pour quitter l'application\n\n");
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
@@ -389,8 +410,14 @@ void get_version_pack() {
 
 void get_last_version_pack() {
 	FILE *pack_version_file;
+	bool res;
 	consoleSelect(&logs_console);
-	if (downloadFile(pack_version_url, TEMP_FILE, OFF, false)) {
+	if (!beta_mode) {
+		res = downloadFile(pack_version_url, TEMP_FILE, OFF, false);
+	} else {
+		res = downloadFile(pack_version_url_beta, TEMP_FILE, OFF, false);
+	}
+	if (res) {
 		logs_console_clear();
 		pack_version_file = fopen(TEMP_FILE, "r");
 		if (pack_version_file == NULL) {
@@ -567,7 +594,11 @@ void display_infos() {
 	printf("Version actuelle du pack : %s\n", pack_version);
 	printf("Derniere version du pack : %s\n", last_pack_version);
 	printf("ID de la console : %li\n", console_id);
-	printf("Numero de serie de la console : %s\n", console_serial.number);
+	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
+		printf("Numero de serie de la console  indetectable, Incognito est actif.\n");
+	} else {
+		printf("Numero de serie de la console : %s\n", console_serial.number);
+	}
 	if (strcmp(emummc_value, "Emunand") != 0) {
 		printf("Type de systeme : %s\n", emummc_value);
 	} else {
@@ -575,11 +606,13 @@ void display_infos() {
 	}
 	printf("Modele de la console : %s\n", console_model);
 	printf("Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+	/*
 	if (sd_is_exfat) {
 		printf("Formatage de la SD: EXFAT\n");
 	} else {
 		printf("Formatage de la SD: FAT32\n");
 	}
+	*/
 	printf("Version actuelle du firmware : %s\n", firmware_version);
 	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
 	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
@@ -610,7 +643,12 @@ void record_infos() {
 	fprintf(log_infos, "Version actuelle du pack : %s\n", pack_version);
 	fprintf(log_infos, "Derniere version du pack : %s\n", last_pack_version);
 	fprintf(log_infos, "ID de la console : %li\n", console_id);
-	fprintf(log_infos, "Numero de serie de la console : %s\n", console_serial.number);
+	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
+		fprintf(log_infos, "Numero de serie de la console  indetectable, Incognito est actif.\n");
+	} else {
+		fprintf(log_infos, "Numero de serie de la console : %s\n", console_serial.number);
+		
+	}
 	if (strcmp(emummc_value, "Emunand") != 0) {
 		fprintf(log_infos, "Type de systeme : %s\n", emummc_value);
 	} else {
@@ -618,11 +656,13 @@ void record_infos() {
 	}
 	fprintf(log_infos, "Modele de la console : %s\n", console_model);
 	fprintf(log_infos, "Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+	/*
 	if (sd_is_exfat) {
 		fprintf(log_infos, "Formatage de la SD: EXFAT\n");
 	} else {
 		fprintf(log_infos, "Formatage de la SD: FAT32\n");
 	}
+	*/
 	fprintf(log_infos, "Version actuelle du firmware : %s\n", firmware_version);
 	fprintf(log_infos, "Version actuelle d'Atmosphere : %s\n", atmosphere_version);
 	printf("Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\".");
@@ -664,6 +704,14 @@ void aply_reboot() {
 	}
 }
 
+void switch_app_mode() {
+	if (!beta_mode) {
+		beta_mode = true;
+	} else {
+		beta_mode = false;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
@@ -676,6 +724,7 @@ int main(int argc, char **argv)
 	config.s1.subfolder_in_zip_pack = "";
 	config.s1.dl_app = "";
 	config.s1.firmware_path = "";
+	config.s1.atmo_logo_dir = "";
 	config.s1.pack_size = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
@@ -707,8 +756,60 @@ int main(int argc, char **argv)
 				strcpy(firmware_path, config.s1.firmware_path);
 				free((void*)config.s1.firmware_path);
 			}
+			if (strcmp(config.s1.atmo_logo_dir, "") != 0) {
+				strcpy(atmo_logo_dir, config.s1.atmo_logo_dir);
+				free((void*)config.s1.atmo_logo_dir);
+			}
 			if (config.s1.pack_size != 0) {
 				pack_size = config.s1.pack_size;
+			}
+		}
+	}
+	configuration config_beta;
+	config_beta.s1.dl_pack = "";
+	config_beta.s1.dl_pack_version = "";
+	config_beta.s1.pack_version_local_filepath = "";
+	config_beta.s1.subfolder_in_zip_pack = "";
+	config_beta.s1.dl_app = "";
+	config_beta.s1.firmware_path = "";
+	config_beta.s1.atmo_logo_dir = "";
+	config_beta.s1.pack_size = 0;
+	FILE *test_ini_beta;
+	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
+	if (test_ini_beta != NULL) {
+		fclose(test_ini_beta);
+		// parse the .ini file
+		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", config_handler, &config) == 0) {
+			if (strcmp(config_beta.s1.dl_pack, "") != 0) {
+				strcpy(CFW_URL_beta, config_beta.s1.dl_pack);
+				free((void*)config_beta.s1.dl_pack);
+			}
+			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
+				strcpy(pack_version_url_beta, config_beta.s1.dl_pack_version);
+				free((void*)config_beta.s1.dl_pack_version);
+			}
+			if (strcmp(config_beta.s1.pack_version_local_filepath, "") != 0) {
+				strcpy(pack_version_local_filepath_beta, config_beta.s1.pack_version_local_filepath);
+				free((void*)config_beta.s1.dl_pack_version);
+			}
+			if (strcmp(config_beta.s1.subfolder_in_zip_pack, "") != 0) {
+				strcpy(subfolder_in_zip_beta, config_beta.s1.subfolder_in_zip_pack);
+				free((void*)config_beta.s1.subfolder_in_zip_pack);
+			}
+			if (strcmp(config_beta.s1.dl_app, "") != 0) {
+				strcpy(APP_URL_beta, config_beta.s1.dl_app);
+				free((void*)config_beta.s1.dl_app);
+			}
+			if (strcmp(config_beta.s1.firmware_path, "") != 0) {
+				strcpy(firmware_path_beta, config_beta.s1.firmware_path);
+				free((void*)config_beta.s1.firmware_path);
+			}
+			if (strcmp(config_beta.s1.atmo_logo_dir, "") != 0) {
+				strcpy(atmo_logo_dir_beta, config_beta.s1.atmo_logo_dir);
+				free((void*)config_beta.s1.atmo_logo_dir);
+			}
+			if (config_beta.s1.pack_size != 0) {
+				pack_size_beta = config_beta.s1.pack_size;
 			}
 		}
 	}
@@ -769,12 +870,21 @@ int main(int argc, char **argv)
 				DIR *dir2;
 				update_firmware2 = ask_question("Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?");
 				if (update_firmware2) {
-					if ((dir2 = opendir(firmware_path)) != NULL) {
+					if (!beta_mode) {
+						dir2 = opendir(firmware_path);
+					} else {
+						dir2 = opendir(firmware_path_beta);
+					}
+					if (dir2 != NULL) {
 						closedir(dir2);
 						fnc_clean_theme();
 						cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 						char temp_setting[FS_MAX_PATH+100]= "";
-						strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
+						if (!beta_mode) {
+							strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
+						} else {
+							strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path_beta), "\" \"false\" \"true\" \"false\"");
+						}
 					appExit();
 						envSetNextLoad("/switch/AIO_LS_pack_Updater/Daybreak-cli.nro", temp_setting);
 						return 0;
@@ -796,10 +906,23 @@ int main(int argc, char **argv)
 				} else {
 					clean_theme = ask_question("Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?");
 				}
+				bool clean_logos = ask_question("Souhaitez-vous retirer les logos?");
 				bool validate_choice = ask_question("Souhaitez-vous vraiment continuer?");
 				if (validate_choice) {
-					if (downloadFile(CFW_URL, TEMP_FILE, OFF, true)){
-						if (get_sd_size_left() <= pack_size) {
+					bool dl_pack_res;
+					if (!beta_mode) {
+						dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
+					} else {
+						dl_pack_res = downloadFile(CFW_URL_beta, TEMP_FILE, OFF, true);
+					}
+					if (dl_pack_res) {
+						bool not_has_enough_space_on_sd;
+						if (!beta_mode) {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
+						} else {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+						}
+						if (not_has_enough_space_on_sd) {
 							printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 						} else {
 							set_90dns();
@@ -808,14 +931,36 @@ int main(int argc, char **argv)
 							} else {
 								clean_sd(false);
 							}
-							if (0 == unzip(TEMP_FILE)) {
+							int unzip_res;
+							if (!beta_mode) {
+								unzip_res = unzip(TEMP_FILE, subfolder_in_zip);
+							} else {
+								unzip_res = unzip(TEMP_FILE, subfolder_in_zip_beta);
+							}
+							if (unzip_res == 0) {
 								remove(TEMP_FILE);
+								if (clean_logos) {
+										if (!beta_mode) {
+											fnc_clean_logo(atmo_logo_dir);
+										} else {
+											fnc_clean_logo(atmo_logo_dir_beta);
+										}
+								}
 								if (update_firmware) {
-									if ((dir = opendir(firmware_path)) != NULL) {
+									if (!beta_mode) {
+										dir = opendir(firmware_path);
+									} else {
+										dir = opendir(firmware_path_beta);
+									}
+									if (dir != NULL) {
 										closedir(dir);
 										cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 										char temp_setting[FS_MAX_PATH+100]= "";
-										strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
+										if (!beta_mode) {
+											strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
+										} else {
+											strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path_beta), "\" \"false\" \"true\" \"false\"");
+										}
 										printf("\033[0;32m\nFinis!\nApplication de la mise a jour dans 5 secondes :)\033[0;37m\n");
 										consoleUpdate(&logs_console);
 										sleep(5);
@@ -844,8 +989,13 @@ int main(int argc, char **argv)
 			case UP_APP:
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
-				if (downloadFile(APP_URL, TEMP_FILE, OFF, true))
-				{
+					bool dl_app_res;
+					if (!beta_mode) {
+						dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
+					} else {
+						dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
+					}
+				if (dl_app_res) {
 					if (get_sd_size_left() <= 2000000) {
 						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
 					} else {
@@ -913,6 +1063,13 @@ int main(int argc, char **argv)
 		} else if (kDown & HidNpadButton_Y) {
 			logs_console_clear();
 			record_infos();
+
+		} else if (kDown & HidNpadButton_Minus) {
+			logs_console_clear();
+			switch_app_mode();
+			get_last_version_pack();
+			cursor = 0;
+			refreshScreen(cursor);
 
 		// exit...
 		} else if (kDown & HidNpadButton_Plus) {

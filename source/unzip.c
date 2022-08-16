@@ -8,8 +8,9 @@
 #include <sys/stat.h>
 
 #include "unzip.h"
+// #include "zip.h"
 
-#define WRITEBUFFERSIZE 0x100000
+size_t WRITEBUFFERSIZE = 0x100000;
 
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
@@ -107,6 +108,21 @@ int remove_directory(const char *path) {
    return r;
 }
 
+void fnc_clean_logo(char *atmo_logo_folder) {
+	printf("Suppression des logos...\n");
+	consoleUpdate(&logs_console);
+	if (strcmp(atmo_logo_folder, "") != 1 && strcmp(atmo_logo_folder, "/") != 1) {
+		remove_directory(atmo_logo_folder);
+	}
+	remove("bootloader/bootlogo.bmp");
+	remove("bootloader/res/bootlogo.bmp");
+	remove("bootloader/res/background.bmp");
+	remove("config/nx-hbmenu/settings.cfg");
+	remove("config/nx-hbmenu/themes/ls.romfs");
+	remove("config/nx-hbmenu/themes/ls2.romfs");
+	cp("romfs:/nologo/hekate_ipl.ini", "bootloader/hekate_ipl.ini");
+}
+
 void fnc_clean_theme() {
 		// Full theme deletion, helped  with code from nx-theme-installer
 		printf("Suppression d'un eventuel theme...\n");
@@ -193,7 +209,7 @@ void clean_sd(bool clean_theme) {
 		consoleUpdate(&logs_console);
 }
 
-char * substr(char * s, int x, int y) {
+char * substr(char *s, int x, int y) {
 	char * ret = malloc(strlen(s) + 1);
 	char * p = ret;
 	char * q = &s[x];
@@ -210,10 +226,120 @@ char * substr(char * s, int x, int y) {
 	return ret;
 }
 
-int unzip(const char *output)
-{
+/*
+int unzip2(const char *output, char *subfolder_in_zip) {
+	FILE *logfile = fopen("log.txt", "w");
+	uLong first_subfolder_passed = 0;
+	uLong subfolder_in_zip_length;
+	if (strcmp(subfolder_in_zip, "") != 0 && strcmp(subfolder_in_zip, "/") != 0) {
+		for(int i = 0; subfolder_in_zip[i] != '\0'; i++) {
+			if(subfolder_in_zip[i] == '/') {
+				first_subfolder_passed++;
+			}
+		}
+	if ((subfolder_in_zip[strlen(subfolder_in_zip) - 1]) != '/') {
+		strcat(subfolder_in_zip, "/");
+		first_subfolder_passed++;
+	}
+	subfolder_in_zip_length = strlen(subfolder_in_zip);
+	} else {
+		strcpy(subfolder_in_zip, "/");
+		subfolder_in_zip_length = 0;
+	}
+	fprintf(logfile, "%s\n", subfolder_in_zip);
+	fprintf(logfile, "%ld\n\n", strlen(subfolder_in_zip));
+	bool detected_payload_bin = false;
+	char filename_on_sd[FS_MAX_PATH] = {0};
+	DIR *dir;
+	unsigned char *buf;
+	struct zip_t *zip = zip_open(output, 0, 'r');
+	int i, n = zip_entries_total(zip);
+	for (i = 0; i < n; ++i) {
+		zip_entry_openbyindex(zip, i);
+			const char *filename_inzip = zip_entry_name(zip);
+			int isdir = zip_entry_isdir(zip);
+			unsigned long long size = zip_entry_size(zip);
+			unsigned int crc32 = zip_entry_crc32(zip);
+		// char *c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
+		// strcpy(filename_on_sd, c1);
+		// free(c1);
+		int k = 0;
+		for (uLong j = subfolder_in_zip_length; j < strlen(filename_inzip); j++) {
+			filename_on_sd[k] = filename_inzip[j];
+			k++;
+		}
+		filename_on_sd[k] = '\0';
+		fprintf(logfile, "%s\n", filename_on_sd);
+		fprintf(logfile, "%s\n", filename_inzip);
+		if (first_subfolder_passed > i){
+			zip_entry_close(zip);
+			continue;
+		}
+		if (isdir) {
+			if ((filename_on_sd[strlen(filename_on_sd) - 1]) == '/') {
+				dir = opendir(filename_on_sd);
+				if (dir) {
+					closedir(dir);
+					} else {
+						printf("\033[0;34mCreation du repertoir: %s\033[0;37m\n", filename_on_sd);
+						mkdir(filename_on_sd, 0777);
+						consoleUpdate(&logs_console);
+					}
+					zip_entry_close(zip);
+					continue;
+			}
+		}
+		char outfile[FS_MAX_PATH] = {0};
+		FILE *unziped_file;
+		if (strcmp(filename_on_sd, "payload.bin") == 0){
+			detected_payload_bin = true;
+			strcat(strcat(outfile, filename_on_sd), ".temp");
+
+			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
+			consoleUpdate(&logs_console);
+		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
+			strcat(strcat(outfile, filename_on_sd), ".temp");
+
+			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
+			consoleUpdate(&logs_console);
+		} else {
+			strcat(outfile, filename_on_sd);
+
+			printf("\033[0;36mExtraction de: %s\033[0;37m\n", filename_on_sd);
+			consoleUpdate(&logs_console);
+		}
+		unziped_file = fopen(outfile, "wb");
+		WRITEBUFFERSIZE = zip_entry_size(zip);
+		buf = calloc(sizeof(unsigned char), WRITEBUFFERSIZE);
+		size_t j = zip_entry_noallocread(zip, buf, WRITEBUFFERSIZE);
+			if (j != fwrite(buf, 1, j, unziped_file)) {
+				fprintf(logfile, "Erreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\n", filename_on_sd);
+				printf("\033[0;31mErreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\033[0;37m\n", filename_on_sd);
+				consoleUpdate(&logs_console);
+				free(buf);
+				fclose(unziped_file);
+				zip_entry_close(zip);
+				zip_close(zip);
+				return 1;
+			}
+		// fprintf(logfile, "%d\n\n", zip_entry_fread(zip, outfile));
+		free(buf);
+		fclose(unziped_file);
+		zip_entry_close(zip);
+	}
+	zip_close(zip);
+	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
+	// remove(output);
+	remove("payload.bin");
+	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
+
+	fclose(logfile);
+	return 0;
+}
+*/
+
+int unzip(const char *output, char *subfolder_in_zip) {
 	// FILE *logfile = fopen("log.txt", "w");
-	extern char subfolder_in_zip[FS_MAX_PATH];
 	unzFile zfile = unzOpen(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);

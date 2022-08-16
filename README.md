@@ -4,6 +4,10 @@ AIO_LS_pack_Updater is an homebrew for Nintendo Switch which update your cfw wit
 
 The app can also auto-update itself, aply some protection for Atmosphere to be able to connect to internet with your CFW, get some usful informations about the console and install a firmware.
 
+## Beta mode
+
+This mode could be useful to test the new features of the pack and the app but this also could brake some functions and could be not backward compatible with the stable version so use it if you know what you're doing. Beta mode has his own config file if you want to customize some settings, see the "config" folder of the repository.
+
 ## How to build 🏗️
 
 To build the project you have to download devkitPro, install devkitPro and follow these commands :
@@ -26,7 +30,7 @@ make
  
 ## Issues 🚩 
 
-No issue known for now.
+* Don't use special chars like accents in your files' name, included with files contained in your pack zip.
 
 ## Credits 📜 
 
