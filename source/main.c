@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.2.2"
+#define APP_VERSION			 "3.2.3"
 #define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
@@ -38,8 +38,10 @@ char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_L
 char APP_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char firmware_path_beta[FS_MAX_PATH] = "/dernier_firmware_compatible";
-char atmo_logo_dir[FS_MAX_PATH] = "/atmosphere/exefs_patches/logo";
-char atmo_logo_dir_beta[FS_MAX_PATH] = "/atmosphere/exefs_patches/logo";
+char atmo_logo_dir[FS_MAX_PATH] = "logo";
+char atmo_logo_dir_beta[FS_MAX_PATH] = "logo";
+char hekate_nologo_file_path[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
+char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 
 char pack_version[15] = "inconnue";
 char last_pack_version[15] = "inconnue";
@@ -87,6 +89,7 @@ typedef struct{
 	const char* dl_app;
 	const char *firmware_path;
 	const char *atmo_logo_dir;
+	const char *hekate_nologo_file_path;
 } config_section;
 
 // define a structure for holding all of the config of the ini file.
@@ -186,6 +189,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.atmo_logo_dir = strdup(value);
 		} else {
 			pconfig->s1.atmo_logo_dir = "";
+		}
+	}else if(MATCH("config", "hekate_nologo_file_path")){
+		if (value != 0) {
+			pconfig->s1.hekate_nologo_file_path = strdup(value);
+		} else {
+			pconfig->s1.hekate_nologo_file_path = "";
 		}
 	}else if(MATCH("config", "pack_size")){
 		if (value != 0) {
@@ -725,6 +734,7 @@ int main(int argc, char **argv)
 	config.s1.dl_app = "";
 	config.s1.firmware_path = "";
 	config.s1.atmo_logo_dir = "";
+	config.s1.hekate_nologo_file_path = "";
 	config.s1.pack_size = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
@@ -760,6 +770,10 @@ int main(int argc, char **argv)
 				strcpy(atmo_logo_dir, config.s1.atmo_logo_dir);
 				free((void*)config.s1.atmo_logo_dir);
 			}
+			if (strcmp(config.s1.hekate_nologo_file_path, "") != 0) {
+				strcpy(hekate_nologo_file_path, config.s1.hekate_nologo_file_path);
+				free((void*)config.s1.hekate_nologo_file_path);
+			}
 			if (config.s1.pack_size != 0) {
 				pack_size = config.s1.pack_size;
 			}
@@ -773,6 +787,7 @@ int main(int argc, char **argv)
 	config_beta.s1.dl_app = "";
 	config_beta.s1.firmware_path = "";
 	config_beta.s1.atmo_logo_dir = "";
+	config_beta.s1.hekate_nologo_file_path = "";
 	config_beta.s1.pack_size = 0;
 	FILE *test_ini_beta;
 	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
@@ -807,6 +822,10 @@ int main(int argc, char **argv)
 			if (strcmp(config_beta.s1.atmo_logo_dir, "") != 0) {
 				strcpy(atmo_logo_dir_beta, config_beta.s1.atmo_logo_dir);
 				free((void*)config_beta.s1.atmo_logo_dir);
+			}
+			if (strcmp(config_beta.s1.hekate_nologo_file_path, "") != 0) {
+				strcpy(hekate_nologo_file_path_beta, config_beta.s1.hekate_nologo_file_path);
+				free((void*)config_beta.s1.hekate_nologo_file_path);
 			}
 			if (config_beta.s1.pack_size != 0) {
 				pack_size_beta = config_beta.s1.pack_size;
@@ -941,9 +960,9 @@ int main(int argc, char **argv)
 								remove(TEMP_FILE);
 								if (clean_logos) {
 										if (!beta_mode) {
-											fnc_clean_logo(atmo_logo_dir);
+											fnc_clean_logo(atmo_logo_dir, hekate_nologo_file_path);
 										} else {
-											fnc_clean_logo(atmo_logo_dir_beta);
+											fnc_clean_logo(atmo_logo_dir_beta, hekate_nologo_file_path_beta);
 										}
 								}
 								if (update_firmware) {

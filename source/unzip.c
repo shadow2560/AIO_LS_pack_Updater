@@ -108,19 +108,20 @@ int remove_directory(const char *path) {
    return r;
 }
 
-void fnc_clean_logo(char *atmo_logo_folder) {
+void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 	printf("Suppression des logos...\n");
 	consoleUpdate(&logs_console);
-	if (strcmp(atmo_logo_folder, "") != 1 && strcmp(atmo_logo_folder, "/") != 1) {
-		remove_directory(atmo_logo_folder);
-	}
+	char base_atmo_logo_folder[FS_MAX_PATH] = "/atmosphere/exefs_patches/";
+	remove_directory(strcat(base_atmo_logo_folder, atmo_logo_folder));
 	remove("bootloader/bootlogo.bmp");
 	remove("bootloader/res/bootlogo.bmp");
 	remove("bootloader/res/background.bmp");
 	remove("config/nx-hbmenu/settings.cfg");
-	remove("config/nx-hbmenu/themes/ls.romfs");
-	remove("config/nx-hbmenu/themes/ls2.romfs");
-	cp("romfs:/nologo/hekate_ipl.ini", "bootloader/hekate_ipl.ini");
+	cp(hekate_nologo_file_path, "/bootloader/hekate_ipl.ini");
+	mkdir("/config", 0777);
+	mkdir("/config/nx-hbmenu", 0777);
+	mkdir("/config/nx-hbmenu/themes", 0777);
+	cp("romfs:/nologo/hbmenu_default_theme.cfg", "/config/nx-hbmenu/themes/theme.cfg");
 }
 
 void fnc_clean_theme() {
