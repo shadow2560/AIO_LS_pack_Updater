@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.2.4"
+#define APP_VERSION			 "3.2.5"
 #define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
@@ -27,7 +27,7 @@
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
-char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/version.txt";
+char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/pack_version.txt";
 char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
 char pack_version_local_filepath_beta[FS_MAX_PATH] = "/pack_version.txt";
 char subfolder_in_zip[FS_MAX_PATH] = "";
@@ -288,9 +288,9 @@ void refreshScreen(int cursor)
 {
 	consoleClear();
 	if (!beta_mode) {
-		printf("\x1B[36mAIO_LS_pack_Updater: v%s.\x1B[37m\n\n\n", APP_VERSION);
+		printf("\x1B[36mAIO_LS_pack_Updater v%s - par Shadow256 \x1B[37m\n\n\n", APP_VERSION);
 	} else {
-		printf("\x1B[31mAIO_LS_pack_Updater: v%s (BETA MODE)\x1B[37m\n\n", APP_VERSION);
+		printf("\x1B[31mAIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE\x1B[37m\n\n", APP_VERSION);
 	}
 	printf("Appuyez sur (A) pour selectionner une option\n\n");
 	printf("Appuyez sur (X) pour afficher diverses informations\n");
