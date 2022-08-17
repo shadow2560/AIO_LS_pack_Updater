@@ -1087,6 +1087,7 @@ int main(int argc, char **argv)
 			logs_console_clear();
 			switch_app_mode();
 			get_last_version_pack();
+			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);
 
