@@ -16,7 +16,7 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.2.5"
+#define APP_VERSION			 "3.2.6"
 #define CURSOR_LIST_MAX		 4
 #define UP_APP          0
 #define UP_CFW          1
@@ -53,7 +53,7 @@ char fusee_gelee_patch[15] = "inconnu";
 char console_model[50] = "inconnu";
 u64 console_id = 0;
 SetSysSerialNumber console_serial;
-bool sd_is_exfat = false;
+bool sd_is_exfat;
 bool console_is_erista = false;
 bool beta_mode = false;
 FsFileSystem *fs_sd;
@@ -138,6 +138,11 @@ u32 ParseHexInteger(const char *s) {
                 }
             }
         }
+
+bool isApplet() {
+	AppletType at = appletGetAppletType();
+	return at != AppletType_Application && at != AppletType_SystemApplication;
+}
 
 static int config_handler(void* config, const char* section, const char* name, const char* value)
 {
@@ -304,7 +309,7 @@ void refreshScreen(int cursor)
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
 		if (cursor == i) {
-			printf("\033[0;31m[X] %s\033[0;37m\n\n", OPTION_LIST[i]);
+			printf("\x1B[31m[X] %s\x1B[37m\n\n", OPTION_LIST[i]);
 		} else {
 			printf("[ ] %s\n\n", OPTION_LIST[i]);
 		}
@@ -388,7 +393,6 @@ s64 get_sd_size_left() {
 	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
 	// nsExit();
 		// printf("%ld\n", fs_sd_size);
-		fsIsExFatSupported(&sd_is_exfat);
 		return fs_sd_size;
 }
 
@@ -600,6 +604,11 @@ void display_infos() {
 	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
 	consoleSelect(&logs_console);
 	printf("Informations:\n\n");
+	if (isApplet()) {
+		printf("Homebrew en mode applet, utilisation non recommandee.\n");
+	} else {
+		printf("Le homebrew peut utiliser toute la RAM, utilisation recommandee.\n");
+	}
 	printf("Version actuelle du pack : %s\n", pack_version);
 	printf("Derniere version du pack : %s\n", last_pack_version);
 	printf("ID de la console : %li\n", console_id);
@@ -649,6 +658,11 @@ void record_infos() {
 		return;
 	}
 	fprintf(log_infos, "Informations:\n\n");
+	if (isApplet()) {
+		fprintf(log_infos, "Homebrew en mode applet, utilisation non recommandee.\n");
+	} else {
+		fprintf(log_infos, "Le homebrew peut utiliser toute la RAM, utilisation recommandee.\n");
+	}
 	fprintf(log_infos, "Version actuelle du pack : %s\n", pack_version);
 	fprintf(log_infos, "Derniere version du pack : %s\n", last_pack_version);
 	fprintf(log_infos, "ID de la console : %li\n", console_id);
@@ -665,13 +679,14 @@ void record_infos() {
 	}
 	fprintf(log_infos, "Modele de la console : %s\n", console_model);
 	fprintf(log_infos, "Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
-	/*
-	if (sd_is_exfat) {
-		fprintf(log_infos, "Formatage de la SD: EXFAT\n");
-	} else {
-		fprintf(log_infos, "Formatage de la SD: FAT32\n");
-	}
-	*/
+		// Result res;
+		// res = fsIsExFatSupported(&sd_is_exfat);
+		// fprintf(log_infos, "Exfat : %i - %d\n", sd_is_exfat, res);
+	// if (sd_is_exfat) {
+		// fprintf(log_infos, "Formatage de la SD: EXFAT\n");
+	// } else {
+		// fprintf(log_infos, "Formatage de la SD: FAT32\n");
+	// }
 	fprintf(log_infos, "Version actuelle du firmware : %s\n", firmware_version);
 	fprintf(log_infos, "Version actuelle d'Atmosphere : %s\n", atmosphere_version);
 	printf("Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\".");
@@ -849,6 +864,10 @@ int main(int argc, char **argv)
 	get_serial_number();
 	get_emunand_type();
 	remove(TEMP_FILE);
+
+	if (isApplet()) {
+		printf("\x1B[44m");
+	}
 
 	// main menu
 	refreshScreen(cursor);

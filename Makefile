@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	shadow256
-APP_VERSION := 	3.2.5
+APP_VERSION := 	3.2.6
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
