@@ -16,13 +16,13 @@
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.2.6"
+#define APP_VERSION			 "3.2.7"
 #define CURSOR_LIST_MAX		 4
-#define UP_APP          0
-#define UP_CFW          1
-#define UP_FW          2
-#define UP_90dns          3
-#define UP_atmo_protect_configs          4
+#define UP_APP		  0
+#define UP_CFW		  1
+#define UP_FW		  2
+#define UP_90dns		  3
+#define UP_atmo_protect_configs		  4
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -115,33 +115,74 @@ typedef struct
 
 // function directly taken from Atmosphere
 u32 ParseHexInteger(const char *s) {
-            u32 x = 0;
-            if (s[0] == '0' && s[1] == 'x') {
-                s += 2;
-            }
+			u32 x = 0;
+			if (s[0] == '0' && s[1] == 'x') {
+				s += 2;
+			}
 
-            while (true) {
-                const char c = *(s++);
+			while (true) {
+				const char c = *(s++);
 
-                if (c == '\x00') {
-                    return x;
-                } else {
-                    x <<= 4;
+				if (c == '\x00') {
+					return x;
+				} else {
+					x <<= 4;
 
-                    if ('0' <= c && c <= '9') {
-                        x |= (c - '0');
-                    } else if ('a' <= c && c <= 'f') {
-                        x |= (c - 'a') + 10;
-                    } else if ('A' <= c && c <= 'F') {
-                        x |= (c - 'A') + 10;
-                    }
-                }
-            }
-        }
+					if ('0' <= c && c <= '9') {
+						x |= (c - '0');
+					} else if ('a' <= c && c <= 'f') {
+						x |= (c - 'a') + 10;
+					} else if ('A' <= c && c <= 'F') {
+						x |= (c - 'A') + 10;
+					}
+				}
+			}
+		}
 
 bool isApplet() {
 	AppletType at = appletGetAppletType();
 	return at != AppletType_Application && at != AppletType_SystemApplication;
+}
+
+u32 get_battery_charge() {
+		u32 charge;
+	Result rc = psmInitialize();
+	if (!R_FAILED(rc)) {
+		rc = psmGetBatteryChargePercentage(&charge);
+		if (!R_FAILED(rc)) {
+			psmExit();
+			return(charge);
+		} else {
+			psmExit();
+			return -1;
+		}
+	}
+	return -1;
+}
+
+int GetChargerType() {
+	Result rc = psmInitialize();
+	if (!R_FAILED(rc)) {
+		PsmChargerType charger_type;
+		if (R_FAILED(rc = psmGetChargerType(&charger_type))) {
+			psmExit();;
+			return -1;
+		}
+		if (charger_type == PsmChargerType_EnoughPower) {
+			psmExit();;
+			return 0; // "Official charger or dock";
+		} else if (charger_type == PsmChargerType_LowPower) {
+			psmExit();;
+			return 1; // "USB-C charger";
+		} else if (charger_type == PsmChargerType_Unconnected) {
+			psmExit();;
+			return 2; // "Charger no connected";
+		} else {
+			psmExit();;
+			return 3; // "unknown result";
+		}
+	}
+	return -1;
 }
 
 static int config_handler(void* config, const char* section, const char* name, const char* value)
@@ -467,9 +508,9 @@ void get_fw_version() {
 		return;
 	}
 
-    char sysVersionBuffer[20];
+	char sysVersionBuffer[20];
 	snprintf(sysVersionBuffer, 20, "%u.%u.%u", ver.major, ver.minor, ver.micro);
-    snprintf(firmware_version, sizeof(firmware_version), "%s", sysVersionBuffer);
+	snprintf(firmware_version, sizeof(firmware_version), "%s", sysVersionBuffer);
 	setsysExit();
 }
 
@@ -581,7 +622,7 @@ bool ask_question(char *question_text) {
 	bool rc;
 	consoleSelect(&logs_console);
 	printf("%s\n", question_text);
-	printf("[A]: OUI          [B]: NON\n");
+	printf("[A]: OUI		  [B]: NON\n");
 	consoleUpdate(&logs_console);
 	while(1) {
 		padUpdate(&pad);
@@ -633,6 +674,13 @@ void display_infos() {
 	*/
 	printf("Version actuelle du firmware : %s\n", firmware_version);
 	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	if (GetChargerType() == 0) {
+		printf("Charge active, charge batterie : %d%%, type de chargeur : officiel", get_battery_charge());
+	} else if (GetChargerType() == 1) {
+		printf("Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel", get_battery_charge());
+	} else {
+		printf("Charge inactive, charge batterie : %d%%", get_battery_charge());
+	}
 	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
 	consoleUpdate(&logs_console);
 	/*
@@ -689,6 +737,14 @@ void record_infos() {
 	// }
 	fprintf(log_infos, "Version actuelle du firmware : %s\n", firmware_version);
 	fprintf(log_infos, "Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	if (GetChargerType() == 0) {
+		fprintf(log_infos, "Charge active, charge batterie : %d%%, type de chargeur : officiel", get_battery_charge());
+	} else if (GetChargerType() == 1) {
+		fprintf(log_infos, "Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel", get_battery_charge());
+	} else {
+		fprintf(log_infos, "Charge inactive, charge batterie : %d%%", get_battery_charge());
+	}
+	// fprintf(log_infos, "Infos batterie et chargeur : %i, %d%% %i", IsChargingEnabled(), get_battery_charge(), GetChargerType());
 	printf("Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\".");
 	consoleUpdate(&logs_console);
 	fclose(log_infos);
@@ -904,6 +960,27 @@ int main(int argc, char **argv)
 			{
 			case UP_FW:
 				consoleSelect(&logs_console);
+				if (GetChargerType() == 0 && get_battery_charge() < 10) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 10%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 20%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				}
 				bool update_firmware2 = false;
 				DIR *dir2;
 				update_firmware2 = ask_question("Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?");
@@ -934,6 +1011,27 @@ int main(int argc, char **argv)
 				break;
 			case UP_CFW:
 				consoleSelect(&logs_console);
+				if (GetChargerType() == 0 && get_battery_charge() < 20) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 20%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
+					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'être au-dessus de 30%% de batterie.");
+					consoleSelect(&menu_console);
+					break;
+				}
 				mkdir(APP_PATH, 0777);
 				bool update_firmware = false;
 				bool clean_theme = false;
