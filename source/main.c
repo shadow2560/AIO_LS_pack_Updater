@@ -421,6 +421,7 @@ void appExit()
 	appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
 	// hiddbgExit();
+	fsFsClose(fs_sd);
 	socketExit();
 	romfsExit();
 	consoleExit(&logs_console);
@@ -727,7 +728,11 @@ void record_infos() {
 	}
 	fprintf(log_infos, "Modele de la console : %s\n", console_model);
 	fprintf(log_infos, "Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+		// struct statvfs s;
+		// statvfs("payload.bin", &s);
+		// fprintf(log_infos, "%i\n", s.f_basetype);
 		// Result res;
+		// fprintf(log_infos, "%i\n", system("stat -f -c '%t' ./payload.bin > sdmc:/t.txt"));
 		// res = fsIsExFatSupported(&sd_is_exfat);
 		// fprintf(log_infos, "Exfat : %i - %d\n", sd_is_exfat, res);
 	// if (sd_is_exfat) {
