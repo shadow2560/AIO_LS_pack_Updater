@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h> // chdir
+#include <switch.h>
 
 #include "reboot.h"
 

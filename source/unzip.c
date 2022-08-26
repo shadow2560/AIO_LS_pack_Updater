@@ -120,12 +120,12 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 	remove("bootloader/res/background.bmp");
 	remove("config/nx-hbmenu/settings.cfg");
 	if (strcmp(hekate_nologo_file_path, "") != 0 && strcmp(hekate_nologo_file_path, "/") != 0) {
-		cp(hekate_nologo_file_path, "/bootloader/hekate_ipl.ini");
+		cp(hekate_nologo_file_path, (char*) "/bootloader/hekate_ipl.ini");
 	}
 	mkdir("/config", 0777);
 	mkdir("/config/nx-hbmenu", 0777);
 	mkdir("/config/nx-hbmenu/themes", 0777);
-	cp("romfs:/nologo/hbmenu_default_theme.cfg", "/config/nx-hbmenu/themes/theme.cfg");
+	cp((char*) "romfs:/nologo/hbmenu_default_theme.cfg", (char*) "/config/nx-hbmenu/themes/theme.cfg");
 }
 
 void fnc_clean_theme() {
@@ -215,7 +215,7 @@ void clean_sd(bool clean_theme) {
 }
 
 char * substr(char *s, int x, int y) {
-	char * ret = malloc(strlen(s) + 1);
+	char * ret = (char*) malloc(strlen(s) + 1);
 	char * p = ret;
 	char * q = &s[x];
 

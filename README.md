@@ -21,16 +21,14 @@ To build the project you have to download devkitPro, install devkitPro and follo
 ``cd ../aiosu-forwarder ``
 ``make``
 ``mv ./aiosu-forwarder.nro ../romfs/nro/aiosu-forwarder.nro``
-``cd ../daybreak-cli``
-``cp ../romfs/payload/ams_rcm.bin romfs/payload/ams_rcm.bin``
-make
-``mv ./daybreak-cli.nro ../romfs/nro/daybreak-cli.nro``
 ``cd ..``
 ``make``  
  
 ## Issues 🚩 
 
+* Can't use accents or special chars when printing to the screen.
 * Don't use special chars like accents in your files' name, included with files contained in your pack zip.
+* Can't detect if SD is in EXFAT or FAT32
 
 ## Credits 📜 
 
@@ -41,5 +39,8 @@ make
 - Thanks [HamletDuFromage](https://github.com/HamletDuFromage) for your help and for some code in [AIO_Switch_Updater](https://github.com/HamletDuFromage/AIO-switch-updater) and also for some other codes taken from your projects (get fw version, get Atmosphere version, etc...).
 - Thanks [ITotalJustice](https://github.com/ITotalJustice) for [sigpatch-updater](https://github.com/ITotalJustice/sigpatch-updater/)
 - Thanks [suchmememanyskill](https://github.com/suchmememanyskill) for [90dns-setter](https://github.com/suchmememanyskill/switch-90dns-setter/)
+- Thanks [dezem](https://github.com/dezem) for [Atmoxl-titel-installer](https://github.com/dezem/AtmoXL-Titel-Installer)
+- Thank [XorTroll](https://github.com/XorTroll) for [Goldleaf](https://github.com/XorTroll/Goldleaf)
+- Thanks The-4n for the [Homebrew Menu forwarders](https://gbatemp.net/threads/homebrew-menu-loader-legal-nsp.518433/) that I have recompiled with the last version of the HB Loader with his tools
 - Thanks [shadow2560](https://github.com/shadow2560/) for his [pack](https://github.com/shadow2560/switch_AIO_LS_pack)
 - And thanks to the others that I may have forgotten.

@@ -39,13 +39,13 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	shadow256
-APP_VERSION := 	3.2.7
+APP_VERSION := 	3.3.0
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source lib/zipper/source
+SOURCES		:=	source source/contents_install source/contents_install/data source/contents_install/es source/contents_install/hos source/contents_install/install source/contents_install/ncm source/contents_install/ns source/contents_install/nx source/contents_install/nx/ipc source/contents_install/util source/firmwares_install
 DATA		:=	data
-INCLUDES	:=	includes lib/zipper/include
+INCLUDES	:=	includes includes/contents_install include/contents_install/data include/contents_install/es include/contents_install/hos include/contents_install/install include/contents_install/ncm include/contents_install/ns include/contents_install/nx include/contents_install/nx/ipc include/contents_install/util includes/firmwares_install
 ROMFS		:=	romfs
 
 #---------------------------------------------------------------------------------
@@ -56,14 +56,14 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++17
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:=  -lcurl -lminizip -lz -lnx
+LIBS	:=  -lcurl -lminizip -lz -lnx -lmbedtls -lmbedcrypto -lmbedx509 -lstdc++fs -lzzip -lzstd
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
