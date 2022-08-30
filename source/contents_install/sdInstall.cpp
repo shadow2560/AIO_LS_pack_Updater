@@ -38,8 +38,6 @@ SOFTWARE.
 #include "util/config.hpp"
 #include "util/util.hpp"
 
-extern PrintConsole logs_console;
-
 namespace nspInstStuff {
 
     bool installNspFromFile(std::vector<std::filesystem::path> ourTitleList, int whereToInstall) {
@@ -50,8 +48,7 @@ namespace nspInstStuff {
             auto& file = ourTitleList[i];
             std::string itm = file.filename().string();
             if (inst::util::isTitleInstalled(itm, installedTitles)) {
-                printf("Already installed, reinstalling...\n");
-				consoleUpdate(&logs_console);
+                LOG_DEBUG("Already installed, reinstalling...\n");
 				continue;
             }
         }

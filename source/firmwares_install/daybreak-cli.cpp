@@ -24,7 +24,9 @@
 #include <switch.h>
 #include "ams_su.h"
 #include "daybreak-cli.hpp"
+#include "translate.h"
 
+extern lng language_vars;
 extern PrintConsole logs_console;
 
 const char app_version[] = "2.0.0";
@@ -67,7 +69,8 @@ AsyncResult m_prepare_result;
 float m_progress_percent = 0.0f;
 
 void custom_pause() {
-	printf("Appuyez sur \"A\" pour continuer...\n");
+	printf(language_vars.lng_db_pause);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
 		padUpdate(&daybreak_pad);
@@ -128,7 +131,8 @@ bool DaybreakInitializeMenu() {
 	/* Attempt to get the exosphere version. */
 	u64 version;
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereApiVersionConfigItem), &version))) {
-		printf("Atmosphere non trouve, Daybreak requiere Atmosphere. %d", rc);
+		printf(language_vars.lng_db_atmosphere_not_found_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
@@ -140,14 +144,16 @@ bool DaybreakInitializeMenu() {
 	/* Validate the exosphere version. */
 	const bool ams_supports_sysupdate_api = EncodeVersion(version_major, version_minor, version_micro) >= EncodeVersion(0, 14, 0);
 	if (!ams_supports_sysupdate_api) {
-		printf("Version d'Atmosphere depassee, Daybreak requiere Atmosphere 0.14.0 ou superieure. %d", rc);
+		printf(language_vars.lng_db_atmosphere_outdated_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
 
 	/* Ensure DayBreak is ran as a NRO. */
 	if (envIsNso()) {
-		printf("Environment non supporte, Lancez Daybreak via le Homebrew menu. %d", rc);
+		printf(language_vars.lng_db_nso_launch_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
@@ -170,21 +176,27 @@ Result GetUpdateInformation() {
 	/* Attempt to get the update information. */
 	if (R_FAILED(rc = amssuGetUpdateInformation(&m_update_info, g_update_path))) {
 		if (rc == 0x1a405) {
-			printf("Aucune mise a jour trouvee dans le dossier.\nassurez-vous que vos ncas sont nommes correctement!\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_update_not_found_error, rc);
+			printf("\n");
 		} else {
-			printf("Echec de recuperation des informations de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_get_update_infos_error, rc);
+			printf("\n");
 		}
 		custom_pause();
 		return rc;
 	}
 	/* Print update information. */
-	printf("- Version: %d.%d.%d\n", (m_update_info.version >> 26) & 0x1f, (m_update_info.version >> 20) & 0x1f, (m_update_info.version >> 16) & 0xf);
+	printf(language_vars.lng_db_update_infos_fw_version, (m_update_info.version >> 26) & 0x1f, (m_update_info.version >> 20) & 0x1f, (m_update_info.version >> 16) & 0xf);
+	printf("\n");
 	if (m_update_info.exfat_supported) {
-		printf("- exFAT: Supporte\n");
+		printf(language_vars.lng_db_update_infos_exfat_support);
+		printf("\n");
 	} else {
-		printf("- exFAT: Non supporte\n");
+		printf(language_vars.lng_db_update_infos_exfat_no_support);
+		printf("\n");
 	}
-	printf("- Firmware variations: %d\n", m_update_info.num_firmware_variations);
+	printf(language_vars.lng_db_update_infos_fw_version_variations, m_update_info.num_firmware_variations);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	/* Mark as having obtained update info. */
 	m_has_info = true;
@@ -196,19 +208,23 @@ void ValidateUpdate() {
 
 	/* Validate the update. */
 	if (R_FAILED(rc = amssuValidateUpdate(&m_validation_info, g_update_path))) {
-		printf("Echec de la validation de la mise a jour.\nResult: 0x%08x\n", rc);
+		printf(language_vars.lng_db_update_validation_error, rc);
+		printf("\n");
 		custom_pause();
 		return;
 	}
 
 	/* Check the result. */
 	if (R_SUCCEEDED(m_validation_info.result)) {
-		printf("La mise a jour est valide!\n");
+		printf(language_vars.lng_db_update_validation_success);
+		printf("\n");
 
 		if (R_FAILED(m_validation_info.exfat_result)) {
 		   const u32 version = m_validation_info.invalid_key.version;
-			printf("Echec de la validation de l'exFAT avec le resultat: 0x%08x\n", m_validation_info.exfat_result);
-			printf("Contenu manquant:\n- Program id: %016lx\n- Version: %d.%d.%d\n", m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+			printf(language_vars.lng_db_update_validation_exfat_error, m_validation_info.exfat_result);
+			printf("\n");
+			printf(language_vars.lng_db_update_validation_missing_content, m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+			printf("\n");
 
 			/* Log the missing content id. */
 			printf("- Content id: ");
@@ -220,8 +236,10 @@ void ValidateUpdate() {
 	} else {
 		/* Log the missing content info. */
 		const u32 version = m_validation_info.invalid_key.version;
-		printf("Echec de la validation avec le resultat: 0x%08x\n", m_validation_info.result);
-		printf("Contenu manquant:\n- Program id: %016lx\n- Version: %d.%d.%d\n", m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+		printf(language_vars.lng_db_update_validation_content_error, m_validation_info.result);
+		printf("\n");
+		printf(language_vars.lng_db_update_validation_missing_content, m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+		printf("\n");
 
 		/* Log the missing content id. */
 		printf("- Content id: ");
@@ -244,34 +262,40 @@ Result TransitionUpdateState() {
 	if (m_install_state == InstallState::NeedsSetup) {
 		/* Setup the update. */
 		if (R_FAILED(rc = amssuSetupUpdate(nullptr, UpdateTaskBufferSize, g_update_path, g_use_exfat))) {
-			printf("Echec durant la mise en place de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_setup_error, rc);
+			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
 
 		/* Log setup completion. */
-		printf("Mise a jour mise en place.\n");
+		printf(language_vars.lng_db_install_process_setup_success);
+		printf("\n");
 		m_install_state = InstallState::NeedsPrepare;
 	} else if (m_install_state == InstallState::NeedsPrepare) {
 		/* Request update preparation. */
 		if (R_FAILED(rc = amssuRequestPrepareUpdate(&m_prepare_result))) {
-			printf("Echec de la requete de preparation de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_request_preparation_error, rc);
+			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
 
 		/* Log awaiting prepare. */
-		printf("Preparation de la mise a jour...\n");
+		printf(language_vars.lng_db_install_process_preparing);
+		printf("\n");
 		m_install_state = InstallState::AwaitingPrepare;
 	} else if (m_install_state == InstallState::AwaitingPrepare) {
 		/* Check if preparation has a result. */
 		if (R_FAILED(rc = asyncResultWait(&m_prepare_result, 0)) && rc != 0xea01) {
-			printf("Echec de la recuperation du resultat de la preparation de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_get_preparation_result_error, rc);
+			printf("\n");
 			MarkForReboot();
 			return rc;
 		} else if (R_SUCCEEDED(rc)) {
 			if (R_FAILED(rc = asyncResultGet(&m_prepare_result))) {
-				printf("Echec de la preparation de la mise a jour.\nResult: 0x%08x\n", rc);
+				printf(language_vars.lng_db_install_process_preparation_error, rc);
+				printf("\n");
 				MarkForReboot();
 				return rc;
 			}
@@ -280,14 +304,19 @@ Result TransitionUpdateState() {
 		/* Check if the update has been prepared. */
 		bool prepared;
 		if (R_FAILED(rc = amssuHasPreparedUpdate(&prepared))) {
-			printf("Echec de la verification pour savoir si la mise a jour a bien ete preparee.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_preparation_result_error, rc);
+			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
 
 		/* Mark for application if preparation complete. */
 		if (prepared) {
-			printf("\nPreparation de la mise a jour effectuee.\nApplication de la mise a jour...\n");
+			printf("\n");
+			printf(language_vars.lng_db_install_process_preparation_success);
+			printf("\n");
+			printf(language_vars.lng_db_install_process_applying_update);
+			printf("\n");
 			m_install_state = InstallState::NeedsApply;
 			return rc;
 		}
@@ -295,7 +324,8 @@ Result TransitionUpdateState() {
 		/* Check update progress. */
 		NsSystemUpdateProgress update_progress = {};
 		if (R_FAILED(rc = amssuGetPrepareUpdateProgress(&update_progress))) {
-			printf("Echec de la verification de la progression de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_get_progress_error, rc);
+			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
@@ -317,28 +347,33 @@ Result TransitionUpdateState() {
 	} else if (m_install_state == InstallState::NeedsApply) {
 		/* Apply the prepared update. */
 		if (R_FAILED(rc = amssuApplyPreparedUpdate())) {
-			printf("Echec de l'application de la mise a jour.\nResult: 0x%08x\n", rc);
+			printf(language_vars.lng_db_install_process_applying_update_error, rc);
+			printf("\n");
 		} else {
 			/* Log success. */
-			printf("Application de la mise a jour effectuee.\n");
+			printf(language_vars.lng_db_install_process_success);
+			printf("\n");
 
 			if (g_reset_to_factory) {
 				if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
 					/* Fallback on ResetToFactorySettings. */
 					if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
 						if (R_FAILED(rc = nsResetToFactorySettings())) {
-							printf("Echec de la reinitialisation d'usine de la console.\nResult: 0x%08x\n", rc);
+							printf(language_vars.lng_db_install_process_reset_to_factory_error, rc);
+							printf("\n");
 							MarkForReboot();
 							return rc;
 						}
 					} else {
-						printf("Echec de la reinitialisation complete d'usine de la console.\nResult: 0x%08x\n", rc);
+						printf(language_vars.lng_db_install_process_reset_to_factory_for_refurbishment_error, rc);
+						printf("\n");
 						MarkForReboot();
 						return rc;
 					}
 				}
 
-				printf("Reinitialisation d'usine effectuee.%d\n", rc);
+				printf(language_vars.lng_db_install_process_reset_to_factory_success, rc);
+				printf("\n");
 			}
 		}
 
@@ -352,7 +387,11 @@ Result TransitionUpdateState() {
 bool daybreak_ask_question(char *question_text) {
 	bool rc;
 	printf("%s\n", question_text);
-	printf("[A]: Oui          [B]: Non\n");
+	printf("	[A]: ");
+	printf(language_vars.lng_yes);
+	printf("		  [B]: ");
+	printf(language_vars.lng_no);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
 		padUpdate(&daybreak_pad);
@@ -370,12 +409,14 @@ bool daybreak_ask_question(char *question_text) {
 
 bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exfat, int force_unsuported_firmware) {
 	DaybreakAppInit();
-	printf("Daybreak-cli %s par shadow256, largement basee sur Daybreak  d'Atmosphere.", app_version);
+	printf(language_vars.lng_db_title, app_version);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	padInitializeDefault(&daybreak_pad);
 	if (!DaybreakInitializeMenu()) {
-		printf("Erreur durant le processus d'initialisation.\n");
+		printf(language_vars.lng_db_init_failed_error);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
@@ -384,25 +425,29 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	u64 has_rcm_bug_patch;
 	u64 is_emummc;
 	if (R_FAILED(rc = splGetConfig(SplConfigItem_HardwareType, &hardware_type))) {
-		printf("Echec de la recuperation du type de materiel. %d\n", rc);
+		printf(language_vars.lng_db_get_hardware_type_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
 	
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereHasRcmBugPatch), &has_rcm_bug_patch))) {
-		printf("Echec de la recuperation du statut du bug RCM. %d\n", rc);
+		printf(language_vars.lng_db_get_rcm_bug_patch_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
-		printf("Echec de la recuperation du status de l'emuMMC. %d\n", rc);
+		printf(language_vars.lng_db_get_emummc_status_error, rc);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
 	/* Warn if we're working with a patched unit. */
 	const bool is_erista = hardware_type == 0 || hardware_type == 1;
 	if (is_erista && has_rcm_bug_patch && !is_emummc) {
-		printf("Attention: Modele patche detecte, Vous pourriez bruler des Efuses ou rendre la console  inutilisable.\n");
+		printf(language_vars.lng_db_patched_model_warning);
+		printf("\n");
 		consoleUpdate(&logs_console);
 	}
 	snprintf(g_update_path, sizeof(g_update_path), "%s", current_path);
@@ -410,7 +455,8 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Obtain update information. */
 	if (!R_FAILED(GetUpdateInformation())) {
 		/* Log this early so it is printed out before validation causes stalling. */
-		printf("Validation de la mise a jour, cela peut prendre du temps...\n");
+		printf(language_vars.lng_db_update_validation);
+		printf("\n");
 		consoleUpdate(&logs_console);
 	}
 	/* Perform validation if it hasn't been done already. */
@@ -419,7 +465,8 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
-		printf("Echec de la validation de la mise a jour.\n");
+		printf(language_vars.lng_db_update_validation_failed_error);
+		printf("\n");
 		custom_pause();
 		return false;
 	}
@@ -432,24 +479,26 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	if (g_exfat_supported && force_exfat == 1) {
 		g_use_exfat = true;
 	} else if (g_exfat_supported && force_exfat == 0) {
-		g_use_exfat = daybreak_ask_question((char *) "Souhaitez-vous installer le driver EXFAT (recommande)?");
+		g_use_exfat = daybreak_ask_question((char *) language_vars.lng_db_ask_exfat_driver_install);
 	} else {
 		g_use_exfat = false;
 	}
 	bool choose_fat32_forced = false;
 	if (!g_exfat_supported && g_use_exfat) {
-		choose_fat32_forced = daybreak_ask_question((char *) "Ce firmware  ne supporte pas l'EXFAT, souhaitez-vous n'utiliser que le FAT32?");
+		choose_fat32_forced = daybreak_ask_question((char *) language_vars.lng_db_ask_fat32_if_exfat_not_supported);
 		if (choose_fat32_forced) {
 			g_use_exfat = false;
 		} else {
-			printf("Mise a jour annulee.");
+			printf(language_vars.lng_db_update_canceled);
+			printf("\n");
 			custom_pause();
 			return false;
 		}
 	}
 	/* Warn the user if they're updating with exFAT supposed to be supported but not present/corrupted. */
 	if (g_use_exfat == true && m_update_info.exfat_supported && R_FAILED(m_validation_info.exfat_result)) {
-		printf("Erreur: Le firmware EXFAT est manquant ou corrompu.\n");
+		printf(language_vars.lng_db_exfat_forced_but_not_supported_error);
+		printf("\n");
 		custom_pause();
 		return false;
 		
@@ -459,16 +508,18 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	bool force_update_not_supported = false;
 	if (EncodeVersion((version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf) > g_supported_version) {
 		if (force_unsuported_firmware == 1) {
-			printf("Forcage de la mise a jour sur un firmware non supportee active.");
+			printf(language_vars.lng_db_force_unsupported_firmware_enabled);
+			printf("\n");
 			consoleUpdate(&logs_console);
 			force_update_not_supported = true;
 		} else if (force_unsuported_firmware == 0) {
-			force_update_not_supported = daybreak_ask_question((char *) "Ce firmware est trop recent et n'est pas encore supporte.\nVoulez-vous l'installer malgre tout?");
+			force_update_not_supported = daybreak_ask_question((char *) language_vars.lng_db_ask_force_unsupported_firmware_install);
 		} else {
 			force_update_not_supported = false;
 		}
 		if (!force_update_not_supported) {
-			printf("Erreur: Ce firmware est trop recent et n'est pas force a l'installation, la mise a jour est annulee.\n");
+			printf(language_vars.lng_db_firmware_not_supported_and_force_install_disabled);
+			printf("\n");
 			custom_pause();
 			return false;
 		}
@@ -485,9 +536,11 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	*/
 	if (force_reset_to_factory == 1) {
+		printf(language_vars.lng_db_reset_to_factory_forced);
+		printf("\n");
 		g_reset_to_factory = true;
 	} else if (force_reset_to_factory == 0) {
-		g_reset_to_factory = daybreak_ask_question((char *) "Souhaitez-vous reinitialiser la console d'usine?");
+		g_reset_to_factory = daybreak_ask_question((char *) language_vars.lng_db_ask_reset_to_factory);
 	} else {
 		g_reset_to_factory = false;
 	}
@@ -497,7 +550,8 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	m_install_state = InstallState::NeedsDraw;
 	/* We have drawn now, allow setup to occur. */
 	if (m_install_state == InstallState::NeedsDraw) {
-		printf("Debut de la mise en place de la mise a jour...\n");
+		printf(language_vars.lng_db_install_update_begin);
+		printf("\n");
 		consoleUpdate(&logs_console);
 		m_install_state = InstallState::NeedsSetup;
 	}

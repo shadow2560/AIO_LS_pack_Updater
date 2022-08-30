@@ -9,10 +9,12 @@
 #include <switch.h>
 
 #include "download.h"
+#include "translate.h"
 
 #define API_AGENT "PoloNX"
 #define _1MiB   0x100000
 
+extern lng language_vars;
 extern PrintConsole logs_console;
 
 static time_t prevtime;
@@ -62,9 +64,11 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
 			if (dif > 1.2f) {
-				printf("* Telechargement: %.2fMB a %.2f MB/s *\r", dlnow / _1MiB, (dlnow - dlold) / dif);
+				printf(language_vars.lng_dl_progress_0, dlnow / _1MiB, (dlnow - dlold) / dif);
+				printf("\r");
 			} else {
-				printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
+				printf(language_vars.lng_dl_progress_1, dlnow / _1MiB);
+				printf("\r");
 			}
 		} else {
 			int numberOfEqual = (dlnow * 100) / dltotal / 10;
@@ -76,9 +80,11 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 				printf(" ");
 			}
 			if (dif > 1.2f) {
-				printf("]   Telechargement: %.2fMB sur %.2fMB a %.2f MB/s *", dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
+				printf("]   ");
+				printf(language_vars.lng_dl_progress_with_bar_0, dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
 			} else {
-				printf("]   Telechargement: %.2fMB sur %.2fMB *", dlnow / _1MiB, dltotal / _1MiB);
+				printf("]   ");
+				printf(language_vars.lng_dl_progress_with_bar_1, dlnow / _1MiB, dltotal / _1MiB);
 			}
 		}
 		consoleUpdate(&logs_console);
@@ -89,34 +95,11 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 	return 0;
 }
 
-int download_progress2(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
-	struct timeval tv = {0};
-	gettimeofday(&tv, NULL);
-	int counter = round(tv.tv_usec / 100000);
-
-	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
-		if (dltotal <= 0.0) {
-				printf("* Telechargement: %.2fMB *\r", dlnow / _1MiB);
-		} else {
-			int numberOfEqual = (dlnow * 100) / dltotal / 10;
-			printf("\r* [");
-			for (int i = 0; i < numberOfEqual; i++) {
-				printf("=");
-			}
-			for (int i = 0; i < 10 - numberOfEqual; i++) {
-				printf(" ");
-			}
-				printf("]   Telechargement: %.2fMB sur %.2fMB *", dlnow / _1MiB, dltotal / _1MiB);
-		}
-		consoleUpdate(&logs_console);
-	}
-
-	return 0;
-}
-
 bool downloadFile(const char *url, const char *output, int api, bool display_log) {
 	if (display_log) {
-		printf("\n\033[0;32mTelechargement de\n%s\nVeuillez patienter...\033[0;37m\n", url);
+		printf("\n\033[0;32m");
+		printf(language_vars.lng_dl_begin, url);
+		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
 	curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -158,7 +141,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			if (chunk.offset) {
 				if (chunk.offset != fwrite(chunk.data, 1, chunk.offset, fp)) {
 					if (display_log) {
-						printf("\033[0;31mErreur d'ecriture du fichier telecharge, verifiez l'espace libre sur la SD.\033[0;37m\n");
+						printf("\033[0;31m");
+						printf(language_vars.lng_dl_file_write_error);
+						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
 					}
 					curl_easy_cleanup(curl);
@@ -177,13 +162,17 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			fclose(fp);
 			if (res == CURLE_OK) {
 				if (display_log) {
-					printf("\n\n\033[0;32mTelechargement complete\033[0;37m\n\n");
+					printf("\n\n\033[0;32m");
+					printf(language_vars.lng_dl_success);
+					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
 				return true;
 			} else {
 				if (display_log) {
-					printf("\n\n\033[0;31mErreur Durant le telechargement, verifiez votre connexion internet ainsi que l'espace restant sur votre SD puis tentez de relancer le telechargement.\033[0;37m\n\n");
+					printf("\n\n\033[0;31m");
+					printf(language_vars.lng_dl_dl_error);
+					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
 				return false;
@@ -191,7 +180,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		} else {
 			curl_easy_cleanup(curl);
 			if (display_log) {
-				printf("\n\n\033[0;31mErreur d'ouverture du fichier temporaire, tentez de relancer le telechargement.\033[0;37m\n\n");
+				printf("\n\n\033[0;31m");
+				printf(language_vars.lng_dl_open_temp_file_error);
+				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
 			curl_global_cleanup();
@@ -199,7 +190,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		}
 	} else {
 		if (display_log) {
-			printf("\n\n\033[0;31mErreur, l'initialisation de curl a echouee, tentez de relancer le telechargement.\033[0;37m\n\n");
+			printf("\n\n\033[0;31m");
+			printf(language_vars.lng_dl_curl_init_error);
+			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
 		}
 		curl_global_cleanup();

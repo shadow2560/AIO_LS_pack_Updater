@@ -12,15 +12,17 @@
 #include "reboot.h"
 #include "ini.h"
 #include "firmwares_install/daybreak-cli.hpp"
+#include "translate.h"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
 
+lng language_vars;
 #define ROOT					"/"
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "3.3.0"
+#define APP_VERSION			 "4.0.1"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -50,14 +52,14 @@ char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 int exit_mode_param = 0;
 int exit_mode_param_beta = 0;
 
-char pack_version[15] = "inconnue";
-char last_pack_version[15] = "inconnue";
-char firmware_version[50] = "inconnue";
-char atmosphere_version[50] = "inconnue";
-char emummc_value[10] = "inconnue";
-char emummc_type[10] = "inconnu";
-char fusee_gelee_patch[15] = "inconnu";
-char console_model[50] = "inconnu";
+char pack_version[15];
+char last_pack_version[15];
+char firmware_version[50];
+char atmosphere_version[50];
+char emummc_value[10];
+char emummc_type[10];
+char fusee_gelee_patch[15];
+char console_model[50];
 u64 console_id = 0;
 SetSysSerialNumber console_serial;
 bool sd_is_exfat;
@@ -79,12 +81,12 @@ custom_font->tileHeight=;
 
 const char *OPTION_LIST[] =
 {
-	"= Mise a jour de l'application",
-	"= Mise a jour du pack",
-	"= Mise a jour du firmware",
-	"= Installation de l'icone du Homebrew Menu (recommande si vous le l'avez pas)",
-	"= Application de la protection DNS sur tous les reseaux Wifi deja configures",
-	"= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"
+	language_vars.lng_update_app_menu,
+	language_vars.lng_update_pack_menu,
+	language_vars.lng_update_firmware_menu,
+	language_vars.lng_update_hbmenu_menu,
+	language_vars.lng_set_90dns_menu,
+	language_vars.lng_protect_console_menu
 };
 
 // define a structure for holding the values in "config" section of the ini file.
@@ -351,11 +353,11 @@ void get_emunand_type() {
 		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
 			if (emummc_config.e1.sector == 0) {
 				if (strcmp(emummc_config.e1.path, "") != 0) {
-					strcpy(emummc_type, "fichiers");
+					strcpy(emummc_type, language_vars.lng_files);
 					free((void*)emummc_config.e1.path);
 				}
 			} else {
-				strcpy(emummc_type, "partition");
+				strcpy(emummc_type, language_vars.lng_partition);
 			}
 		}
 	}
@@ -366,25 +368,33 @@ void refreshScreen(int cursor)
 {
 	consoleClear();
 	if (!beta_mode) {
-		printf("\x1B[36mAIO_LS_pack_Updater v%s - par Shadow256 \x1B[37m\n\n\n", APP_VERSION);
+		printf("\x1B[36m");
+		printf(language_vars.lng_title, APP_VERSION);
 	} else {
-		printf("\x1B[31mAIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE\x1B[37m\n\n", APP_VERSION);
+		printf("\x1B[31m");
+		printf(language_vars.lng_title_beta, APP_VERSION);
 	}
-	printf("Appuyez sur (A) pour selectionner une option\n\n");
-	printf("Appuyez sur (X) pour afficher diverses informations\n");
-	printf("Appuyez sur (Y) pour enregistrer diverses informations dans un fichier\n");
+	printf("\x1B[37m\n\n");
+	printf(language_vars.lng_a_menu);
+	printf("\n\n");
+	printf(language_vars.lng_x_menu);
+	printf("\n");
+	printf(language_vars.lng_y_menu);
+	printf("\n");
 	if (!beta_mode) {
-		printf("Appuyez sur (-) pour passer en mode beta\n\n");
+		printf(language_vars.lng_minus_menu);
 	} else {
-		printf("Appuyez sur (-) pour passer en mode stable\n\n");
+		printf(language_vars.lng_minus_menu_beta);
 	}
-	printf("Appuyez sur (+) pour quitter l'application\n\n");
+	printf("\n\n");
+	printf(language_vars.lng_plus_menu);
+	printf("\n\n");
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
 		if (cursor == i) {
-			printf("\x1B[31m[X] %s\x1B[37m\n\n", OPTION_LIST[i]);
+			printf("\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
 		} else {
-			printf("[ ] %s\n\n", OPTION_LIST[i]);
+			printf("%s\n\n", OPTION_LIST[i]);
 		}
 	}
 	consoleUpdate(&menu_console);
@@ -592,25 +602,15 @@ void get_fusee_gelee_exploit() {
 	}
 	console_is_erista = hardware_type == 0 || hardware_type == 1;
 	if (console_is_erista && !has_rcm_bug_patch) {
-		strcpy(console_model, "Switch Erista non patchee");
-		strcpy(fusee_gelee_patch, "Utilisable");
+		strcpy(fusee_gelee_patch, language_vars.lng_usable);
 	} else {
-		strcpy(console_model, "Switch Erista patchee");
-		strcpy(fusee_gelee_patch, "Non utilisable");
+		strcpy(fusee_gelee_patch, language_vars.lng_not_usable);
 	}
 	if (hardware_type == 0) {
-		if (!has_rcm_bug_patch) {
-			strcpy(console_model, "Switch Erista Icosa non patchee");
-		} else {
-			strcpy(console_model, "Switch Erista Icosa patchee");
-		}
+		strcpy(console_model, "Switch Erista Icosa");
 	}
 	if (hardware_type == 0) {
-		if (!has_rcm_bug_patch) {
-			strcpy(console_model, "Switch Erista Copper non patchee");
-		} else {
-			strcpy(console_model, "Switch Erista Copper patchee");
-		}
+		strcpy(console_model, "Switch Erista Copper");
 	}
 	if (hardware_type == 2) {
 		strcpy(console_model, "Switch Mariko Hoag");
@@ -651,7 +651,11 @@ bool ask_question(char *question_text) {
 	bool rc;
 	consoleSelect(&logs_console);
 	printf("%s\n", question_text);
-	printf("[A]: OUI		  [B]: NON\n");
+	printf("	[A]: ");
+	printf(language_vars.lng_yes);
+	printf("		  [B]: ");
+	printf(language_vars.lng_no);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
 		padUpdate(&pad);
@@ -673,55 +677,49 @@ void display_infos() {
 	// consoleInit(&infos_console);
 	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
 	consoleSelect(&logs_console);
-	printf("Informations:\n\n");
+	printf(language_vars.lng_infos_begin);
+	printf("\n\n");
 	if (isApplet()) {
-		printf("Homebrew en mode applet, utilisation non recommandee.\n");
+		printf(language_vars.lng_infos_is_applet);
 	} else {
-		printf("Le homebrew peut utiliser toute la RAM, utilisation recommandee.\n");
+		printf(language_vars.lng_infos_is_not_applet);
 	}
-	printf("Version actuelle du pack : %s\n", pack_version);
-	printf("Derniere version du pack : %s\n", last_pack_version);
-	printf("ID de la console : %li\n", console_id);
+	printf("\n");
+	printf(language_vars.lng_infos_pack_version, pack_version);
+	printf("\n");
+	printf(language_vars.lng_infos_last_pack_version, last_pack_version);
+	printf("\n");
+	printf(language_vars.lng_infos_console_id, console_id);
+	printf("\n");
 	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
-		printf("Numero de serie de la console  indetectable, Incognito est actif.\n");
+		printf(language_vars.lng_infos_serial_incognito);
 	} else {
-		printf("Numero de serie de la console : %s\n", console_serial.number);
+		printf(language_vars.lng_infos_serial, console_serial.number);
 	}
+	printf("\n");
 	if (strcmp(emummc_value, "Emunand") != 0) {
-		printf("Type de systeme : %s\n", emummc_value);
+		printf(language_vars.lng_infos_sysnand, emummc_value);
 	} else {
-		printf("Type de systeme : %s via %s\n", emummc_value, emummc_type);
+		printf(language_vars.lng_infos_emunand, emummc_value, emummc_type);
 	}
-	printf("Modele de la console : %s\n", console_model);
-	printf("Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
-	/*
-	if (sd_is_exfat) {
-		printf("Formatage de la SD: EXFAT\n");
-	} else {
-		printf("Formatage de la SD: FAT32\n");
-	}
-	*/
-	printf("Version actuelle du firmware : %s\n", firmware_version);
-	printf("Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	printf("\n");
+	printf(language_vars.lng_infos_console_model, console_model);
+	printf("\n");
+	printf(language_vars.lng_infos_fusee_gelee_patch, fusee_gelee_patch);
+	printf("\n");
+	printf(language_vars.lng_infos_actual_firmware_version, firmware_version);
+	printf("\n");
+	printf(language_vars.lng_infos_actual_atmosphere_version, atmosphere_version);
+	printf("\n");
 	if (GetChargerType() == 0) {
-		printf("Charge active, charge batterie : %d%%, type de chargeur : officiel\n", get_battery_charge());
+		printf(language_vars.lng_infos_official_charge, get_battery_charge());
 	} else if (GetChargerType() == 1) {
-		printf("Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel\n", get_battery_charge());
+		printf(language_vars.lng_infos_usb_charge, get_battery_charge());
 	} else {
-		printf("Charge inactive, charge batterie : %d%%\n", get_battery_charge());
+		printf(language_vars.lng_infos_no_charge, get_battery_charge());
 	}
-	// printf("Appuyez sur \"B\" pour revenir au menu principal.\n");
+	printf("\n");
 	consoleUpdate(&logs_console);
-	/*
-	while(1) {
-		padUpdate(&pad);
-		u64 kDown = padGetButtonsDown(&pad);
-		if (kDown & HidNpadButton_B) {
-			break;
-		}
-	}
-	*/
-	// consoleExit(&infos_console);
 	consoleSelect(&menu_console);
 }
 
@@ -730,32 +728,41 @@ void record_infos() {
 	FILE *log_infos;
 	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
 	if ( log_infos == NULL ) {
-		printf("Le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\" n'a pas pu etre enregistre.");
+		printf(language_vars.lng_record_infos_log_not_open_error);
+		printf("\n");
 		consoleUpdate(&logs_console);
 		return;
 	}
-	fprintf(log_infos, "Informations:\n\n");
+	fprintf(log_infos, language_vars.lng_infos_begin);
+	fprintf(log_infos, "\n\n");
 	if (isApplet()) {
-		fprintf(log_infos, "Homebrew en mode applet, utilisation non recommandee.\n");
+		fprintf(log_infos, language_vars.lng_infos_is_applet);
 	} else {
-		fprintf(log_infos, "Le homebrew peut utiliser toute la RAM, utilisation recommandee.\n");
+		fprintf(log_infos, language_vars.lng_infos_is_not_applet);
 	}
-	fprintf(log_infos, "Version actuelle du pack : %s\n", pack_version);
-	fprintf(log_infos, "Derniere version du pack : %s\n", last_pack_version);
-	fprintf(log_infos, "ID de la console : %li\n", console_id);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_pack_version, pack_version);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_last_pack_version, last_pack_version);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_console_id, console_id);
+	fprintf(log_infos, "\n");
 	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
-		fprintf(log_infos, "Numero de serie de la console  indetectable, Incognito est actif.\n");
+		fprintf(log_infos, language_vars.lng_infos_serial_incognito);
 	} else {
-		fprintf(log_infos, "Numero de serie de la console : %s\n", console_serial.number);
-		
+		fprintf(log_infos, language_vars.lng_infos_serial, console_serial.number);
 	}
+	fprintf(log_infos, "\n");
 	if (strcmp(emummc_value, "Emunand") != 0) {
-		fprintf(log_infos, "Type de systeme : %s\n", emummc_value);
+		fprintf(log_infos, language_vars.lng_infos_sysnand, emummc_value);
 	} else {
-		fprintf(log_infos, "Type de systeme : %s via %s\n", emummc_value, emummc_type);
+		fprintf(log_infos, language_vars.lng_infos_emunand, emummc_value, emummc_type);
 	}
-	fprintf(log_infos, "Modele de la console : %s\n", console_model);
-	fprintf(log_infos, "Etat de l'exploit Fusee Gelee : %s\n", fusee_gelee_patch);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_console_model, console_model);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_fusee_gelee_patch, fusee_gelee_patch);
+	fprintf(log_infos, "\n");
 		// struct statvfs s;
 		// statvfs("payload.bin", &s);
 		// fprintf(log_infos, "%i\n", s.f_basetype);
@@ -768,17 +775,21 @@ void record_infos() {
 	// } else {
 		// fprintf(log_infos, "Formatage de la SD: FAT32\n");
 	// }
-	fprintf(log_infos, "Version actuelle du firmware : %s\n", firmware_version);
-	fprintf(log_infos, "Version actuelle d'Atmosphere : %s\n", atmosphere_version);
+	fprintf(log_infos, language_vars.lng_infos_actual_firmware_version, firmware_version);
+	fprintf(log_infos, "\n");
+	fprintf(log_infos, language_vars.lng_infos_actual_atmosphere_version, atmosphere_version);
+	fprintf(log_infos, "\n");
 	if (GetChargerType() == 0) {
-		fprintf(log_infos, "Charge active, charge batterie : %d%%, type de chargeur : officiel\n", get_battery_charge());
+		fprintf(log_infos, language_vars.lng_infos_official_charge, get_battery_charge());
 	} else if (GetChargerType() == 1) {
-		fprintf(log_infos, "Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel\n", get_battery_charge());
+		fprintf(log_infos, language_vars.lng_infos_usb_charge, get_battery_charge());
 	} else {
-		fprintf(log_infos, "Charge inactive, charge batterie : %d%%\n", get_battery_charge());
+		fprintf(log_infos, language_vars.lng_infos_no_charge, get_battery_charge());
 	}
+	fprintf(log_infos, "\n");
 	// fprintf(log_infos, "Infos batterie et chargeur : %i, %d%% %i", IsChargingEnabled(), get_battery_charge(), GetChargerType());
-	printf("Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\".");
+	// fprintf(log_infos, "%s", language_vars.lng_title);
+	printf(language_vars.lng_record_infos_success);
 	consoleUpdate(&logs_console);
 	fclose(log_infos);
 }
@@ -840,7 +851,8 @@ bool titleid_curently_launched(u64 titleid) {
 #include "contents_install/util/util.hpp"
 
 bool install_hbmenu() {
-	printDisplay("Installation du forwarder du Homebrew Menu en cours...\n\n");
+	printDisplay(language_vars.lng_hbmenu_install_begin);
+	printDisplay("\n\n");
 	std::vector<std::filesystem::path> nsp_list;
 	std::filesystem::path nsp_path;
 	inst::util::initInstallServices();
@@ -849,13 +861,18 @@ bool install_hbmenu() {
 	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
 		if (installedTitles[i].first == hbmenu_title_id) {
 			// if (!titleid_curently_launched(hbmenu_title_id)) {
-				printDisplay("Ancienne version du forwarder trouvee, desinstallation de celle-ci...\n");
+				printDisplay(language_vars.lng_hbmenu_install_uninstall_begin);
+				printDisplay("\n");
 				if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
-					printDisplay("\033[0;31mErreur durant la desinstallation de l'ancienne version du forwarder, anulation de l'installation.\033[0;37m\n\n");
+					printDisplay("\033[0;31m");
+					printDisplay(language_vars.lng_hbmenu_install_uninstall_error);
+					printDisplay("\033[0;37m\n\n");
 					inst::util::deinitInstallServices();
 					return false;
 				} else {
-					printDisplay("\033[0;32mDesinstallation de l'ancienne version du forwarder effectuee.\033[0;37m\n\n");
+					printDisplay("\033[0;32m");
+					printDisplay(language_vars.lng_hbmenu_install_uninstall_success);
+					printDisplay("\033[0;37m\n\n");
 				}
 			// } else {
 				// printDisplay("\033[0;31mErreur: Vous avez choisi d'installer l'icone du Homebrew Menu mais vous avez lance celui-ci, ceci est impossible, veuillez quitter cette version du Homebrew Menu lancee en mode application (non lancee en mode applet).\nPour corriger ce probleme vous pouvez lancer ce homebrew via l'album (mode applet a n'utiliser eventuellement que pour cette action specifique) ou maintenir \"R\" durant le lancement d'un autre contenu installe sur la console.\nAnulation de l'installation.\033[0;37m\n\n");
@@ -883,13 +900,17 @@ bool install_hbmenu() {
 		}
 		free(c1);
 	}
-	printDisplay("NSP du forwarder choisi: %s\n\n", nsp_path.filename().c_str());
+	// printDisplay("NSP du forwarder choisi: %s\n\n", nsp_path.filename().c_str());
 	nsp_list.push_back(nsp_path);
 	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
-		printDisplay("\033[0;32mInstallation du forwarder du Homebrew Menu effectuee.\033[0;37m\n");
+		printDisplay("\033[0;32m");
+		printDisplay(language_vars.lng_hbmenu_install_success);
+		printDisplay("\033[0;37m\n");
 		return true;
 	} else {
-		printDisplay("\033[0;31mUne erreur s'est produite durant l'installation du forwarder du Homebrew Menu.\nVos sig_patches ne sont peut-etre pas a jour, l'espace restant sur votre stockage est peut-etre insufisant ou vous avez peut-etre de la corruption de donnees sur votre SD ou votre nand/emunand.\033[0;37m\n");
+		printDisplay("\033[0;31m");
+		printDisplay(language_vars.lng_hbmenu_install_error);
+		printDisplay("\033[0;37m\n");
 		return false;
 	}
 }
@@ -898,6 +919,15 @@ int main(int argc, char **argv)
 {
 	// init stuff
 	appInit();
+	language_vars = set_translation_strings();
+	strcpy(pack_version, language_vars.lng_unknown_1);
+	strcpy(last_pack_version, language_vars.lng_unknown_1);
+	strcpy(firmware_version, language_vars.lng_unknown_1);
+	strcpy(atmosphere_version, language_vars.lng_unknown_1);
+	strcpy(emummc_value, language_vars.lng_unknown_1);
+	strcpy(emummc_type, language_vars.lng_unknown_0);
+	strcpy(fusee_gelee_patch, language_vars.lng_unknown_0);
+	strcpy(console_model, language_vars.lng_unknown_0);
 	// config for holding ini file values.
 	configuration config;
 	config.s1.dl_pack = "";
@@ -1072,29 +1102,34 @@ int main(int argc, char **argv)
 			{
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 10%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_10);
+					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_20);
+					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				}
 				bool update_firmware2 = false;
 				DIR *dir2;
-				update_firmware2 = ask_question((char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?");
+				update_firmware2 = ask_question((char*) language_vars.lng_ask_update_firmware);
 				if (update_firmware2) {
 					if (!beta_mode) {
 						dir2 = opendir(firmware_path);
@@ -1106,23 +1141,35 @@ int main(int argc, char **argv)
 						fnc_clean_theme();
 						if (!beta_mode) {
 							if (daybreak_main(firmware_path, 2, 1, 2)) {
-								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
+								printDisplay("\033[0;32m\n");
+								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay("\033[0;37m\n");
 								sleep(5);
 								simple_reboot();
 							} else {
-								printDisplay("\033[0;31mUne erreur s'est produite durant l'installation du firmware.\033[0;37m\n");
+								printDisplay("\033[0;31m\n");
+								printDisplay(language_vars.lng_install_firmware_end_error);
+								printDisplay("\033[0;37m\n");
 							}
 						} else {
 							if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
-								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
+								printDisplay("\033[0;32m\n");
+								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay("\033[0;37m\n");
 								sleep(5);
 								simple_reboot();
 							} else {
-								printDisplay("\033[0;31mUne erreur s'est produite durant l'installation du firmware.\033[0;37m\n");
+								printDisplay("\033[0;31m\n");
+								printDisplay(language_vars.lng_install_firmware_end_error);
+								printDisplay("\033[0;37m\n");
 							}
 						}
 					} else {
-						printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\nLe dossier contenant le firmware est le dossier \"%s\".\n", firmware_path);
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars.lng_install_firmware_error_folder_not_found);
+						printDisplay("\033[0;37m\n");
+						printDisplay(language_vars.lng_install_firmware_folder_location, firmware_path);
+						printDisplay("\n");
 					}
 				}
 				consoleSelect(&menu_console);
@@ -1132,23 +1179,23 @@ int main(int argc, char **argv)
 			{
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_20);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					printDisplay("Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie.");
+					printDisplay(language_vars.lng_battery_error_30);
 					consoleSelect(&menu_console);
 					break;
 				}
@@ -1158,20 +1205,20 @@ int main(int argc, char **argv)
 				DIR *dir;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
-						update_firmware = ask_question((char*) "Souhaitez-vous mettre a jour le firmware vers la derniere version compatible (si oui les fichiers du theme seront aussi nettoyes)?");
+						update_firmware = ask_question((char*) language_vars.lng_ask_update_firmware);
 					}
 				} else {
 					if (strcmp(firmware_path_beta, "") != 0) {
-						update_firmware = ask_question((char*) "Souhaitez-vous mettre a jour le firmware vers la derniere version compatible (si oui les fichiers du theme seront aussi nettoyes)?");
+						update_firmware = ask_question((char*) language_vars.lng_ask_update_firmware);
 					}
 				}
 				if (update_firmware) {
 					clean_theme = true;
 				} else {
-					clean_theme = ask_question((char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?");
+					clean_theme = ask_question((char*) language_vars.lng_ask_clean_theme);
 				}
-				bool clean_logos = ask_question((char*) "Souhaitez-vous retirer les logos?");
-				bool install_hbmenu_choice = ask_question((char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?");
+				bool clean_logos = ask_question((char*) language_vars.lng_ask_clean_logos);
+				bool install_hbmenu_choice = ask_question((char*) language_vars.lng_ask_hbmenu_install);
 				/*
 				if (titleid_curently_launched(hbmenu_title_id) && install_hbmenu_choice) {
 					install_hbmenu_choice = ask_question((char *) "Attention: Vous avez choisi d'installer l'icone du Homebrew Menu mais vous avez lance celui-ci, ceci n'est pas possible, veuillez quitter cette version du Homebrew Menu lancee en mode application (non lancee en mode applet).\nPour pouvoir faire ceci vous devez lancer ce homebrew en maintenant \"R\" en lancant un jeu ou lancer ce homebrew via l'album (en mode applet mais ceci n'est pas recommande pour installer le pack car cela diminu grandement les performances).\nVous pourez egalement effectuer l'installation de l'icone du Homebrew Menu via l'option appropriee du menu principal de ce homebrew apres l'installation du pack et le redemarrage de la console, dans ce cas le mode applet poura etre utilise.\n\nSouhaitez-vous continuer l'installation du pack en desactivant l'installation de l'icone du Homebrew Menu?");
@@ -1183,28 +1230,35 @@ int main(int argc, char **argv)
 					}
 				}
 				*/
-				printDisplay("Recapitulatif des options choisies :\n\n");
+				printDisplay(language_vars.lng_install_pack_recap_begin);
+				printDisplay("\n\n");
 				if (update_firmware) {
-					printDisplay("Mise a jour du firmware, incluant le nettoyage du theme de la console s'il y en a un.\n");
+					printDisplay(language_vars.lng_install_pack_recap_firmware_install);
+					printDisplay("\n");
 				} else {
-					printDisplay("Le firmware ne sera pas mis a jour.\n");
+					printDisplay(language_vars.lng_install_pack_recap_not_install_firmware);
+					printDisplay("\n");
 					if (clean_theme) {
-						printDisplay("Nettoyage du theme de la console s'il y en a un.\n");
+						printDisplay(language_vars.lng_install_pack_recap_clean_theme);
+						printDisplay("\n");
 					} else {
-						printDisplay("Le theme de la console, s'il y en a un, ne sera pas supprimes.\n");
+						printDisplay(language_vars.lng_install_pack_recap_not_clean_theme);
+						printDisplay("\n");
 					}
 				}
 				if (clean_logos) {
-					printDisplay("Suppression des logos du pack.");
+					printDisplay(language_vars.lng_install_pack_recap_clean_logos);
 				} else {
-					printDisplay("Les logos du pack ne seront pas supprimes.\n");
+					printDisplay(language_vars.lng_install_pack_recap_not_clean_logos);
 				}
+				printDisplay("\n");
 				if (install_hbmenu_choice) {
-					printDisplay("L'icone du Homebrew Menu sera mis en place.\n");
+					printDisplay(language_vars.lng_install_pack_recap_install_hbmenu);
 				} else {
-					printDisplay("L'icone du Homebrew Menu ne sera pas mis en place.\n");
+					printDisplay(language_vars.lng_install_pack_recap_not_install_hbmenu);
 				}
-				bool validate_choice = ask_question((char*) "Souhaitez-vous vraiment continuer?");
+				printDisplay("\n");
+				bool validate_choice = ask_question((char*) language_vars.lng_ask_validate_choices);
 				if (validate_choice) {
 					bool dl_pack_res;
 					if (!beta_mode) {
@@ -1220,7 +1274,9 @@ int main(int argc, char **argv)
 							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
 						}
 						if (not_has_enough_space_on_sd) {
-							printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+							printDisplay("\033[0;31m");
+							printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+							printDisplay("\033[0;37m\n");
 						} else {
 							set_90dns();
 							if (clean_theme) {
@@ -1271,22 +1327,34 @@ int main(int argc, char **argv)
 										*/
 										if (!beta_mode) {
 											if (daybreak_main(firmware_path, 2, 1, 2)) {
-												printDisplay("\033[0;32m\nMise a jour du firmware effectuee.\033[0;37m\n");
+												printDisplay("\033[0;32m\n");
+												printDisplay(language_vars.lng_install_firmware_end_success);
+												printDisplay("\033[0;37m\n");
 											} else {
-												printDisplay("\033[0;31mUne erreur s'est produite durant l'installation du firmware.\033[0;37m\n");
+												printDisplay("\033[0;31m\n");
+												printDisplay(language_vars.lng_install_firmware_end_error);
+												printDisplay("\033[0;37m\n");
 											}
 										} else {
 											if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
-												printDisplay("\033[0;32m\nMise a jour du firmware effectuee.\033[0;37m\n");
+												printDisplay("\033[0;32m\n");
+												printDisplay(language_vars.lng_install_firmware_end_success);
+												printDisplay("\033[0;37m\n");
 											} else {
-												printDisplay("\033[0;31mUne erreur s'est produite durant l'installation du firmware.\033[0;37m\n");
+												printDisplay("\033[0;31m\n");
+												printDisplay(language_vars.lng_install_firmware_end_error);
+												printDisplay("\033[0;37m\n");
 											}
 										}
 									} else {
-										printDisplay("\033[0;31mLe repertoire du firmware pour mettre a jour la console n'a pas pu etre ouvert, la mise a jour du firmware ne sera pas faite.\033[0;37m\n");
+										printDisplay("\033[0;31m");
+										printDisplay(language_vars.lng_install_firmware_error_folder_not_found);
+										printDisplay("\033[0;37m\n");
 									}
 								}
-								printDisplay("\033[0;32m\nFinis!\n\nRedemarage automatique dans 5 secondes :)\033[0;37m\n");
+								printDisplay("\033[0;32m\n");
+								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay("\033[0;37m\n");
 								sleep(5);
 								aply_reboot();
 							} else {
@@ -1294,7 +1362,9 @@ int main(int argc, char **argv)
 							}
 						}
 					} else {
-						printDisplay("\033[0;31mUne erreure est survenue lors du telechargement du pack.\033[0;37m\n");
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars.lng_install_pack_download_pack_error);
+						printDisplay("\033[0;37m\n");
 						remove(TEMP_FILE);
 					}
 				}
@@ -1314,10 +1384,14 @@ int main(int argc, char **argv)
 					}
 				if (dl_app_res) {
 					if (get_sd_size_left() <= 4000000) {
-						printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+						printDisplay("\033[0;37m\n");
 					} else {
 						cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
-						printDisplay("\033[0;32m\nFini!\n\nRedemarrage de l'application dans 5 secondes:)\033[0;37m\n");
+						printDisplay("\033[0;32m\n");
+						printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+						printDisplay("\033[0;37m\n");
 						sleep(5);
 						appExit();
 						envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
@@ -1326,7 +1400,9 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					printDisplay("\033[0;31mUne erreure est survenue lors du telechargement de l'application\033[0;37m\n");
+					printDisplay("\033[0;31m");
+					printDisplay(language_vars.lng_install_app_download_app_error);
+					printDisplay("\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
 				consoleSelect(&menu_console);
@@ -1337,11 +1413,15 @@ int main(int argc, char **argv)
 			{
 				consoleSelect(&logs_console);
 				if (set_90dns()) {
-					printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
+					printDisplay("\033[0;32m\n");
+					printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+					printDisplay("\033[0;37m\n");
 					sleep(5);
 					simple_reboot();
 				} else {
-						printDisplay("\033[0;31mUne erreur s'est produite durant l'application des parametres DNS.\033[0;37m\n");
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars.lng_dns_end_install_error);
+						printDisplay("\033[0;37m\n");
 				}
 				consoleSelect(&menu_console);
 				break;
@@ -1350,9 +1430,12 @@ int main(int argc, char **argv)
 			case UP_ATMO_PROTECT_CONFIGS:
 			{
 				consoleSelect(&logs_console);
-				printDisplay("\033[0;32mApplication des configurations de protection...\033[0;37m\n");
+				printDisplay(language_vars.lng_protect_console_begin);
+				printDisplay("\n");
 				if (get_sd_size_left() <= 100000) {
-					printDisplay("\033[0;31mErreur, pas assez d'espace sur la SD.\033[0;37m\n");
+					printDisplay("\033[0;31m");
+					printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+					printDisplay("\033[0;37m\n");
 				} else {
 					mkdir((char*) "/atmosphere", 0777);
 					mkdir((char*) "/atmosphere/config", 0777);
@@ -1365,11 +1448,15 @@ int main(int argc, char **argv)
 					if (!cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
 					if (!set_90dns()) test_cp = false;
 					if (test_cp) {
-						printDisplay("\033[0;32m\nFini!\n\nRedemarrage de la console dans 5 secondes:)\033[0;37m\n");
+						printDisplay("\033[0;32m\n");
+						printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+						printDisplay("\033[0;37m\n");
 						sleep(5);
 						simple_reboot();
 					} else {
-						printDisplay("\033[0;31m\nUne erreur s'est produite durant l'application des parametres, verifiez l'espace restant sur votre SD.\033[0;37m\n");
+						printDisplay("\033[0;31m\n");
+						printDisplay(language_vars.lng_protect_console_error);
+						printDisplay("\033[0;37m\n");
 					}
 				}
 				consoleSelect(&menu_console);

@@ -6,10 +6,12 @@
 #include <switch.h>
 
 #include "reboot.h"
+#include "translate.h"
 
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
 #define IRAM_PAYLOAD_BASE 0x40010000
 
+extern lng language_vars;
 extern PrintConsole menu_console;
 extern PrintConsole logs_console;
 
@@ -47,6 +49,7 @@ static void clear_iram(void) {
 }
 
 static void reboot_to_payload(void) {
+	splInitialize();
 	clear_iram();
 
 	for (size_t i = 0; i < IRAM_PAYLOAD_MAX_SIZE; i += 0x1000) {
@@ -54,16 +57,18 @@ static void reboot_to_payload(void) {
 	}
 
 	splSetConfig((SplConfigItem)65001, 2);
+	splExit();
 }
 
 void rebootAms_rcm()
 {
-	splInitialize();
 	chdir("romfs:/");
 	FILE *f = fopen("payload/ams_rcm.bin", "rb");
 
 	if (f == NULL) {
-		printf("\033[0;31mPayload non trouve\033[0;37m\n");
+		printf("\033[0;31m");
+		printf(language_vars.lng_error_reboot_to_payload);
+		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
 
@@ -71,7 +76,7 @@ void rebootAms_rcm()
 	fclose(f);
 
 	reboot_to_payload();
- 	spsmInitialize();
+	spsmInitialize();
 	socketExit();
 	romfsExit();
 	consoleExit(&logs_console);

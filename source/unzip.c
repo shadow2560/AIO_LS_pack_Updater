@@ -8,10 +8,12 @@
 #include <sys/stat.h>
 
 #include "unzip.h"
+#include "translate.h"
 // #include "zip.h"
 
 size_t WRITEBUFFERSIZE = 0x100000;
 
+extern lng language_vars;
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
 
@@ -109,7 +111,8 @@ int remove_directory(const char *path) {
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
-	printf("Suppression des logos...\n");
+	printf(language_vars.lng_clean_logos_begin);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	char base_atmo_logo_folder[FS_MAX_PATH] = "/atmosphere/exefs_patches/";
 	if (strcmp(atmo_logo_folder, "") != 0 && strcmp(atmo_logo_folder, "/") != 0 && atmo_logo_folder[0] != '/') {
@@ -130,7 +133,8 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 
 void fnc_clean_theme() {
 		// Full theme deletion, helped  with code from nx-theme-installer
-		printf("Suppression d'un eventuel theme...\n");
+		printf(language_vars.lng_clean_theme_begin);
+		printf("\n");
 		consoleUpdate(&logs_console);
 		remove_directory("atmosphere/contents/0100000000001000");
 		remove_directory("atmosphere/contents/0100000000001013");
@@ -141,8 +145,11 @@ void fnc_clean_theme() {
 }
 
 void clean_sd(bool clean_theme) {
-	printf("\033[0;32mNettoyage de la SD:\033[0;37m\n");
-	printf("Nettoyage des fichiers inutiles...");
+	printf("\033[0;32m");
+	printf(language_vars.lng_clean_sd_begin);
+	printf("\033[0;37m\n");
+	printf(language_vars.lng_clean_sd_clean_unusful_files);
+	printf("\n");
 	consoleUpdate(&logs_console);
 	DIR *dir = opendir("atmosphere/titles");
 	if (dir) {
@@ -210,7 +217,9 @@ void clean_sd(bool clean_theme) {
 	if (clean_theme) {
 		fnc_clean_theme();
 	}
-	printf("\033[0;32mNettoyage de la SD termine.\033[0;37m\n\n");
+	printf("\033[0;32m");
+	printf(language_vars.lng_clean_sd_finish);
+	printf("\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
 }
 
@@ -404,7 +413,9 @@ int unzip(const char *output, char *subfolder_in_zip) {
 			if (dir) {
 				closedir(dir);
 			} else {
-				printf("\033[0;34mCreation du repertoir: %s\033[0;37m\n", filename_on_sd);
+				printf("\033[0;34m");
+				printf(language_vars.lng_install_pack_folder_create, filename_on_sd);
+				printf("\033[0;37m\n");
 				mkdir(filename_on_sd, 0777);
 				consoleUpdate(&logs_console);
 			}
@@ -416,24 +427,32 @@ int unzip(const char *output, char *subfolder_in_zip) {
 			detected_payload_bin = true;
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
-			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
+			printf("\033[0;33m");
+			printf(language_vars.lng_install_pack_extract_file_protected, filename_on_sd);
+			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
-			printf("\033[0;33mExtraction de: %-5s\033[0;37m\n", filename_on_sd);
+			printf("\033[0;33m");
+			printf(language_vars.lng_install_pack_extract_file_protected, filename_on_sd);
+			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		} else {
 			outfile = fopen(filename_on_sd, "wb");
 
-			printf("\033[0;36mExtraction de: %s\033[0;37m\n", filename_on_sd);
+			printf("\033[0;36m");
+			printf(language_vars.lng_install_pack_extract_file, filename_on_sd);
+			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
 		buf = malloc(WRITEBUFFERSIZE);
 		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
 			if (j != fwrite(buf, 1, j, outfile)) {
 				// fprintf(logfile, "Erreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\n", filename_on_sd);
-				printf("\033[0;31mErreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\033[0;37m\n", filename_on_sd);
+				printf("\033[0;31m");
+				printf(language_vars.lng_install_pack_file_write_error, filename_on_sd);
+				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				fclose(outfile);
 				unzCloseCurrentFile(zfile);

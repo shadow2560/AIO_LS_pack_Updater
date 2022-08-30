@@ -5,8 +5,7 @@
 extern "C" {
 #endif
 
-void rebootSystem();
-int set_90dns();
+bool set_90dns();
 
 #ifdef __cplusplus
 }
