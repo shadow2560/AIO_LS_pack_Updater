@@ -5,7 +5,7 @@
 #include <unistd.h> // chdir
 #include <switch.h>
 
-#include "reboot.h"
+#include "reboot_to_payload.h"
 #include "translate.h"
 
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000

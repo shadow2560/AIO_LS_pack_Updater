@@ -1,5 +1,5 @@
-#ifndef _REBOOT_H_
-#define _REBOOT_H_
+#ifndef _REBOOT_TO_PAYLOAD_H_
+#define _REBOOT_TO_PAYLOAD_H_
 
 #ifdef __cplusplus
 extern "C" {

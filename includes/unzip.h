@@ -6,8 +6,6 @@
 extern "C" {
 #endif
 
-bool cp(char *filein, char *fileout);
-char * substr(char *s, int x, int y);
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path);
 void fnc_clean_theme();
 void clean_sd(bool clean_theme);

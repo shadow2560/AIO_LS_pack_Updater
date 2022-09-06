@@ -6,10 +6,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "main_util.h"
 #include "90dns_setter.h"
 #include "download.h"
 #include "unzip.h"
-#include "reboot.h"
+#include "reboot_to_payload.h"
 #include "ini.h"
 #include "firmwares_install/daybreak-cli.hpp"
 #include "translate.h"
@@ -124,95 +125,6 @@ typedef struct
 	emummc_config_section e1;
 } emummc_configuration;
 
-// function directly taken from Atmosphere
-u32 ParseHexInteger(const char *s) {
-			u32 x = 0;
-			if (s[0] == '0' && s[1] == 'x') {
-				s += 2;
-			}
-
-			while (true) {
-				const char c = *(s++);
-
-				if (c == '\x00') {
-					return x;
-				} else {
-					x <<= 4;
-
-					if ('0' <= c && c <= '9') {
-						x |= (c - '0');
-					} else if ('a' <= c && c <= 'f') {
-						x |= (c - 'a') + 10;
-					} else if ('A' <= c && c <= 'F') {
-						x |= (c - 'A') + 10;
-					}
-				}
-			}
-		}
-
-bool isApplet() {
-	AppletType at = appletGetAppletType();
-	return at != AppletType_Application && at != AppletType_SystemApplication;
-}
-
-u64 get_app_titleid() {
-	pmdmntInitialize();
-	pminfoInitialize();
-	u64 m_pid = 0;
-	u64 m_tid = 0;
-	pmdmntGetApplicationProcessId(&m_pid);
-	pminfoGetProgramId(&m_tid, m_pid);
-	pminfoExit();
-	pmdmntExit();
-	return m_tid;
-}
-u32 get_battery_charge() {
-		u32 charge;
-	Result rc = psmInitialize();
-	if (!R_FAILED(rc)) {
-		rc = psmGetBatteryChargePercentage(&charge);
-		if (!R_FAILED(rc)) {
-			psmExit();
-			return(charge);
-		} else {
-			psmExit();
-			return -1;
-		}
-	}
-	return -1;
-}
-
-u64 GetCurrentApplicationId() {
-    u64 app_id = 0;
-    svcGetInfo(&app_id, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
-    return app_id;
-}
-
-int GetChargerType() {
-	Result rc = psmInitialize();
-	if (!R_FAILED(rc)) {
-		PsmChargerType charger_type;
-		if (R_FAILED(rc = psmGetChargerType(&charger_type))) {
-			psmExit();;
-			return -1;
-		}
-		if (charger_type == PsmChargerType_EnoughPower) {
-			psmExit();;
-			return 0; // "Official charger or dock";
-		} else if (charger_type == PsmChargerType_LowPower) {
-			psmExit();;
-			return 1; // "USB-C charger";
-		} else if (charger_type == PsmChargerType_Unconnected) {
-			psmExit();;
-			return 2; // "Charger no connected";
-		} else {
-			psmExit();;
-			return 3; // "unknown result";
-		}
-	}
-	return -1;
-}
-
 static int config_handler(void* config, const char* section, const char* name, const char* value)
 {
 	// config instance for filling in the values.
@@ -286,6 +198,132 @@ static int config_handler(void* config, const char* section, const char* name, c
 		return 0;
 	}
 	return 1;
+}
+
+void configs_init() {
+	strcpy(pack_version, language_vars.lng_unknown_1);
+	strcpy(last_pack_version, language_vars.lng_unknown_1);
+	strcpy(firmware_version, language_vars.lng_unknown_1);
+	strcpy(atmosphere_version, language_vars.lng_unknown_1);
+	strcpy(emummc_value, language_vars.lng_unknown_1);
+	strcpy(emummc_type, language_vars.lng_unknown_0);
+	strcpy(fusee_gelee_patch, language_vars.lng_unknown_0);
+	strcpy(console_model, language_vars.lng_unknown_0);
+	// config for holding ini file values.
+	configuration config;
+	config.s1.dl_pack = "";
+	config.s1.dl_pack_version = "";
+	config.s1.pack_version_local_filepath = "";
+	config.s1.subfolder_in_zip_pack = "";
+	config.s1.dl_app = "";
+	config.s1.firmware_path = "";
+	config.s1.atmo_logo_dir = "";
+	config.s1.hekate_nologo_file_path = "";
+	config.s1.pack_size = 0;
+	config.s1.exit_method = 0;
+	FILE *test_ini;
+	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
+	if (test_ini != NULL) {
+		fclose(test_ini);
+		// parse the .ini file
+		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
+			if (strcmp(config.s1.dl_pack, "") != 0) {
+				strcpy(CFW_URL, config.s1.dl_pack);
+				free((void*)config.s1.dl_pack);
+			}
+			if (strcmp(config.s1.dl_pack_version, "") != 0) {
+				strcpy(pack_version_url, config.s1.dl_pack_version);
+				free((void*)config.s1.dl_pack_version);
+			}
+			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
+				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
+				free((void*)config.s1.dl_pack_version);
+			}
+			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
+				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
+				free((void*)config.s1.subfolder_in_zip_pack);
+			}
+			if (strcmp(config.s1.dl_app, "") != 0) {
+				strcpy(APP_URL, config.s1.dl_app);
+				free((void*)config.s1.dl_app);
+			}
+			if (strcmp(config.s1.firmware_path, "") != 0) {
+				strcpy(firmware_path, config.s1.firmware_path);
+				free((void*)config.s1.firmware_path);
+			}
+			if (strcmp(config.s1.atmo_logo_dir, "") != 0) {
+				strcpy(atmo_logo_dir, config.s1.atmo_logo_dir);
+				free((void*)config.s1.atmo_logo_dir);
+			}
+			if (strcmp(config.s1.hekate_nologo_file_path, "") != 0) {
+				strcpy(hekate_nologo_file_path, config.s1.hekate_nologo_file_path);
+				free((void*)config.s1.hekate_nologo_file_path);
+			}
+			if (config.s1.pack_size != 0) {
+				pack_size = config.s1.pack_size;
+			}
+			if (config.s1.exit_method != 0) {
+				exit_mode_param = 1;
+			}
+		}
+	}
+	configuration config_beta;
+	config_beta.s1.dl_pack = "";
+	config_beta.s1.dl_pack_version = "";
+	config_beta.s1.pack_version_local_filepath = "";
+	config_beta.s1.subfolder_in_zip_pack = "";
+	config_beta.s1.dl_app = "";
+	config_beta.s1.firmware_path = "";
+	config_beta.s1.atmo_logo_dir = "";
+	config_beta.s1.hekate_nologo_file_path = "";
+	config_beta.s1.pack_size = 0;
+	config_beta.s1.exit_method = 0;
+	FILE *test_ini_beta;
+	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
+	if (test_ini_beta != NULL) {
+		fclose(test_ini_beta);
+		// parse the .ini file
+		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", config_handler, &config_beta) == 0) {
+			if (strcmp(config_beta.s1.dl_pack, "") != 0) {
+				strcpy(CFW_URL_beta, config_beta.s1.dl_pack);
+				free((void*)config_beta.s1.dl_pack);
+			}
+			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
+				strcpy(pack_version_url_beta, config_beta.s1.dl_pack_version);
+				free((void*)config_beta.s1.dl_pack_version);
+			}
+			if (strcmp(config_beta.s1.pack_version_local_filepath, "") != 0) {
+				strcpy(pack_version_local_filepath_beta, config_beta.s1.pack_version_local_filepath);
+				free((void*)config_beta.s1.dl_pack_version);
+			}
+			if (strcmp(config_beta.s1.subfolder_in_zip_pack, "") != 0) {
+				strcpy(subfolder_in_zip_beta, config_beta.s1.subfolder_in_zip_pack);
+				free((void*)config_beta.s1.subfolder_in_zip_pack);
+			}
+			if (strcmp(config_beta.s1.dl_app, "") != 0) {
+				strcpy(APP_URL_beta, config_beta.s1.dl_app);
+				free((void*)config_beta.s1.dl_app);
+			}
+			if (strcmp(config_beta.s1.firmware_path, "") != 0) {
+				strcpy(firmware_path_beta, config_beta.s1.firmware_path);
+				free((void*)config_beta.s1.firmware_path);
+			}
+			if (strcmp(config_beta.s1.atmo_logo_dir, "") != 0) {
+				strcpy(atmo_logo_dir_beta, config_beta.s1.atmo_logo_dir);
+				free((void*)config_beta.s1.atmo_logo_dir);
+			}
+			if (strcmp(config_beta.s1.hekate_nologo_file_path, "") != 0) {
+				strcpy(hekate_nologo_file_path_beta, config_beta.s1.hekate_nologo_file_path);
+				free((void*)config_beta.s1.hekate_nologo_file_path);
+			}
+			if (config_beta.s1.pack_size != 0) {
+				pack_size_beta = config_beta.s1.pack_size;
+			}
+			if (config_beta.s1.exit_method != 0) {
+				exit_mode_param_beta = 1;
+			}
+		}
+	}
 }
 
 static int emummc_config_handler(void* config, const char* section, const char* name, const char* value)
@@ -362,6 +400,16 @@ void get_emunand_type() {
 		}
 	}
 	free((void*)emummc_config.e1.nintendo_path);
+}
+
+s64 get_sd_size_left() {
+	s64 fs_sd_size;
+	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
+	// nsInitialize();
+	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
+	// nsExit();
+		// printf("%ld\n", fs_sd_size);
+		return fs_sd_size;
 }
 
 void refreshScreen(int cursor)
@@ -468,16 +516,6 @@ void appExit()
 	romfsExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
-}
-
-s64 get_sd_size_left() {
-	s64 fs_sd_size;
-	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
-	// nsInitialize();
-	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
-	// nsExit();
-		// printf("%ld\n", fs_sd_size);
-		return fs_sd_size;
 }
 
 void get_version_pack() {
@@ -836,14 +874,6 @@ void switch_app_mode() {
 	}
 }
 
-bool titleid_curently_launched(u64 titleid) {
-	if (get_app_titleid() == titleid) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
 #include <filesystem>
 #include <vector>
 #include "contents_install/sdInstall.hpp"
@@ -920,129 +950,7 @@ int main(int argc, char **argv)
 	// init stuff
 	appInit();
 	language_vars = set_translation_strings();
-	strcpy(pack_version, language_vars.lng_unknown_1);
-	strcpy(last_pack_version, language_vars.lng_unknown_1);
-	strcpy(firmware_version, language_vars.lng_unknown_1);
-	strcpy(atmosphere_version, language_vars.lng_unknown_1);
-	strcpy(emummc_value, language_vars.lng_unknown_1);
-	strcpy(emummc_type, language_vars.lng_unknown_0);
-	strcpy(fusee_gelee_patch, language_vars.lng_unknown_0);
-	strcpy(console_model, language_vars.lng_unknown_0);
-	// config for holding ini file values.
-	configuration config;
-	config.s1.dl_pack = "";
-	config.s1.dl_pack_version = "";
-	config.s1.pack_version_local_filepath = "";
-	config.s1.subfolder_in_zip_pack = "";
-	config.s1.dl_app = "";
-	config.s1.firmware_path = "";
-	config.s1.atmo_logo_dir = "";
-	config.s1.hekate_nologo_file_path = "";
-	config.s1.pack_size = 0;
-	config.s1.exit_method = 0;
-	FILE *test_ini;
-	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
-	if (test_ini != NULL) {
-		fclose(test_ini);
-		// parse the .ini file
-		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
-			if (strcmp(config.s1.dl_pack, "") != 0) {
-				strcpy(CFW_URL, config.s1.dl_pack);
-				free((void*)config.s1.dl_pack);
-			}
-			if (strcmp(config.s1.dl_pack_version, "") != 0) {
-				strcpy(pack_version_url, config.s1.dl_pack_version);
-				free((void*)config.s1.dl_pack_version);
-			}
-			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
-				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
-				free((void*)config.s1.dl_pack_version);
-			}
-			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
-				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
-				free((void*)config.s1.subfolder_in_zip_pack);
-			}
-			if (strcmp(config.s1.dl_app, "") != 0) {
-				strcpy(APP_URL, config.s1.dl_app);
-				free((void*)config.s1.dl_app);
-			}
-			if (strcmp(config.s1.firmware_path, "") != 0) {
-				strcpy(firmware_path, config.s1.firmware_path);
-				free((void*)config.s1.firmware_path);
-			}
-			if (strcmp(config.s1.atmo_logo_dir, "") != 0) {
-				strcpy(atmo_logo_dir, config.s1.atmo_logo_dir);
-				free((void*)config.s1.atmo_logo_dir);
-			}
-			if (strcmp(config.s1.hekate_nologo_file_path, "") != 0) {
-				strcpy(hekate_nologo_file_path, config.s1.hekate_nologo_file_path);
-				free((void*)config.s1.hekate_nologo_file_path);
-			}
-			if (config.s1.pack_size != 0) {
-				pack_size = config.s1.pack_size;
-			}
-			if (config.s1.exit_method != 0) {
-				exit_mode_param = 1;
-			}
-		}
-	}
-	configuration config_beta;
-	config_beta.s1.dl_pack = "";
-	config_beta.s1.dl_pack_version = "";
-	config_beta.s1.pack_version_local_filepath = "";
-	config_beta.s1.subfolder_in_zip_pack = "";
-	config_beta.s1.dl_app = "";
-	config_beta.s1.firmware_path = "";
-	config_beta.s1.atmo_logo_dir = "";
-	config_beta.s1.hekate_nologo_file_path = "";
-	config_beta.s1.pack_size = 0;
-	config_beta.s1.exit_method = 0;
-	FILE *test_ini_beta;
-	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
-	if (test_ini_beta != NULL) {
-		fclose(test_ini_beta);
-		// parse the .ini file
-		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", config_handler, &config_beta) == 0) {
-			if (strcmp(config_beta.s1.dl_pack, "") != 0) {
-				strcpy(CFW_URL_beta, config_beta.s1.dl_pack);
-				free((void*)config_beta.s1.dl_pack);
-			}
-			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
-				strcpy(pack_version_url_beta, config_beta.s1.dl_pack_version);
-				free((void*)config_beta.s1.dl_pack_version);
-			}
-			if (strcmp(config_beta.s1.pack_version_local_filepath, "") != 0) {
-				strcpy(pack_version_local_filepath_beta, config_beta.s1.pack_version_local_filepath);
-				free((void*)config_beta.s1.dl_pack_version);
-			}
-			if (strcmp(config_beta.s1.subfolder_in_zip_pack, "") != 0) {
-				strcpy(subfolder_in_zip_beta, config_beta.s1.subfolder_in_zip_pack);
-				free((void*)config_beta.s1.subfolder_in_zip_pack);
-			}
-			if (strcmp(config_beta.s1.dl_app, "") != 0) {
-				strcpy(APP_URL_beta, config_beta.s1.dl_app);
-				free((void*)config_beta.s1.dl_app);
-			}
-			if (strcmp(config_beta.s1.firmware_path, "") != 0) {
-				strcpy(firmware_path_beta, config_beta.s1.firmware_path);
-				free((void*)config_beta.s1.firmware_path);
-			}
-			if (strcmp(config_beta.s1.atmo_logo_dir, "") != 0) {
-				strcpy(atmo_logo_dir_beta, config_beta.s1.atmo_logo_dir);
-				free((void*)config_beta.s1.atmo_logo_dir);
-			}
-			if (strcmp(config_beta.s1.hekate_nologo_file_path, "") != 0) {
-				strcpy(hekate_nologo_file_path_beta, config_beta.s1.hekate_nologo_file_path);
-				free((void*)config_beta.s1.hekate_nologo_file_path);
-			}
-			if (config_beta.s1.pack_size != 0) {
-				pack_size_beta = config_beta.s1.pack_size;
-			}
-			if (config_beta.s1.exit_method != 0) {
-				exit_mode_param_beta = 1;
-			}
-		}
-	}
+	configs_init();
 	padInitializeDefault(&pad);
 
 	// change directory to root (defaults to /switch/)

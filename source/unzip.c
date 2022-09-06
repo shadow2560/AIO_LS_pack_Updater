@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <minizip/unzip.h>
 #include <string.h>
-#include <assert.h>
 #include <dirent.h>
 #include <switch.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "main_util.h"
 #include "unzip.h"
 #include "translate.h"
 // #include "zip.h"
@@ -21,93 +21,12 @@ bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-bool cp(char *filein, char *fileout) {
-	FILE *exein, *exeout;
-	exein = fopen(filein, "rb");
-	if (exein == NULL) {
-		/* handle error */
-		perror("file open for reading");
-		return false;
-	}
-	exeout = fopen(fileout, "wb");
-	if (exeout == NULL) {
-		/* handle error */
-		perror("file open for writing");
-		return false;
-	}
-	size_t n, m;
-	unsigned char buff[8192];
-	do {
-		n = fread(buff, 1, sizeof buff, exein);
-		if (n) m = fwrite(buff, 1, n, exeout);
-		else   m = 0;
-	}
-	while ((n > 0) && (n == m));
-	if (m) {
-		perror("copy");
-		return false;
-	}
-	if (fclose(exeout)) {
-		perror("close output file");
-		return false;
-	}
-	if (fclose(exein)) {
-		perror("close input file");
-		return false;
-	}
-	return true;
-}
-
 int check(unsigned const char type) {
 	if(type == DT_REG)
 		return 1;
 	if(type == DT_DIR)
 		return 0;
 	return -1;
-}
-
-int remove_directory(const char *path) {
-   DIR *d = opendir(path);
-   size_t path_len = strlen(path);
-   int r = -1;
-
-   if (d) {
-	  struct dirent *p;
-
-	  r = 0;
-	  while (!r && (p=readdir(d))) {
-		  int r2 = -1;
-		  char *buf;
-		  size_t len;
-
-		  /* Skip the names "." and ".." as we don't want to recurse on them. */
-		  if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
-			 continue;
-
-		  len = path_len + strlen(p->d_name) + 2; 
-		  buf = (char*) malloc(len);
-
-		  if (buf) {
-			 struct stat statbuf;
-
-			 snprintf(buf, len, "%s/%s", path, p->d_name);
-			 if (!stat(buf, &statbuf)) {
-				if (S_ISDIR(statbuf.st_mode))
-				   r2 = remove_directory(buf);
-				else
-				   r2 = unlink(buf);
-			 }
-			 free(buf);
-		  }
-		  r = r2;
-	  }
-	  closedir(d);
-   }
-
-   if (!r)
-	  r = rmdir(path);
-
-   return r;
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
@@ -221,23 +140,6 @@ void clean_sd(bool clean_theme) {
 	printf(language_vars.lng_clean_sd_finish);
 	printf("\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
-}
-
-char * substr(char *s, int x, int y) {
-	char * ret = (char*) malloc(strlen(s) + 1);
-	char * p = ret;
-	char * q = &s[x];
-
-	assert(ret != NULL);
-
-	while(x  < y) {
-	*p++ = *q++;
-		x ++; 
-	}
-
-	*p++ = '\0';
-
-	return ret;
 }
 
 /*
