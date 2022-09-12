@@ -16,6 +16,7 @@ u64 GetCurrentApplicationId();
 bool titleid_curently_launched(u64 titleid);
 u32 get_battery_charge();
 int GetChargerType();
+s64 get_sd_size_left();
 
 #ifdef __cplusplus
 }

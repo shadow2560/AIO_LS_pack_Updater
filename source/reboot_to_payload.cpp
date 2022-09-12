@@ -5,13 +5,13 @@
 #include <unistd.h> // chdir
 #include <switch.h>
 
-#include "reboot_to_payload.h"
-#include "translate.h"
+#include "reboot_to_payload.hpp"
+#include "translate.hpp"
 
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
 #define IRAM_PAYLOAD_BASE 0x40010000
 
-extern lng language_vars;
+extern translation_map language_vars;
 extern PrintConsole menu_console;
 extern PrintConsole logs_console;
 
@@ -67,7 +67,7 @@ void rebootAms_rcm()
 
 	if (f == NULL) {
 		printf("\033[0;31m");
-		printf(language_vars.lng_error_reboot_to_payload);
+		printf(language_vars["lng_error_reboot_to_payload"]);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}

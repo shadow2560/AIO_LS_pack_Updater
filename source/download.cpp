@@ -8,13 +8,13 @@
 #include <curl/curl.h>
 #include <switch.h>
 
-#include "download.h"
-#include "translate.h"
+#include "download.hpp"
+#include "translate.hpp"
 
 #define API_AGENT "PoloNX"
 #define _1MiB   0x100000
 
-extern lng language_vars;
+extern translation_map language_vars;
 extern PrintConsole logs_console;
 
 static time_t prevtime;
@@ -64,10 +64,10 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
 			if (dif > 1.2f) {
-				printf(language_vars.lng_dl_progress_0, dlnow / _1MiB, (dlnow - dlold) / dif);
+				printf(language_vars["lng_dl_progress_0"], dlnow / _1MiB, (dlnow - dlold) / dif);
 				printf("\r");
 			} else {
-				printf(language_vars.lng_dl_progress_1, dlnow / _1MiB);
+				printf(language_vars["lng_dl_progress_1"], dlnow / _1MiB);
 				printf("\r");
 			}
 		} else {
@@ -81,10 +81,10 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 			}
 			if (dif > 1.2f) {
 				printf("]   ");
-				printf(language_vars.lng_dl_progress_with_bar_0, dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
+				printf(language_vars["lng_dl_progress_with_bar_0"], dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
 			} else {
 				printf("]   ");
-				printf(language_vars.lng_dl_progress_with_bar_1, dlnow / _1MiB, dltotal / _1MiB);
+				printf(language_vars["lng_dl_progress_with_bar_1"], dlnow / _1MiB, dltotal / _1MiB);
 			}
 		}
 		consoleUpdate(&logs_console);
@@ -98,7 +98,7 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 bool downloadFile(const char *url, const char *output, int api, bool display_log) {
 	if (display_log) {
 		printf("\n\033[0;32m");
-		printf(language_vars.lng_dl_begin, url);
+		printf(language_vars["lng_dl_begin"], url);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
@@ -142,7 +142,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 				if (chunk.offset != fwrite(chunk.data, 1, chunk.offset, fp)) {
 					if (display_log) {
 						printf("\033[0;31m");
-						printf(language_vars.lng_dl_file_write_error);
+						printf(language_vars["lng_dl_file_write_error"]);
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
 					}
@@ -163,7 +163,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			if (res == CURLE_OK) {
 				if (display_log) {
 					printf("\n\n\033[0;32m");
-					printf(language_vars.lng_dl_success);
+					printf(language_vars["lng_dl_success"]);
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
@@ -171,7 +171,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			} else {
 				if (display_log) {
 					printf("\n\n\033[0;31m");
-					printf(language_vars.lng_dl_dl_error);
+					printf(language_vars["lng_dl_dl_error"]);
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
@@ -181,7 +181,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			curl_easy_cleanup(curl);
 			if (display_log) {
 				printf("\n\n\033[0;31m");
-				printf(language_vars.lng_dl_open_temp_file_error);
+				printf(language_vars["lng_dl_open_temp_file_error"]);
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
@@ -191,7 +191,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 	} else {
 		if (display_log) {
 			printf("\n\n\033[0;31m");
-			printf(language_vars.lng_dl_curl_init_error);
+			printf(language_vars["lng_dl_curl_init_error"]);
 			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
 		}

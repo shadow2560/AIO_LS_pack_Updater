@@ -6,10 +6,10 @@
 // Include the main libnx system header, for Switch development
 #include <switch.h>
 
-#include "90dns_setter.h"
-#include "translate.h"
+#include "90dns_setter.hpp"
+#include "translate.hpp"
 
-extern lng language_vars;
+extern translation_map language_vars;
 extern PrintConsole logs_console;
 
 const char *regions[] = {
@@ -33,7 +33,7 @@ bool set_90dns()
 	res = setInitialize();
 	if (res){
 		printf("\033[0;31m");
-		printf(language_vars.lng_dns_install_set_init_error, res);
+		printf(language_vars["lng_dns_install_set_init_error"], res);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);		return false;
 	}
@@ -41,7 +41,7 @@ bool set_90dns()
 		res = setsysInitialize();
 		if (res){
 			printf("\033[0;31m");
-			printf(language_vars.lng_dns_install_setsys_init_error, res);
+			printf(language_vars["lng_dns_install_setsys_init_error"], res);
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 			setExit();
@@ -51,7 +51,7 @@ bool set_90dns()
 			res = setGetRegionCode(&region);
 			if (res){
 				printf("\033[0;31m");
-				printf(language_vars.lng_dns_install_get_region_code_error, res);
+				printf(language_vars["lng_dns_install_get_region_code_error"], res);
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				setExit();
@@ -60,19 +60,19 @@ bool set_90dns()
 			}
 			else {
 				if (region <= SetRegion_CHN){
-					printf(language_vars.lng_dns_install_display_region_code, regions[region]);
+					printf(language_vars["lng_dns_install_display_region_code"], regions[region]);
 					printf("\n");
 					consoleUpdate(&logs_console);
 					if (region == SetRegion_USA){
 						printf("\033[0;32m");
-						printf(language_vars.lng_dns_install_use_us_dns);
+						printf(language_vars["lng_dns_install_use_us_dns"]);
 						printf("\033[0;37m\n");
 						primaryDns = americaDns;
 						secondaryDns = europeDns;
 					}
 					else {
 						printf("\033[0;32m");
-						printf(language_vars.lng_dns_install_use_eu_dns);
+						printf(language_vars["lng_dns_install_use_eu_dns"]);
 						printf("\033[0;37m\n");
 						primaryDns = europeDns;
 						secondaryDns = americaDns;
@@ -80,7 +80,7 @@ bool set_90dns()
 				}
 				else {
 					printf("\033[0;32m");
-					printf(language_vars.lng_dns_install_use_unknown_dns);
+					printf(language_vars["lng_dns_install_use_unknown_dns"]);
 					printf("\033[0;37m\n");
 					primaryDns = europeDns;
 					secondaryDns = americaDns;
@@ -91,7 +91,7 @@ bool set_90dns()
 	}
 
 	printf("\n");
-	printf(language_vars.lng_dns_install_aplying);
+	printf(language_vars["lng_dns_install_aplying"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
 	SetSysNetworkSettings* wifiSettings = (SetSysNetworkSettings*) malloc(sizeof(SetSysNetworkSettings) * 0x200);
@@ -101,7 +101,7 @@ bool set_90dns()
 		res = setsysGetNetworkSettings(&entryCount, wifiSettings, 0x200);
 		if (res){
 			printf("\033[0;31m");
-			printf(language_vars.lng_dns_install_get_wifi_networks_error, res);
+			printf(language_vars["lng_dns_install_get_wifi_networks_error"], res);
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 			free(wifiSettings);
@@ -110,7 +110,7 @@ bool set_90dns()
 			return false;
 		}
 		else {
-			printf(language_vars.lng_dns_install_networs_count, entryCount);
+			printf(language_vars["lng_dns_install_networs_count"], entryCount);
 			printf("\n");
 			consoleUpdate(&logs_console);
 			for (int i = 0; i < entryCount; i++){
@@ -123,7 +123,7 @@ bool set_90dns()
 				res = setsysSetNetworkSettings(wifiSettings, entryCount);
 				if (res){
 					printf("\033[0;31m");
-					printf(language_vars.lng_dns_install_wifi_network_config_error, res);
+					printf(language_vars["lng_dns_install_wifi_network_config_error"], res);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					free(wifiSettings);
@@ -133,7 +133,7 @@ bool set_90dns()
 				}
 				else {
 					printf("\033[0;32m");
-					printf(language_vars.lng_dns_install_success);
+					printf(language_vars["lng_dns_install_success"]);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 				}

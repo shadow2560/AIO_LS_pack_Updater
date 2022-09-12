@@ -203,3 +203,16 @@ int GetChargerType() {
 	}
 	return -1;
 }
+
+s64 get_sd_size_left() {
+	s64 fs_sd_size;
+	FsFileSystem *fs_sd;
+	fs_sd = fsdevGetDeviceFileSystem("sdmc");
+	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
+	fsFsClose(fs_sd);
+	// nsInitialize();
+	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
+	// nsExit();
+		// printf("%ld\n", fs_sd_size);
+		return fs_sd_size;
+}

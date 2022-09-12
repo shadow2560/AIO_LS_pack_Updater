@@ -7,23 +7,23 @@
 #include <stdlib.h>
 
 #include "main_util.h"
-#include "90dns_setter.h"
-#include "download.h"
-#include "unzip.h"
-#include "reboot_to_payload.h"
+#include "90dns_setter.hpp"
+#include "download.hpp"
+#include "unzip.hpp"
+#include "reboot_to_payload.hpp"
 #include "ini.h"
 #include "firmwares_install/daybreak-cli.hpp"
-#include "translate.h"
+#include "translate.hpp"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
 
-lng language_vars;
+translation_map language_vars;
 #define ROOT					"/"
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.0.1"
+#define APP_VERSION			 "4.1.0"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -31,6 +31,7 @@ lng language_vars;
 #define UP_HBMENU_INSTALL		  3
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
+const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -66,7 +67,6 @@ SetSysSerialNumber console_serial;
 bool sd_is_exfat;
 bool console_is_erista = false;
 bool beta_mode = false;
-FsFileSystem *fs_sd;
 PadState pad;
 
 PrintConsole menu_console;
@@ -79,16 +79,6 @@ custom_font->numChars=;
 custom_font->tileWidth=;
 custom_font->tileHeight=;
 */
-
-const char *OPTION_LIST[] =
-{
-	language_vars.lng_update_app_menu,
-	language_vars.lng_update_pack_menu,
-	language_vars.lng_update_firmware_menu,
-	language_vars.lng_update_hbmenu_menu,
-	language_vars.lng_set_90dns_menu,
-	language_vars.lng_protect_console_menu
-};
 
 // define a structure for holding the values in "config" section of the ini file.
 typedef struct{
@@ -201,14 +191,14 @@ static int config_handler(void* config, const char* section, const char* name, c
 }
 
 void configs_init() {
-	strcpy(pack_version, language_vars.lng_unknown_1);
-	strcpy(last_pack_version, language_vars.lng_unknown_1);
-	strcpy(firmware_version, language_vars.lng_unknown_1);
-	strcpy(atmosphere_version, language_vars.lng_unknown_1);
-	strcpy(emummc_value, language_vars.lng_unknown_1);
-	strcpy(emummc_type, language_vars.lng_unknown_0);
-	strcpy(fusee_gelee_patch, language_vars.lng_unknown_0);
-	strcpy(console_model, language_vars.lng_unknown_0);
+	strcpy(pack_version, language_vars["lng_unknown_1"]);
+	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
+	strcpy(firmware_version, language_vars["lng_unknown_1"]);
+	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
+	strcpy(emummc_value, language_vars["lng_unknown_1"]);
+	strcpy(emummc_type, language_vars["lng_unknown_0"]);
+	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"]);
+	strcpy(console_model, language_vars["lng_unknown_0"]);
 	// config for holding ini file values.
 	configuration config;
 	config.s1.dl_pack = "";
@@ -391,25 +381,15 @@ void get_emunand_type() {
 		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
 			if (emummc_config.e1.sector == 0) {
 				if (strcmp(emummc_config.e1.path, "") != 0) {
-					strcpy(emummc_type, language_vars.lng_files);
+					strcpy(emummc_type, language_vars["lng_files"]);
 					free((void*)emummc_config.e1.path);
 				}
 			} else {
-				strcpy(emummc_type, language_vars.lng_partition);
+				strcpy(emummc_type, language_vars["lng_partition"]);
 			}
 		}
 	}
 	free((void*)emummc_config.e1.nintendo_path);
-}
-
-s64 get_sd_size_left() {
-	s64 fs_sd_size;
-	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
-	// nsInitialize();
-	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
-	// nsExit();
-		// printf("%ld\n", fs_sd_size);
-		return fs_sd_size;
 }
 
 void refreshScreen(int cursor)
@@ -417,25 +397,25 @@ void refreshScreen(int cursor)
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
-		printf(language_vars.lng_title, APP_VERSION);
+		printf(language_vars["lng_title"], APP_VERSION);
 	} else {
 		printf("\x1B[31m");
-		printf(language_vars.lng_title_beta, APP_VERSION);
+		printf(language_vars["lng_title_beta"], APP_VERSION);
 	}
 	printf("\x1B[37m\n\n");
-	printf(language_vars.lng_a_menu);
+	printf(language_vars["lng_a_menu"]);
 	printf("\n\n");
-	printf(language_vars.lng_x_menu);
+	printf(language_vars["lng_x_menu"]);
 	printf("\n");
-	printf(language_vars.lng_y_menu);
+	printf(language_vars["lng_y_menu"]);
 	printf("\n");
 	if (!beta_mode) {
-		printf(language_vars.lng_minus_menu);
+		printf(language_vars["lng_minus_menu"]);
 	} else {
-		printf(language_vars.lng_minus_menu_beta);
+		printf(language_vars["lng_minus_menu_beta"]);
 	}
 	printf("\n\n");
-	printf(language_vars.lng_plus_menu);
+	printf(language_vars["lng_plus_menu"]);
 	printf("\n\n");
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
@@ -490,7 +470,6 @@ int appInit() {
 	// nxlinkStdio();
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	romfsInit();	//Init of romfs
-	fs_sd = fsdevGetDeviceFileSystem("sdmc");
 // hiddbgInitialize();
 appletBeginBlockingHomeButton(0);
 appletSetAutoSleepDisabled(true);
@@ -511,7 +490,6 @@ void appExit()
 	appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
 	// hiddbgExit();
-	fsFsClose(fs_sd);
 	socketExit();
 	romfsExit();
 	consoleExit(&logs_console);
@@ -640,9 +618,9 @@ void get_fusee_gelee_exploit() {
 	}
 	console_is_erista = hardware_type == 0 || hardware_type == 1;
 	if (console_is_erista && !has_rcm_bug_patch) {
-		strcpy(fusee_gelee_patch, language_vars.lng_usable);
+		strcpy(fusee_gelee_patch, language_vars["lng_usable"]);
 	} else {
-		strcpy(fusee_gelee_patch, language_vars.lng_not_usable);
+		strcpy(fusee_gelee_patch, language_vars["lng_not_usable"]);
 	}
 	if (hardware_type == 0) {
 		strcpy(console_model, "Switch Erista Icosa");
@@ -690,9 +668,9 @@ bool ask_question(char *question_text) {
 	consoleSelect(&logs_console);
 	printf("%s\n", question_text);
 	printf("	[A]: ");
-	printf(language_vars.lng_yes);
+	printf(language_vars["lng_yes"]);
 	printf("		  [B]: ");
-	printf(language_vars.lng_no);
+	printf(language_vars["lng_no"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
@@ -715,46 +693,46 @@ void display_infos() {
 	// consoleInit(&infos_console);
 	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
 	consoleSelect(&logs_console);
-	printf(language_vars.lng_infos_begin);
+	printf(language_vars["lng_infos_begin"]);
 	printf("\n\n");
 	if (isApplet()) {
-		printf(language_vars.lng_infos_is_applet);
+		printf(language_vars["lng_infos_is_applet"]);
 	} else {
-		printf(language_vars.lng_infos_is_not_applet);
+		printf(language_vars["lng_infos_is_not_applet"]);
 	}
 	printf("\n");
-	printf(language_vars.lng_infos_pack_version, pack_version);
+	printf(language_vars["lng_infos_pack_version"], pack_version);
 	printf("\n");
-	printf(language_vars.lng_infos_last_pack_version, last_pack_version);
+	printf(language_vars["lng_infos_last_pack_version"], last_pack_version);
 	printf("\n");
-	printf(language_vars.lng_infos_console_id, console_id);
+	printf(language_vars["lng_infos_console_id"], console_id);
 	printf("\n");
 	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
-		printf(language_vars.lng_infos_serial_incognito);
+		printf(language_vars["lng_infos_serial_incognito"]);
 	} else {
-		printf(language_vars.lng_infos_serial, console_serial.number);
+		printf(language_vars["lng_infos_serial"], console_serial.number);
 	}
 	printf("\n");
 	if (strcmp(emummc_value, "Emunand") != 0) {
-		printf(language_vars.lng_infos_sysnand, emummc_value);
+		printf(language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		printf(language_vars.lng_infos_emunand, emummc_value, emummc_type);
+		printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
 	}
 	printf("\n");
-	printf(language_vars.lng_infos_console_model, console_model);
+	printf(language_vars["lng_infos_console_model"], console_model);
 	printf("\n");
-	printf(language_vars.lng_infos_fusee_gelee_patch, fusee_gelee_patch);
+	printf(language_vars["lng_infos_fusee_gelee_patch"], fusee_gelee_patch);
 	printf("\n");
-	printf(language_vars.lng_infos_actual_firmware_version, firmware_version);
+	printf(language_vars["lng_infos_actual_firmware_version"], firmware_version);
 	printf("\n");
-	printf(language_vars.lng_infos_actual_atmosphere_version, atmosphere_version);
+	printf(language_vars["lng_infos_actual_atmosphere_version"], atmosphere_version);
 	printf("\n");
 	if (GetChargerType() == 0) {
-		printf(language_vars.lng_infos_official_charge, get_battery_charge());
+		printf(language_vars["lng_infos_official_charge"], get_battery_charge());
 	} else if (GetChargerType() == 1) {
-		printf(language_vars.lng_infos_usb_charge, get_battery_charge());
+		printf(language_vars["lng_infos_usb_charge"], get_battery_charge());
 	} else {
-		printf(language_vars.lng_infos_no_charge, get_battery_charge());
+		printf(language_vars["lng_infos_no_charge"], get_battery_charge());
 	}
 	printf("\n");
 	consoleUpdate(&logs_console);
@@ -766,40 +744,40 @@ void record_infos() {
 	FILE *log_infos;
 	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
 	if ( log_infos == NULL ) {
-		printf(language_vars.lng_record_infos_log_not_open_error);
+		printf(language_vars["lng_record_infos_log_not_open_error"]);
 		printf("\n");
 		consoleUpdate(&logs_console);
 		return;
 	}
-	fprintf(log_infos, language_vars.lng_infos_begin);
+	fprintf(log_infos, language_vars["lng_infos_begin"]);
 	fprintf(log_infos, "\n\n");
 	if (isApplet()) {
-		fprintf(log_infos, language_vars.lng_infos_is_applet);
+		fprintf(log_infos, language_vars["lng_infos_is_applet"]);
 	} else {
-		fprintf(log_infos, language_vars.lng_infos_is_not_applet);
+		fprintf(log_infos, language_vars["lng_infos_is_not_applet"]);
 	}
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_pack_version, pack_version);
+	fprintf(log_infos, language_vars["lng_infos_pack_version"], pack_version);
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_last_pack_version, last_pack_version);
+	fprintf(log_infos, language_vars["lng_infos_last_pack_version"], last_pack_version);
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_console_id, console_id);
+	fprintf(log_infos, language_vars["lng_infos_console_id"], console_id);
 	fprintf(log_infos, "\n");
 	if ((console_serial.number[0] == 'x' && console_serial.number[1] == 'a' && console_serial.number[2] == 'w' && console_serial.number[3] == '0') || (console_serial.number[0] == 'X' && console_serial.number[1] == 'A' && console_serial.number[2] == 'W' && console_serial.number[3] == '0')) {
-		fprintf(log_infos, language_vars.lng_infos_serial_incognito);
+		fprintf(log_infos, language_vars["lng_infos_serial_incognito"]);
 	} else {
-		fprintf(log_infos, language_vars.lng_infos_serial, console_serial.number);
+		fprintf(log_infos, language_vars["lng_infos_serial"], console_serial.number);
 	}
 	fprintf(log_infos, "\n");
 	if (strcmp(emummc_value, "Emunand") != 0) {
-		fprintf(log_infos, language_vars.lng_infos_sysnand, emummc_value);
+		fprintf(log_infos, language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		fprintf(log_infos, language_vars.lng_infos_emunand, emummc_value, emummc_type);
+		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
 	}
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_console_model, console_model);
+	fprintf(log_infos, language_vars["lng_infos_console_model"], console_model);
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_fusee_gelee_patch, fusee_gelee_patch);
+	fprintf(log_infos, language_vars["lng_infos_fusee_gelee_patch"], fusee_gelee_patch);
 	fprintf(log_infos, "\n");
 		// struct statvfs s;
 		// statvfs("payload.bin", &s);
@@ -813,21 +791,21 @@ void record_infos() {
 	// } else {
 		// fprintf(log_infos, "Formatage de la SD: FAT32\n");
 	// }
-	fprintf(log_infos, language_vars.lng_infos_actual_firmware_version, firmware_version);
+	fprintf(log_infos, language_vars["lng_infos_actual_firmware_version"], firmware_version);
 	fprintf(log_infos, "\n");
-	fprintf(log_infos, language_vars.lng_infos_actual_atmosphere_version, atmosphere_version);
+	fprintf(log_infos, language_vars["lng_infos_actual_atmosphere_version"], atmosphere_version);
 	fprintf(log_infos, "\n");
 	if (GetChargerType() == 0) {
-		fprintf(log_infos, language_vars.lng_infos_official_charge, get_battery_charge());
+		fprintf(log_infos, language_vars["lng_infos_official_charge"], get_battery_charge());
 	} else if (GetChargerType() == 1) {
-		fprintf(log_infos, language_vars.lng_infos_usb_charge, get_battery_charge());
+		fprintf(log_infos, language_vars["lng_infos_usb_charge"], get_battery_charge());
 	} else {
-		fprintf(log_infos, language_vars.lng_infos_no_charge, get_battery_charge());
+		fprintf(log_infos, language_vars["lng_infos_no_charge"], get_battery_charge());
 	}
 	fprintf(log_infos, "\n");
 	// fprintf(log_infos, "Infos batterie et chargeur : %i, %d%% %i", IsChargingEnabled(), get_battery_charge(), GetChargerType());
-	// fprintf(log_infos, "%s", language_vars.lng_title);
-	printf(language_vars.lng_record_infos_success);
+	// fprintf(log_infos, "%s", language_vars["lng_title"]);
+	printf(language_vars["lng_record_infos_success"]);
 	consoleUpdate(&logs_console);
 	fclose(log_infos);
 }
@@ -881,7 +859,7 @@ void switch_app_mode() {
 #include "contents_install/util/util.hpp"
 
 bool install_hbmenu() {
-	printDisplay(language_vars.lng_hbmenu_install_begin);
+	printDisplay(language_vars["lng_hbmenu_install_begin"]);
 	printDisplay("\n\n");
 	std::vector<std::filesystem::path> nsp_list;
 	std::filesystem::path nsp_path;
@@ -891,17 +869,17 @@ bool install_hbmenu() {
 	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
 		if (installedTitles[i].first == hbmenu_title_id) {
 			// if (!titleid_curently_launched(hbmenu_title_id)) {
-				printDisplay(language_vars.lng_hbmenu_install_uninstall_begin);
+				printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
 				printDisplay("\n");
 				if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
 					printDisplay("\033[0;31m");
-					printDisplay(language_vars.lng_hbmenu_install_uninstall_error);
+					printDisplay(language_vars["lng_hbmenu_install_uninstall_error"]);
 					printDisplay("\033[0;37m\n\n");
 					inst::util::deinitInstallServices();
 					return false;
 				} else {
 					printDisplay("\033[0;32m");
-					printDisplay(language_vars.lng_hbmenu_install_uninstall_success);
+					printDisplay(language_vars["lng_hbmenu_install_uninstall_success"]);
 					printDisplay("\033[0;37m\n\n");
 				}
 			// } else {
@@ -934,15 +912,24 @@ bool install_hbmenu() {
 	nsp_list.push_back(nsp_path);
 	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
 		printDisplay("\033[0;32m");
-		printDisplay(language_vars.lng_hbmenu_install_success);
+		printDisplay(language_vars["lng_hbmenu_install_success"]);
 		printDisplay("\033[0;37m\n");
 		return true;
 	} else {
 		printDisplay("\033[0;31m");
-		printDisplay(language_vars.lng_hbmenu_install_error);
+		printDisplay(language_vars["lng_hbmenu_install_error"]);
 		printDisplay("\033[0;37m\n");
 		return false;
 	}
+}
+
+void menu_init() {
+OPTION_LIST[0] = language_vars["lng_update_app_menu"];
+	OPTION_LIST[1] = language_vars["lng_update_pack_menu"];
+	OPTION_LIST[2] = language_vars["lng_update_firmware_menu"];
+	OPTION_LIST[3] = language_vars["lng_update_hbmenu_menu"];
+	OPTION_LIST[4] = language_vars["lng_set_90dns_menu"];
+	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
 }
 
 int main(int argc, char **argv)
@@ -950,6 +937,7 @@ int main(int argc, char **argv)
 	// init stuff
 	appInit();
 	language_vars = set_translation_strings();
+	menu_init();
 	configs_init();
 	padInitializeDefault(&pad);
 
@@ -1010,34 +998,34 @@ int main(int argc, char **argv)
 			{
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
-					printDisplay(language_vars.lng_battery_error_10);
+					printDisplay(language_vars["lng_battery_error_10"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
-					printDisplay(language_vars.lng_battery_error_20);
+					printDisplay(language_vars["lng_battery_error_20"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				}
 				bool update_firmware2 = false;
 				DIR *dir2;
-				update_firmware2 = ask_question((char*) language_vars.lng_ask_update_firmware);
+				update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 				if (update_firmware2) {
 					if (!beta_mode) {
 						dir2 = opendir(firmware_path);
@@ -1050,33 +1038,33 @@ int main(int argc, char **argv)
 						if (!beta_mode) {
 							if (daybreak_main(firmware_path, 2, 1, 2)) {
 								printDisplay("\033[0;32m\n");
-								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 								printDisplay("\033[0;37m\n");
 								sleep(5);
 								simple_reboot();
 							} else {
 								printDisplay("\033[0;31m\n");
-								printDisplay(language_vars.lng_install_firmware_end_error);
+								printDisplay(language_vars["lng_install_firmware_end_error"]);
 								printDisplay("\033[0;37m\n");
 							}
 						} else {
 							if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
 								printDisplay("\033[0;32m\n");
-								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 								printDisplay("\033[0;37m\n");
 								sleep(5);
 								simple_reboot();
 							} else {
 								printDisplay("\033[0;31m\n");
-								printDisplay(language_vars.lng_install_firmware_end_error);
+								printDisplay(language_vars["lng_install_firmware_end_error"]);
 								printDisplay("\033[0;37m\n");
 							}
 						}
 					} else {
 						printDisplay("\033[0;31m");
-						printDisplay(language_vars.lng_install_firmware_error_folder_not_found);
+						printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
 						printDisplay("\033[0;37m\n");
-						printDisplay(language_vars.lng_install_firmware_folder_location, firmware_path);
+						printDisplay(language_vars["lng_install_firmware_folder_location"], firmware_path);
 						printDisplay("\n");
 					}
 				}
@@ -1087,23 +1075,23 @@ int main(int argc, char **argv)
 			{
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
-					printDisplay(language_vars.lng_battery_error_20);
+					printDisplay(language_vars["lng_battery_error_20"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					printDisplay(language_vars.lng_battery_error_30);
+					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				}
@@ -1113,20 +1101,20 @@ int main(int argc, char **argv)
 				DIR *dir;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
-						update_firmware = ask_question((char*) language_vars.lng_ask_update_firmware);
+						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 					}
 				} else {
 					if (strcmp(firmware_path_beta, "") != 0) {
-						update_firmware = ask_question((char*) language_vars.lng_ask_update_firmware);
+						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 					}
 				}
 				if (update_firmware) {
 					clean_theme = true;
 				} else {
-					clean_theme = ask_question((char*) language_vars.lng_ask_clean_theme);
+					clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
 				}
-				bool clean_logos = ask_question((char*) language_vars.lng_ask_clean_logos);
-				bool install_hbmenu_choice = ask_question((char*) language_vars.lng_ask_hbmenu_install);
+				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
+				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
 				/*
 				if (titleid_curently_launched(hbmenu_title_id) && install_hbmenu_choice) {
 					install_hbmenu_choice = ask_question((char *) "Attention: Vous avez choisi d'installer l'icone du Homebrew Menu mais vous avez lance celui-ci, ceci n'est pas possible, veuillez quitter cette version du Homebrew Menu lancee en mode application (non lancee en mode applet).\nPour pouvoir faire ceci vous devez lancer ce homebrew en maintenant \"R\" en lancant un jeu ou lancer ce homebrew via l'album (en mode applet mais ceci n'est pas recommande pour installer le pack car cela diminu grandement les performances).\nVous pourez egalement effectuer l'installation de l'icone du Homebrew Menu via l'option appropriee du menu principal de ce homebrew apres l'installation du pack et le redemarrage de la console, dans ce cas le mode applet poura etre utilise.\n\nSouhaitez-vous continuer l'installation du pack en desactivant l'installation de l'icone du Homebrew Menu?");
@@ -1138,35 +1126,35 @@ int main(int argc, char **argv)
 					}
 				}
 				*/
-				printDisplay(language_vars.lng_install_pack_recap_begin);
+				printDisplay(language_vars["lng_install_pack_recap_begin"]);
 				printDisplay("\n\n");
 				if (update_firmware) {
-					printDisplay(language_vars.lng_install_pack_recap_firmware_install);
+					printDisplay(language_vars["lng_install_pack_recap_firmware_install"]);
 					printDisplay("\n");
 				} else {
-					printDisplay(language_vars.lng_install_pack_recap_not_install_firmware);
+					printDisplay(language_vars["lng_install_pack_recap_not_install_firmware"]);
 					printDisplay("\n");
 					if (clean_theme) {
-						printDisplay(language_vars.lng_install_pack_recap_clean_theme);
+						printDisplay(language_vars["lng_install_pack_recap_clean_theme"]);
 						printDisplay("\n");
 					} else {
-						printDisplay(language_vars.lng_install_pack_recap_not_clean_theme);
+						printDisplay(language_vars["lng_install_pack_recap_not_clean_theme"]);
 						printDisplay("\n");
 					}
 				}
 				if (clean_logos) {
-					printDisplay(language_vars.lng_install_pack_recap_clean_logos);
+					printDisplay(language_vars["lng_install_pack_recap_clean_logos"]);
 				} else {
-					printDisplay(language_vars.lng_install_pack_recap_not_clean_logos);
+					printDisplay(language_vars["lng_install_pack_recap_not_clean_logos"]);
 				}
 				printDisplay("\n");
 				if (install_hbmenu_choice) {
-					printDisplay(language_vars.lng_install_pack_recap_install_hbmenu);
+					printDisplay(language_vars["lng_install_pack_recap_install_hbmenu"]);
 				} else {
-					printDisplay(language_vars.lng_install_pack_recap_not_install_hbmenu);
+					printDisplay(language_vars["lng_install_pack_recap_not_install_hbmenu"]);
 				}
 				printDisplay("\n");
-				bool validate_choice = ask_question((char*) language_vars.lng_ask_validate_choices);
+				bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
 				if (validate_choice) {
 					bool dl_pack_res;
 					if (!beta_mode) {
@@ -1183,7 +1171,7 @@ int main(int argc, char **argv)
 						}
 						if (not_has_enough_space_on_sd) {
 							printDisplay("\033[0;31m");
-							printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+							printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 							printDisplay("\033[0;37m\n");
 						} else {
 							set_90dns();
@@ -1236,32 +1224,32 @@ int main(int argc, char **argv)
 										if (!beta_mode) {
 											if (daybreak_main(firmware_path, 2, 1, 2)) {
 												printDisplay("\033[0;32m\n");
-												printDisplay(language_vars.lng_install_firmware_end_success);
+												printDisplay(language_vars["lng_install_firmware_end_success"]);
 												printDisplay("\033[0;37m\n");
 											} else {
 												printDisplay("\033[0;31m\n");
-												printDisplay(language_vars.lng_install_firmware_end_error);
+												printDisplay(language_vars["lng_install_firmware_end_error"]);
 												printDisplay("\033[0;37m\n");
 											}
 										} else {
 											if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
 												printDisplay("\033[0;32m\n");
-												printDisplay(language_vars.lng_install_firmware_end_success);
+												printDisplay(language_vars["lng_install_firmware_end_success"]);
 												printDisplay("\033[0;37m\n");
 											} else {
 												printDisplay("\033[0;31m\n");
-												printDisplay(language_vars.lng_install_firmware_end_error);
+												printDisplay(language_vars["lng_install_firmware_end_error"]);
 												printDisplay("\033[0;37m\n");
 											}
 										}
 									} else {
 										printDisplay("\033[0;31m");
-										printDisplay(language_vars.lng_install_firmware_error_folder_not_found);
+										printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
 										printDisplay("\033[0;37m\n");
 									}
 								}
 								printDisplay("\033[0;32m\n");
-								printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 								printDisplay("\033[0;37m\n");
 								sleep(5);
 								aply_reboot();
@@ -1271,7 +1259,7 @@ int main(int argc, char **argv)
 						}
 					} else {
 						printDisplay("\033[0;31m");
-						printDisplay(language_vars.lng_install_pack_download_pack_error);
+						printDisplay(language_vars["lng_install_pack_download_pack_error"]);
 						printDisplay("\033[0;37m\n");
 						remove(TEMP_FILE);
 					}
@@ -1293,12 +1281,12 @@ int main(int argc, char **argv)
 				if (dl_app_res) {
 					if (get_sd_size_left() <= 4000000) {
 						printDisplay("\033[0;31m");
-						printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 						printDisplay("\033[0;37m\n");
 					} else {
 						cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
 						printDisplay("\033[0;32m\n");
-						printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 						printDisplay("\033[0;37m\n");
 						sleep(5);
 						appExit();
@@ -1309,7 +1297,7 @@ int main(int argc, char **argv)
 				else
 				{
 					printDisplay("\033[0;31m");
-					printDisplay(language_vars.lng_install_app_download_app_error);
+					printDisplay(language_vars["lng_install_app_download_app_error"]);
 					printDisplay("\033[0;37m\n");
 					remove(TEMP_FILE);
 				}
@@ -1322,13 +1310,13 @@ int main(int argc, char **argv)
 				consoleSelect(&logs_console);
 				if (set_90dns()) {
 					printDisplay("\033[0;32m\n");
-					printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
 					sleep(5);
 					simple_reboot();
 				} else {
 						printDisplay("\033[0;31m");
-						printDisplay(language_vars.lng_dns_end_install_error);
+						printDisplay(language_vars["lng_dns_end_install_error"]);
 						printDisplay("\033[0;37m\n");
 				}
 				consoleSelect(&menu_console);
@@ -1338,11 +1326,11 @@ int main(int argc, char **argv)
 			case UP_ATMO_PROTECT_CONFIGS:
 			{
 				consoleSelect(&logs_console);
-				printDisplay(language_vars.lng_protect_console_begin);
+				printDisplay(language_vars["lng_protect_console_begin"]);
 				printDisplay("\n");
 				if (get_sd_size_left() <= 100000) {
 					printDisplay("\033[0;31m");
-					printDisplay(language_vars.lng_error_not_enough_space_on_sd);
+					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 					printDisplay("\033[0;37m\n");
 				} else {
 					mkdir((char*) "/atmosphere", 0777);
@@ -1357,13 +1345,13 @@ int main(int argc, char **argv)
 					if (!set_90dns()) test_cp = false;
 					if (test_cp) {
 						printDisplay("\033[0;32m\n");
-						printDisplay(language_vars.lng_success_reboot_in_five_seconds);
+						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 						printDisplay("\033[0;37m\n");
 						sleep(5);
 						simple_reboot();
 					} else {
 						printDisplay("\033[0;31m\n");
-						printDisplay(language_vars.lng_protect_console_error);
+						printDisplay(language_vars["lng_protect_console_error"]);
 						printDisplay("\033[0;37m\n");
 					}
 				}
