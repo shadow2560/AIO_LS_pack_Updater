@@ -11,9 +11,9 @@
 #include "download.hpp"
 #include "unzip.hpp"
 #include "reboot_to_payload.hpp"
-#include "ini.h"
 #include "firmwares_install/daybreak-cli.hpp"
 #include "translate.hpp"
+#include "main_config.hpp"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -79,318 +79,6 @@ custom_font->numChars=;
 custom_font->tileWidth=;
 custom_font->tileHeight=;
 */
-
-// define a structure for holding the values in "config" section of the ini file.
-typedef struct{
-	const char* dl_pack;
-	const char* dl_pack_version;
-	const char* pack_version_local_filepath;
-	const char* subfolder_in_zip_pack;
-	s64 pack_size;
-	const char* dl_app;
-	const char *firmware_path;
-	const char *atmo_logo_dir;
-	const char *hekate_nologo_file_path;
-	int exit_method;
-} config_section;
-
-// define a structure for holding all of the config of the ini file.
-typedef struct
-{
-	config_section s1;
-} configuration;
-
-// define a structure for holding the values in "emummc" section of the emummc ini file.
-typedef struct{
-	int enabled;
-	u32 id;
-	u32 sector;
-	const char* path;
-	const char* nintendo_path;
-} emummc_config_section;
-
-// define a structure for holding all of the config of the ini file.
-typedef struct
-{
-	emummc_config_section e1;
-} emummc_configuration;
-
-static int config_handler(void* config, const char* section, const char* name, const char* value)
-{
-	// config instance for filling in the values.
-	configuration* pconfig = (configuration*)config;
-
-	// define a macro for checking Sections and keys under the sections.
-	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-
-	// fill the values in config struct for Section 1.
-	if(MATCH("config", "dl_pack_adress")){
-		if (value != 0) {
-			pconfig->s1.dl_pack = strdup(value);
-		} else {
-			pconfig->s1.dl_pack = "";
-		}
-	} else 	if(MATCH("config", "pack_version_adress")){
-		if (value != 0) {
-			pconfig->s1.dl_pack_version = strdup(value);
-		} else {
-			pconfig->s1.dl_pack_version = "";
-		}
-		} else 	if(MATCH("config", "pack_version_local_filepath")){
-		if (value != 0) {
-			pconfig->s1.pack_version_local_filepath = strdup(value);
-		} else {
-			pconfig->s1.pack_version_local_filepath = "";
-		}
-	}else if(MATCH("config", "subfolder_of_pack_in_zip")){
-		if (value != 0) {
-			pconfig->s1.subfolder_in_zip_pack = strdup(value);
-		} else {
-			pconfig->s1.subfolder_in_zip_pack = "";
-		}
-	}else if(MATCH("config", "dl_app_adress")){
-		if (value != 0) {
-			pconfig->s1.dl_app = strdup(value);
-		} else {
-			pconfig->s1.dl_app = "";
-		}
-	}else if(MATCH("config", "firmware_path")){
-		if (value != 0) {
-			pconfig->s1.firmware_path = strdup(value);
-		} else {
-			pconfig->s1.dl_app = "";
-		}
-	}else if(MATCH("config", "atmo_logo_dir")){
-		if (value != 0) {
-			pconfig->s1.atmo_logo_dir = strdup(value);
-		} else {
-			pconfig->s1.atmo_logo_dir = "";
-		}
-	}else if(MATCH("config", "hekate_nologo_file_path")){
-		if (value != 0) {
-			pconfig->s1.hekate_nologo_file_path = strdup(value);
-		} else {
-			pconfig->s1.hekate_nologo_file_path = "";
-		}
-	}else if(MATCH("config", "pack_size")){
-		if (value != 0) {
-			pconfig->s1.pack_size = atoll(value);
-		} else {
-			pconfig->s1.pack_size = 0;
-		}
-	}else if(MATCH("config", "exit_method")){
-		if (value != 0) {
-			pconfig->s1.exit_method = atoll(value);
-		} else {
-			pconfig->s1.exit_method = 0;
-		}
-	}else{
-		return 0;
-	}
-	return 1;
-}
-
-void configs_init() {
-	strcpy(pack_version, language_vars["lng_unknown_1"]);
-	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
-	strcpy(firmware_version, language_vars["lng_unknown_1"]);
-	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
-	strcpy(emummc_value, language_vars["lng_unknown_1"]);
-	strcpy(emummc_type, language_vars["lng_unknown_0"]);
-	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"]);
-	strcpy(console_model, language_vars["lng_unknown_0"]);
-	// config for holding ini file values.
-	configuration config;
-	config.s1.dl_pack = "";
-	config.s1.dl_pack_version = "";
-	config.s1.pack_version_local_filepath = "";
-	config.s1.subfolder_in_zip_pack = "";
-	config.s1.dl_app = "";
-	config.s1.firmware_path = "";
-	config.s1.atmo_logo_dir = "";
-	config.s1.hekate_nologo_file_path = "";
-	config.s1.pack_size = 0;
-	config.s1.exit_method = 0;
-	FILE *test_ini;
-	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
-	if (test_ini != NULL) {
-		fclose(test_ini);
-		// parse the .ini file
-		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", config_handler, &config) == 0) {
-			if (strcmp(config.s1.dl_pack, "") != 0) {
-				strcpy(CFW_URL, config.s1.dl_pack);
-				free((void*)config.s1.dl_pack);
-			}
-			if (strcmp(config.s1.dl_pack_version, "") != 0) {
-				strcpy(pack_version_url, config.s1.dl_pack_version);
-				free((void*)config.s1.dl_pack_version);
-			}
-			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
-				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
-				free((void*)config.s1.dl_pack_version);
-			}
-			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
-				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
-				free((void*)config.s1.subfolder_in_zip_pack);
-			}
-			if (strcmp(config.s1.dl_app, "") != 0) {
-				strcpy(APP_URL, config.s1.dl_app);
-				free((void*)config.s1.dl_app);
-			}
-			if (strcmp(config.s1.firmware_path, "") != 0) {
-				strcpy(firmware_path, config.s1.firmware_path);
-				free((void*)config.s1.firmware_path);
-			}
-			if (strcmp(config.s1.atmo_logo_dir, "") != 0) {
-				strcpy(atmo_logo_dir, config.s1.atmo_logo_dir);
-				free((void*)config.s1.atmo_logo_dir);
-			}
-			if (strcmp(config.s1.hekate_nologo_file_path, "") != 0) {
-				strcpy(hekate_nologo_file_path, config.s1.hekate_nologo_file_path);
-				free((void*)config.s1.hekate_nologo_file_path);
-			}
-			if (config.s1.pack_size != 0) {
-				pack_size = config.s1.pack_size;
-			}
-			if (config.s1.exit_method != 0) {
-				exit_mode_param = 1;
-			}
-		}
-	}
-	configuration config_beta;
-	config_beta.s1.dl_pack = "";
-	config_beta.s1.dl_pack_version = "";
-	config_beta.s1.pack_version_local_filepath = "";
-	config_beta.s1.subfolder_in_zip_pack = "";
-	config_beta.s1.dl_app = "";
-	config_beta.s1.firmware_path = "";
-	config_beta.s1.atmo_logo_dir = "";
-	config_beta.s1.hekate_nologo_file_path = "";
-	config_beta.s1.pack_size = 0;
-	config_beta.s1.exit_method = 0;
-	FILE *test_ini_beta;
-	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
-	if (test_ini_beta != NULL) {
-		fclose(test_ini_beta);
-		// parse the .ini file
-		if (ini_parse("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", config_handler, &config_beta) == 0) {
-			if (strcmp(config_beta.s1.dl_pack, "") != 0) {
-				strcpy(CFW_URL_beta, config_beta.s1.dl_pack);
-				free((void*)config_beta.s1.dl_pack);
-			}
-			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
-				strcpy(pack_version_url_beta, config_beta.s1.dl_pack_version);
-				free((void*)config_beta.s1.dl_pack_version);
-			}
-			if (strcmp(config_beta.s1.pack_version_local_filepath, "") != 0) {
-				strcpy(pack_version_local_filepath_beta, config_beta.s1.pack_version_local_filepath);
-				free((void*)config_beta.s1.dl_pack_version);
-			}
-			if (strcmp(config_beta.s1.subfolder_in_zip_pack, "") != 0) {
-				strcpy(subfolder_in_zip_beta, config_beta.s1.subfolder_in_zip_pack);
-				free((void*)config_beta.s1.subfolder_in_zip_pack);
-			}
-			if (strcmp(config_beta.s1.dl_app, "") != 0) {
-				strcpy(APP_URL_beta, config_beta.s1.dl_app);
-				free((void*)config_beta.s1.dl_app);
-			}
-			if (strcmp(config_beta.s1.firmware_path, "") != 0) {
-				strcpy(firmware_path_beta, config_beta.s1.firmware_path);
-				free((void*)config_beta.s1.firmware_path);
-			}
-			if (strcmp(config_beta.s1.atmo_logo_dir, "") != 0) {
-				strcpy(atmo_logo_dir_beta, config_beta.s1.atmo_logo_dir);
-				free((void*)config_beta.s1.atmo_logo_dir);
-			}
-			if (strcmp(config_beta.s1.hekate_nologo_file_path, "") != 0) {
-				strcpy(hekate_nologo_file_path_beta, config_beta.s1.hekate_nologo_file_path);
-				free((void*)config_beta.s1.hekate_nologo_file_path);
-			}
-			if (config_beta.s1.pack_size != 0) {
-				pack_size_beta = config_beta.s1.pack_size;
-			}
-			if (config_beta.s1.exit_method != 0) {
-				exit_mode_param_beta = 1;
-			}
-		}
-	}
-}
-
-static int emummc_config_handler(void* config, const char* section, const char* name, const char* value)
-{
-	// config instance for filling in the values.
-	emummc_configuration* pconfig = (emummc_configuration*)config;
-
-	// define a macro for checking Sections and keys under the sections.
-	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-
-	// fill the values in config struct for emummc 1.
-	if(MATCH("emummc", "enabled")){
-		if (value != 0) {
-			pconfig->e1.enabled = atoll(value);
-		} else {
-			pconfig->e1.enabled = 0;
-		}
-	} else 	if(MATCH("emummc", "id")){
-		if (value != 0) {
-			pconfig->e1.id = ParseHexInteger(value);
-		} else {
-			pconfig->e1.id = 0;
-		}
-		} else 	if(MATCH("emummc", "sector")){
-		if (value != 0) {
-			pconfig->e1.sector = ParseHexInteger(value);;
-		} else {
-			pconfig->e1.sector = 0;
-		}
-	}else if(MATCH("emummc", "path")){
-		if (value != 0) {
-			pconfig->e1.path = strdup(value);
-		} else {
-			pconfig->e1.path = "";
-		}
-	}else if(MATCH("emummc", "nintendo_path")){
-		if (value != 0) {
-			pconfig->e1.nintendo_path = strdup(value);
-		} else {
-			pconfig->e1.nintendo_path = "";
-		}
-	}else{
-		return 0;
-	}
-	return 1;
-}
-
-void get_emunand_type() {
-	if (strcmp(emummc_value, "Emunand") != 0) {
-		strcpy(emummc_type, "");
-		return;
-	}
-	// config for holding ini file values.
-	emummc_configuration emummc_config;
-	emummc_config.e1.enabled = 0;
-	emummc_config.e1.sector = 0;
-	emummc_config.e1.id = 0;
-	emummc_config.e1.path = "";
-	emummc_config.e1.nintendo_path = "";
-	FILE *test_ini;
-	test_ini = fopen("/emuMMC/emummc.ini", "r");
-	if (test_ini != NULL) {
-		fclose(test_ini);
-		// parse the .ini file
-		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
-			if (emummc_config.e1.sector == 0) {
-				if (strcmp(emummc_config.e1.path, "") != 0) {
-					strcpy(emummc_type, language_vars["lng_files"]);
-					free((void*)emummc_config.e1.path);
-				}
-			} else {
-				strcpy(emummc_type, language_vars["lng_partition"]);
-			}
-		}
-	}
-	free((void*)emummc_config.e1.nintendo_path);
-}
 
 void refreshScreen(int cursor)
 {
@@ -576,7 +264,6 @@ void get_fw_version() {
 void get_ams_version() {
 	splInitialize();
 	u32 ExosphereApiVersionConfigItem = 65000;
-	u32 ExosphereEmummcType		   = 65007;
 	u64 version;
 	Result rc = 0;
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereApiVersionConfigItem), &version))) {
@@ -589,17 +276,12 @@ void get_ams_version() {
 	char sysVersionBuffer[50];
 	snprintf(sysVersionBuffer, 50, "%u.%u.%u", version_major, version_minor, version_micro);
 	snprintf(atmosphere_version, sizeof(atmosphere_version), "%s", sysVersionBuffer);
-	u64 is_emummc;
-	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
-		splExit();
-		return;
-	}
-	if (is_emummc) {
+	splExit();
+	if (is_emummc()) {
 		strcpy(emummc_value, "Emunand");
 	} else {
 		strcpy(emummc_value,"Sysnand");
 	}
-	splExit();
 }
 
 void get_fusee_gelee_exploit() {
@@ -713,7 +395,7 @@ void display_infos() {
 		printf(language_vars["lng_infos_serial"], console_serial.number);
 	}
 	printf("\n");
-	if (strcmp(emummc_value, "Emunand") != 0) {
+	if (!is_emummc()) {
 		printf(language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
 		printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
@@ -769,7 +451,7 @@ void record_infos() {
 		fprintf(log_infos, language_vars["lng_infos_serial"], console_serial.number);
 	}
 	fprintf(log_infos, "\n");
-	if (strcmp(emummc_value, "Emunand") != 0) {
+	if (!is_emummc()) {
 		fprintf(log_infos, language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
 		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
@@ -938,6 +620,14 @@ int main(int argc, char **argv)
 	appInit();
 	language_vars = set_translation_strings();
 	menu_init();
+	strcpy(pack_version, language_vars["lng_unknown_1"]);
+	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
+	strcpy(firmware_version, language_vars["lng_unknown_1"]);
+	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
+	strcpy(emummc_value, language_vars["lng_unknown_1"]);
+	strcpy(emummc_type, language_vars["lng_unknown_0"]);
+	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"]);
+	strcpy(console_model, language_vars["lng_unknown_0"]);
 	configs_init();
 	padInitializeDefault(&pad);
 

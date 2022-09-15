@@ -216,3 +216,17 @@ s64 get_sd_size_left() {
 		// printf("%ld\n", fs_sd_size);
 		return fs_sd_size;
 }
+
+bool is_emummc() {
+	u32 ExosphereEmummcType		   = 65007;
+	Result rc = 0;
+	u64 is_emummc;
+	splInitialize();
+	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
+		splExit();
+		return false;
+	} else {
+		splExit();
+		return true;
+	}
+}
