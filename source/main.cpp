@@ -64,7 +64,7 @@ char fusee_gelee_patch[15];
 char console_model[50];
 u64 console_id = 0;
 SetSysSerialNumber console_serial;
-bool sd_is_exfat;
+// bool sd_is_exfat;
 bool console_is_erista = false;
 bool beta_mode = false;
 PadState pad;
@@ -201,10 +201,7 @@ void get_version_pack() {
 			}
 			i++;
 		}
-		while (i <= 15) {
-			pack_version[i] = '\0';
-			i++;
-		}
+		pack_version[i] = '\0';
 		free( buffer );
 	fclose(pack_version_file);
 }
@@ -236,10 +233,7 @@ void get_last_version_pack() {
 			}
 			i++;
 		}
-		while (i <= 15) {
-			last_pack_version[i] = '\0';
-			i++;
-		}
+		last_pack_version[i] = '\0';
 		free(buffer);
 		fclose(pack_version_file);
 	}
