@@ -249,8 +249,8 @@ void get_fw_version() {
 		return;
 	}
 
-	char sysVersionBuffer[20];
-	snprintf(sysVersionBuffer, 20, "%u.%u.%u", ver.major, ver.minor, ver.micro);
+	char sysVersionBuffer[50];
+	snprintf(sysVersionBuffer, 50, "%u.%u.%u", ver.major, ver.minor, ver.micro);
 	snprintf(firmware_version, sizeof(firmware_version), "%s", sysVersionBuffer);
 	setsysExit();
 }
