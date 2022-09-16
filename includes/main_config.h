@@ -42,7 +42,7 @@ typedef struct
 } emummc_configuration;
 
 void configs_init();
-void get_emunand_type();
+int get_emunand_type();
 
 #ifdef __cplusplus
 }

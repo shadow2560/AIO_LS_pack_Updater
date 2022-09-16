@@ -4,10 +4,7 @@
 
 #include "main_util.h"
 #include "ini.h"
-#include "main_config.hpp"
-#include "translate.hpp"
-
-extern translation_map language_vars;
+#include "main_config.h"
 
 extern char CFW_URL[1003];
 extern char CFW_URL_beta[1003];
@@ -29,9 +26,6 @@ extern char hekate_nologo_file_path[FS_MAX_PATH];
 extern char hekate_nologo_file_path_beta[FS_MAX_PATH];
 extern int exit_mode_param;
 extern int exit_mode_param_beta;
-
-extern char emummc_value[10];
-extern char emummc_type[10];
 
 static int config_handler(void* config, const char* section, const char* name, const char* value)
 {
@@ -271,10 +265,9 @@ static int emummc_config_handler(void* config, const char* section, const char* 
 	return 1;
 }
 
-void get_emunand_type() {
+int get_emunand_type() {
 	if (!is_emummc()) {
-		strcpy(emummc_type, "");
-		return;
+		return 0;
 	}
 	// config for holding ini file values.
 	emummc_configuration emummc_config;
@@ -291,13 +284,18 @@ void get_emunand_type() {
 		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
 			if (emummc_config.e1.sector == 0) {
 				if (strcmp(emummc_config.e1.path, "") != 0) {
-					strcpy(emummc_type, language_vars["lng_files"]);
 					free((void*)emummc_config.e1.path);
+					free((void*)emummc_config.e1.nintendo_path);
+					return 1;
 				}
 			} else {
-				strcpy(emummc_type, language_vars["lng_partition"]);
+				if (strcmp(emummc_config.e1.path, "") != 0) {
+					free((void*)emummc_config.e1.path);
+				}
+				free((void*)emummc_config.e1.nintendo_path);
+				return 2;
 			}
 		}
 	}
-	free((void*)emummc_config.e1.nintendo_path);
+	return 0;
 }

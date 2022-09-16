@@ -13,7 +13,7 @@
 #include "reboot_to_payload.hpp"
 #include "firmwares_install/daybreak-cli.hpp"
 #include "translate.hpp"
-#include "main_config.hpp"
+#include "main_config.h"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -614,6 +614,17 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
 }
 
+void set_emummc_values() {
+	int emummc_value = get_emunand_type();
+	if (emummc_value == 0) {
+		strcpy(emummc_type, "");
+	} else if (emummc_value == 1) {
+		strcpy(emummc_type, language_vars["lng_files"]);
+	} else if (emummc_value == 2) {
+		strcpy(emummc_type, language_vars["lng_partition"]);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
@@ -644,7 +655,7 @@ int main(int argc, char **argv)
 	get_fusee_gelee_exploit();
 	get_device_id();
 	get_serial_number();
-	get_emunand_type();
+	set_emummc_values();
 	remove(TEMP_FILE);
 
 	if (isApplet()) {
