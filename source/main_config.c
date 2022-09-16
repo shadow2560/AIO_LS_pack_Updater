@@ -285,14 +285,18 @@ int get_emunand_type() {
 			if (emummc_config.e1.sector == 0) {
 				if (strcmp(emummc_config.e1.path, "") != 0) {
 					free((void*)emummc_config.e1.path);
-					free((void*)emummc_config.e1.nintendo_path);
+					if (strcmp(emummc_config.e1.nintendo_path, "") != 0) {
+						free((void*)emummc_config.e1.nintendo_path);
+					}
 					return 1;
 				}
 			} else {
 				if (strcmp(emummc_config.e1.path, "") != 0) {
 					free((void*)emummc_config.e1.path);
 				}
-				free((void*)emummc_config.e1.nintendo_path);
+				if (strcmp(emummc_config.e1.nintendo_path, "") != 0) {
+					free((void*)emummc_config.e1.nintendo_path);
+				}
 				return 2;
 			}
 		}
