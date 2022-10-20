@@ -23,6 +23,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_success_reboot_in_five_seconds", (char*) "Finis!\n\nRedemarrage automatique dans 5 secondes"}, \
 	{"lng_error_reboot_to_payload", (char*) "Payload non trouve."}, \
 	{"lng_error_not_enough_space_on_sd", (char*) "Erreur, pas assez d'espace sur la SD."}, \
+	{"lng_error_copy_file", (char*) "Erreur de copie de fichier."}, \
 \
 	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
 	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \

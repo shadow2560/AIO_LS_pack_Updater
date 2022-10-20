@@ -14,6 +14,7 @@
 extern translation_map language_vars;
 extern PrintConsole menu_console;
 extern PrintConsole logs_console;
+extern bool debug_enabled;
 
  alignas(0x1000) u8 g_reboot_payload[IRAM_PAYLOAD_MAX_SIZE];
  alignas(0x1000) u8 g_ff_page[0x1000];

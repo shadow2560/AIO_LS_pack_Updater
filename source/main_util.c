@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <unistd.h> // chdir
 #include <dirent.h> // mkdir
 #include <string.h>
@@ -8,8 +9,29 @@
 
 #include "main_util.h"
 
-bool cp(char *filein, char *fileout) {
+extern bool debug_enabled;
+
+void debug_log_start() {
+		FILE *debug_log_file;
+	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "w");
+	fclose(debug_log_file);
+}
+
+void debug_log_write(const char *text, ...) {
+	FILE *debug_log_file;
+	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "a");
+	va_list v;
+	va_start(v, text);
+	vfprintf(debug_log_file, text, v);
+	va_end(v);
+	fclose(debug_log_file);
+}
+
+bool custom_cp(char *filein, char *fileout) {
 	FILE *exein, *exeout;
+	if (debug_enabled) {
+		debug_log_write("Copie du fichier \"%s\" vers la destination \"%s\"\n", filein, fileout);
+	}
 	exein = fopen(filein, "rb");
 	if (exein == NULL) {
 		/* handle error */
@@ -209,7 +231,7 @@ s64 get_sd_size_left() {
 	FsFileSystem *fs_sd;
 	fs_sd = fsdevGetDeviceFileSystem("sdmc");
 	fsFsGetFreeSpace(fs_sd, "/", &fs_sd_size);
-	fsFsClose(fs_sd);
+	// fsFsClose(fs_sd);
 	// nsInitialize();
 	// nsGetFreeSpaceSize(NcmStorageId_SdCard, fs_sd_size);
 	// nsExit();

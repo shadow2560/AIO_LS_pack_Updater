@@ -28,6 +28,7 @@
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
+extern bool debug_enabled;
 
 const char app_version[] = "2.0.0";
 

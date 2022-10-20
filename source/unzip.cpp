@@ -16,6 +16,7 @@ size_t WRITEBUFFERSIZE = 0x100000;
 extern translation_map language_vars;
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
+extern bool debug_enabled;
 
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
@@ -42,12 +43,12 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 	remove("bootloader/res/background.bmp");
 	remove("config/nx-hbmenu/settings.cfg");
 	if (strcmp(hekate_nologo_file_path, "") != 0 && strcmp(hekate_nologo_file_path, "/") != 0) {
-		cp(hekate_nologo_file_path, (char*) "/bootloader/hekate_ipl.ini");
+		custom_cp(hekate_nologo_file_path, (char*) "/bootloader/hekate_ipl.ini");
 	}
 	mkdir("/config", 0777);
 	mkdir("/config/nx-hbmenu", 0777);
 	mkdir("/config/nx-hbmenu/themes", 0777);
-	cp((char*) "romfs:/nologo/hbmenu_default_theme.cfg", (char*) "/config/nx-hbmenu/themes/theme.cfg");
+	custom_cp((char*) "romfs:/nologo/hbmenu_default_theme.cfg", (char*) "/config/nx-hbmenu/themes/theme.cfg");
 }
 
 void fnc_clean_theme() {
@@ -247,7 +248,7 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
 	// remove(output);
 	remove("payload.bin");
-	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
+	custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
 
 	fclose(logfile);
 	return 0;
@@ -374,7 +375,7 @@ int unzip(const char *output, char *subfolder_in_zip) {
 	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
 	// remove(output);
 	remove("payload.bin");
-	cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
+	custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
 
 	// fclose(logfile);
 	return 0;

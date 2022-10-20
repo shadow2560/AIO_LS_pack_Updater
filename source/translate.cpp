@@ -6,6 +6,8 @@
 #include "translate.hpp"
 #include "ini.h"
 
+extern bool debug_enabled;
+
 const char* translation_vars_list[] =
 {
 	"lng_yes",
@@ -19,6 +21,7 @@ const char* translation_vars_list[] =
 	"lng_success_reboot_in_five_seconds",
 	"lng_error_reboot_to_payload",
 	"lng_error_not_enough_space_on_sd",
+	"lng_error_copy_file",
 
 	"lng_title",
 	"lng_title_beta",

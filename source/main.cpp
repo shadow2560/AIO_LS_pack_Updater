@@ -23,7 +23,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.3.0"
+#define APP_VERSION			 "4.3.1"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -32,6 +32,7 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
+bool debug_enabled = false;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -493,7 +494,7 @@ void force_reboot() {
 		fclose(payload_file);
 	} else {
 		rename("/payload.bin", "/payload.bin.temp");
-		cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
+		custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
 	}
 	spsmInitialize();
 	if (R_FAILED(appletRequestToReboot())) {
@@ -623,6 +624,9 @@ int main(int argc, char **argv)
 {
 	// init stuff
 	appInit();
+	if (debug_enabled) {
+		debug_log_start();
+	}
 	language_vars = set_translation_strings();
 	menu_init();
 	strcpy(pack_version, language_vars["lng_unknown_1"]);
@@ -902,7 +906,7 @@ int main(int argc, char **argv)
 									if (dir != NULL) {
 										closedir(dir);
 										/*
-										cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
+										custom_cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
 										char temp_setting[FS_MAX_PATH+100]= "";
 										if (!beta_mode) {
 											strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
@@ -979,14 +983,19 @@ int main(int argc, char **argv)
 						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 						printDisplay("\033[0;37m\n");
 					} else {
-						cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro");
-						printDisplay("\033[0;32m\n");
-						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
-						printDisplay("\033[0;37m\n");
-						sleep(5);
-						appExit();
-						envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-						return 0;
+						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+							printDisplay("\033[0;31m");;
+							printDisplay(language_vars["lng_error_copy_file"]);
+							printDisplay("\033[0;37m");;
+						} else {
+							printDisplay("\033[0;32m\n");
+							printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
+							printDisplay("\033[0;37m\n");
+							sleep(5);
+							appExit();
+							envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+							return 0;
+						}
 					}
 				}
 				else
@@ -1033,10 +1042,10 @@ int main(int argc, char **argv)
 					mkdir((char*) "/atmosphere/hosts", 0777);
 					mkdir((char*) "/bootloader", 0777);
 					bool test_cp = true;
-					if (!cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini")) test_cp = false;
-					if (!cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini")) test_cp = false;
-					if (!cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt")) test_cp = false;
-					if (!cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
+					if (!custom_cp((char*) "romfs:/config_files/exosphere.ini", (char*) "/exosphere.ini")) test_cp = false;
+					if (!custom_cp((char*) "romfs:/config_files/system_settings.ini", (char*) "/atmosphere/config/system_settings.ini")) test_cp = false;
+					if (!custom_cp((char*) "romfs:/config_files/default.txt", (char*) "/atmosphere/hosts/default.txt")) test_cp = false;
+					if (!custom_cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
 					if (!set_90dns()) test_cp = false;
 					if (test_cp) {
 						printDisplay("\033[0;32m\n");

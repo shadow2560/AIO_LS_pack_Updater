@@ -16,6 +16,7 @@
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
+extern bool debug_enabled;
 
 static time_t prevtime;
 time_t currtime;
@@ -195,10 +196,12 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
 		}
+		curl_easy_cleanup(curl);
 		curl_global_cleanup();
 		return false;
 	}
 
+	curl_easy_cleanup(curl);
 	curl_global_cleanup();
 	return false;
 }

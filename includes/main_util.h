@@ -6,7 +6,9 @@
 extern "C" {
 #endif
 
-bool cp(char *filein, char *fileout);
+void debug_log_start();
+void debug_log_write(const char *text, ...);
+bool custom_cp(char *filein, char *fileout);
 int remove_directory(const char *path);
 char * substr(char *s, int x, int y);
 u32 ParseHexInteger(const char *s);
