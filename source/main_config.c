@@ -6,6 +6,8 @@
 #include "ini.h"
 #include "main_config.h"
 
+extern bool debug_enabled;
+
 extern char CFW_URL[1003];
 extern char CFW_URL_beta[1003];
 extern char pack_version_url[1003];
@@ -217,6 +219,29 @@ void configs_init() {
 				exit_mode_param_beta = 1;
 			}
 		}
+	}
+	if (debug_enabled) {
+debug_log_write("\nConfigurations:\n");
+debug_log_write("URL du pack: %s\n", CFW_URL);
+debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
+debug_log_write("URL de la version du pack: %s\n", pack_version_url);
+debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
+debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
+debug_log_write("Chemin du fichier local de la version du pack beta: %s\n", pack_version_local_filepath_beta);
+debug_log_write("Début du chemin du pack dans le zip: %s\n", subfolder_in_zip);
+debug_log_write("Début du chemin du pack dans le zip beta: %s\n", subfolder_in_zip_beta);
+debug_log_write("Taille du pack: %lli\n", pack_size);
+debug_log_write("Taille du pack beta: %lli\n", pack_size_beta);
+debug_log_write("URL de l'application: %s\n", APP_URL);
+debug_log_write("URL de l'application beta: %s\n", APP_URL_beta);
+debug_log_write("Chemin local du firmware: %s\n", firmware_path);
+debug_log_write("Chemin local du firmware beta: %s\n", firmware_path_beta);
+debug_log_write("Chemin du logo d'Atmosphere: %s\n", atmo_logo_dir);
+debug_log_write("Chemin du logo d'Atmosphere beta: %s\n", atmo_logo_dir_beta);
+debug_log_write("Chemin de la config sans logo de Hekate: %s\n", hekate_nologo_file_path);
+debug_log_write("Chemin de la config sans logo de Hekate beta: %s\n", hekate_nologo_file_path_beta);
+debug_log_write("Méthode de fermeture de l'application: %i\n", exit_mode_param);
+debug_log_write("Méthode de fermeture de l'application beta: %i\n\n", exit_mode_param_beta);
 	}
 }
 

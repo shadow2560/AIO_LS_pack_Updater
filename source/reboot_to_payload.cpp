@@ -6,6 +6,7 @@
 #include <switch.h>
 
 #include "reboot_to_payload.hpp"
+#include "main_util.h"
 #include "translate.hpp"
 
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
@@ -67,6 +68,9 @@ void rebootAms_rcm()
 	FILE *f = fopen("payload/ams_rcm.bin", "rb");
 
 	if (f == NULL) {
+		if (debug_enabled) {
+			debug_log_write("Erreur durant le redémarrage sur le payload.\n");
+		}
 		printf("\033[0;31m");
 		printf(language_vars["lng_error_reboot_to_payload"]);
 		printf("\033[0;37m\n");

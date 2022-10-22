@@ -31,6 +31,9 @@ int check(unsigned const char type) {
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
+	if (debug_enabled) {
+		debug_log_write("Suppression des logos.\n");
+	}
 	printf(language_vars["lng_clean_logos_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
@@ -52,19 +55,25 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 }
 
 void fnc_clean_theme() {
-		// Full theme deletion, helped  with code from nx-theme-installer
-		printf(language_vars["lng_clean_theme_begin"]);
-		printf("\n");
-		consoleUpdate(&logs_console);
-		remove_directory("atmosphere/contents/0100000000001000");
-		remove_directory("atmosphere/contents/0100000000001013");
-		remove_directory("atmosphere/contents/0100000000001007"); //Player select
-		remove_directory("atmosphere/contents/0100000000000811"); //Custom font
-		remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
-		// End full theme deletion
+	if (debug_enabled) {
+		debug_log_write("Suppression du thème.\n");
+	}
+	// Full theme deletion, helped  with code from nx-theme-installer
+	printf(language_vars["lng_clean_theme_begin"]);
+	printf("\n");
+	consoleUpdate(&logs_console);
+	remove_directory("atmosphere/contents/0100000000001000");
+	remove_directory("atmosphere/contents/0100000000001013");
+	remove_directory("atmosphere/contents/0100000000001007"); //Player select
+	remove_directory("atmosphere/contents/0100000000000811"); //Custom font
+	remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
+	// End full theme deletion
 }
 
 void clean_sd(bool clean_theme) {
+	if (debug_enabled) {
+		debug_log_write("Nettoyage de la SD.\n");
+	}
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_begin"]);
 	printf("\033[0;37m\n");
@@ -256,7 +265,6 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 */
 
 int unzip(const char *output, char *subfolder_in_zip) {
-	// FILE *logfile = fopen("log.txt", "w");
 	unzFile zfile = unzOpen(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);
@@ -277,8 +285,8 @@ int unzip(const char *output, char *subfolder_in_zip) {
 		strcpy(subfolder_in_zip, "/");
 		subfolder_in_zip_length = 0;
 	}
-	// fprintf(logfile, "%s\n", subfolder_in_zip);
-	// fprintf(logfile, "%ld\n\n", strlen(subfolder_in_zip));
+	// debug_log_write("%s\n", subfolder_in_zip);
+	// debug_log_write("%ld\n\n", strlen(subfolder_in_zip));
 	bool detected_payload_bin = false;
 	char filename_inzip[FS_MAX_PATH] = {0};
 	char filename_on_sd[FS_MAX_PATH] = {0};
@@ -291,7 +299,7 @@ int unzip(const char *output, char *subfolder_in_zip) {
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 
-		// fprintf(logfile, "%s\n", filename_inzip);
+		// debug_log_write("%s\n", filename_inzip);
 		char *c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
 		strcpy(filename_on_sd, c1);
 		free(c1);
@@ -303,8 +311,8 @@ int unzip(const char *output, char *subfolder_in_zip) {
 		}
 		filename_on_sd[k] = '\0';
 		*/
-		// fprintf(logfile, "%s\n", filename_on_sd);
-		// fprintf(logfile, "%s\n\n", filename_inzip);
+		// debug_log_write("%s\n", filename_on_sd);
+		// debug_log_write("%s\n\n", filename_inzip);
 		if (first_subfolder_passed > i){
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
@@ -320,6 +328,9 @@ int unzip(const char *output, char *subfolder_in_zip) {
 				printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
 				printf("\033[0;37m\n");
 				mkdir(filename_on_sd, 0777);
+				if (debug_enabled) {
+					debug_log_write("Création du répertoire \"%s\".\n", filename_on_sd);
+				}
 				consoleUpdate(&logs_console);
 			}
 			unzCloseCurrentFile(zfile);
@@ -352,7 +363,9 @@ int unzip(const char *output, char *subfolder_in_zip) {
 		buf = malloc(WRITEBUFFERSIZE);
 		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
 			if (j != fwrite(buf, 1, j, outfile)) {
-				// fprintf(logfile, "Erreur durant l'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD.\n", filename_on_sd);
+				if (debug_enabled) {
+					debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
+				}
 				printf("\033[0;31m");
 				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
 				printf("\033[0;37m\n");
@@ -369,6 +382,9 @@ int unzip(const char *output, char *subfolder_in_zip) {
 		free(buf);
 		unzCloseCurrentFile(zfile);
 		unzGoToNextFile(zfile);
+		if (debug_enabled) {
+			debug_log_write("Ecriture du fichier \"%s\" OK.\n", filename_on_sd);
+		}
 	}
 
 	unzClose(zfile);
@@ -377,6 +393,5 @@ int unzip(const char *output, char *subfolder_in_zip) {
 	remove("payload.bin");
 	custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
 
-	// fclose(logfile);
 	return 0;
 }

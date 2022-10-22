@@ -4,6 +4,7 @@
 #include <switch.h>
 
 #include "translate.hpp"
+#include "main_util.h"
 #include "ini.h"
 
 extern bool debug_enabled;
@@ -234,9 +235,15 @@ translation_map set_translation_strings() {
 			if (test_ini != NULL) {
 				fclose(test_ini);
 			} else {
+				if (debug_enabled) {
+					debug_log_write("Langage par défaut utilisé.\n");
+				}
 				return language_temp;
 			}
 		}
+	}
+	if (debug_enabled) {
+		debug_log_write("Fichier de langage: %s\n", file_path);
 	}
 	// parse the .ini file
 	if (ini_parse(file_path, translation_handler, &config) == 0) {

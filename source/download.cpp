@@ -8,6 +8,7 @@
 #include <curl/curl.h>
 #include <switch.h>
 
+#include "main_util.h"
 #include "download.hpp"
 #include "translate.hpp"
 
@@ -103,6 +104,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
+	if (debug_enabled) {
+		debug_log_write("Téléchargement de \"%s\".\n", url);
+	}
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl) {
@@ -146,6 +150,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 						printf(language_vars["lng_dl_file_write_error"]);
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
+						if (debug_enabled) {
+							debug_log_write("Erreur durant l'écriture du fichier.\n\n");
+						}
 					}
 					curl_easy_cleanup(curl);
 					curl_global_cleanup();
@@ -168,6 +175,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
+				if (debug_enabled) {
+					debug_log_write("Téléchargement OK.\n\n");
+				}
 				return true;
 			} else {
 				if (display_log) {
@@ -175,6 +185,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf(language_vars["lng_dl_dl_error"]);
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
+				}
+				if (debug_enabled) {
+					debug_log_write("Erreur de Téléchargement.\n\n");
 				}
 				return false;
 			}
@@ -187,6 +200,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 				consoleUpdate(&logs_console);
 			}
 			curl_global_cleanup();
+			if (debug_enabled) {
+				debug_log_write("Erreur d'ouverture du fichier temporaire.\n\n");
+			}
 			return false;
 		}
 	} else {
@@ -198,10 +214,16 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		}
 		curl_easy_cleanup(curl);
 		curl_global_cleanup();
+		if (debug_enabled) {
+			debug_log_write("Erreur d'initialisation de Curl.\n\n");
+		}
 		return false;
 	}
 
 	curl_easy_cleanup(curl);
 	curl_global_cleanup();
+	if (debug_enabled) {
+		debug_log_write("Erreur inconnue.\n\n");
+	}
 	return false;
 }

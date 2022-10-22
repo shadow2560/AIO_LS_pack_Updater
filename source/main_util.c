@@ -36,12 +36,18 @@ bool custom_cp(char *filein, char *fileout) {
 	if (exein == NULL) {
 		/* handle error */
 		perror("file open for reading");
+		if (debug_enabled) {
+			debug_log_write("Erreur d'ouverture du fichier source.\n");
+		}
 		return false;
 	}
 	exeout = fopen(fileout, "wb");
 	if (exeout == NULL) {
 		/* handle error */
 		perror("file open for writing");
+		if (debug_enabled) {
+			debug_log_write("Erreur d'ouverture du fichier cible.\n");
+		}
 		return false;
 	}
 	size_t n, m;
@@ -54,20 +60,32 @@ bool custom_cp(char *filein, char *fileout) {
 	while ((n > 0) && (n == m));
 	if (m) {
 		perror("copy");
+		if (debug_enabled) {
+			debug_log_write("Erreur de copie.\n");
+		}
 		return false;
 	}
 	if (fclose(exeout)) {
 		perror("close output file");
+		if (debug_enabled) {
+			debug_log_write("Erreur de fermeture du fichier source.\n");
+		}
 		return false;
 	}
 	if (fclose(exein)) {
 		perror("close input file");
+		if (debug_enabled) {
+			debug_log_write("Erreur de fermeture du fichier cible.\n");
+		}
 		return false;
 	}
 	return true;
 }
 
 int remove_directory(const char *path) {
+	if (debug_enabled) {
+		debug_log_write("Suppression du dossier \"%s\".\n", path);
+	}
    DIR *d = opendir(path);
    size_t path_len = strlen(path);
    int r = -1;

@@ -23,7 +23,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.3.1"
+#define APP_VERSION			 "4.3.3"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -32,7 +32,7 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
-bool debug_enabled = false;
+bool debug_enabled = true;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -90,6 +90,9 @@ void refreshScreen(int cursor)
 	} else {
 		printf("\x1B[31m");
 		printf(language_vars["lng_title_beta"], APP_VERSION);
+	}
+	if (debug_enabled) {
+		printf(" Debug");
 	}
 	printf("\x1B[37m\n\n");
 	printf(language_vars["lng_a_menu"]);
@@ -174,8 +177,10 @@ void logs_console_clear() {
 	
 }
 
-void appExit()
-{
+void appExit() {
+	if (debug_enabled) {
+		debug_log_write("Fermeture de l'application.\n\n-----------------------------\n\n");
+	}
 	appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
 	// hiddbgExit();
@@ -370,6 +375,9 @@ void display_infos() {
 	// consoleInit(&infos_console);
 	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
 	consoleSelect(&logs_console);
+	if (debug_enabled) {
+		debug_log_write("Affichage des informations.\n");
+	}
 	printf(language_vars["lng_infos_begin"]);
 	printf("\n\n");
 	if (isApplet()) {
@@ -417,6 +425,9 @@ void display_infos() {
 }
 
 void record_infos() {
+	if (debug_enabled) {
+		debug_log_write("Ecriture des informations dans le fichier d'informations.\n");
+	}
 	consoleSelect(&logs_console);
 	FILE *log_infos;
 	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
@@ -523,8 +534,14 @@ void aply_reboot() {
 
 void switch_app_mode() {
 	if (!beta_mode) {
+		if (debug_enabled) {
+			debug_log_write("Switch de l'application en mode Beta.\n");
+		}
 		beta_mode = true;
 	} else {
+		if (debug_enabled) {
+			debug_log_write("Switch de l'application en mode normal.\n");
+		}
 		beta_mode = false;
 	}
 }
@@ -536,6 +553,9 @@ void switch_app_mode() {
 #include "contents_install/util/util.hpp"
 
 bool install_hbmenu() {
+	if (debug_enabled) {
+		debug_log_write("Installation du HBMenu.\n");
+	}
 	printDisplay(language_vars["lng_hbmenu_install_begin"]);
 	printDisplay("\n\n");
 	std::vector<std::filesystem::path> nsp_list;
@@ -546,15 +566,24 @@ bool install_hbmenu() {
 	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
 		if (installedTitles[i].first == hbmenu_title_id) {
 			// if (!titleid_curently_launched(hbmenu_title_id)) {
+				if (debug_enabled) {
+					debug_log_write("Désinstallation du HBMenu.\n");
+				}
 				printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
 				printDisplay("\n");
 				if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
+					if (debug_enabled) {
+						debug_log_write("Erreur durant la désinstallation du HBMenu.\n\n");
+					}
 					printDisplay("\033[0;31m");
 					printDisplay(language_vars["lng_hbmenu_install_uninstall_error"]);
 					printDisplay("\033[0;37m\n\n");
 					inst::util::deinitInstallServices();
 					return false;
 				} else {
+		if (debug_enabled) {
+			debug_log_write("Désinstallation du HBMenu OK.\n");
+		}
 					printDisplay("\033[0;32m");
 					printDisplay(language_vars["lng_hbmenu_install_uninstall_success"]);
 					printDisplay("\033[0;37m\n\n");
@@ -585,14 +614,22 @@ bool install_hbmenu() {
 		}
 		free(c1);
 	}
-	// printDisplay("NSP du forwarder choisi: %s\n\n", nsp_path.filename().c_str());
+	if (debug_enabled) {
+		debug_log_write("NSP du HBMenu choisi: %s\n", nsp_path.filename().c_str());
+	}
 	nsp_list.push_back(nsp_path);
 	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
+		if (debug_enabled) {
+			debug_log_write("Installation du HBMenu OK.\n\n");
+		}
 		printDisplay("\033[0;32m");
 		printDisplay(language_vars["lng_hbmenu_install_success"]);
 		printDisplay("\033[0;37m\n");
 		return true;
 	} else {
+		if (debug_enabled) {
+			debug_log_write("Erreur d'installation du HBMenu.\n\n");
+		}
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_hbmenu_install_error"]);
 		printDisplay("\033[0;37m\n");
@@ -620,11 +657,87 @@ void set_emummc_values() {
 	}
 }
 
+bool fnc_install_firmware() {
+	if (debug_enabled) {
+		debug_log_write("Début de l'installation du firmware.\n");
+	}
+	DIR *dir;
+	if (!beta_mode) {
+		dir = opendir(firmware_path);
+	} else {
+		dir = opendir(firmware_path_beta);
+	}
+	if (dir != NULL) {
+		closedir(dir);
+		/*
+		custom_cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
+		char temp_setting[FS_MAX_PATH+100]= "";
+		if (!beta_mode) {
+			strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
+		} else {
+			strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path_beta), "\" \"false\" \"true\" \"false\"");
+		}
+		printf("\033[0;32m\nFinis!\nApplication de la mise a jour dans 5 secondes :)\033[0;37m\n");
+		consoleUpdate(&logs_console);
+		sleep(5);
+		appExit();
+		envSetNextLoad("/switch/AIO_LS_pack_Updater/Daybreak-cli.nro", temp_setting);
+		return 0;
+		*/
+		if (!beta_mode) {
+			if (daybreak_main(firmware_path, 2, 1, 2)) {
+				if (debug_enabled) {
+					debug_log_write("Installation du firmware OK.\n\n");
+				}
+				printDisplay("\033[0;32m\n");
+				printDisplay(language_vars["lng_install_firmware_end_success"]);
+				printDisplay("\033[0;37m\n");
+				return true;
+			} else {
+				if (debug_enabled) {
+					debug_log_write("Erreur d'installation du firmware.\n\n");
+				}
+				printDisplay("\033[0;31m\n");
+				printDisplay(language_vars["lng_install_firmware_end_error"]);
+				printDisplay("\033[0;37m\n");
+				return false;
+			}
+		} else {
+			if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
+				if (debug_enabled) {
+					debug_log_write("Installation du firmware OK.\n\n");
+				}
+				printDisplay("\033[0;32m\n");
+				printDisplay(language_vars["lng_install_firmware_end_success"]);
+				printDisplay("\033[0;37m\n");
+				return true;
+			} else {
+				if (debug_enabled) {
+					debug_log_write("Erreur d'installation du firmware.\n\n");
+				}
+				printDisplay("\033[0;31m\n");
+				printDisplay(language_vars["lng_install_firmware_end_error"]);
+				printDisplay("\033[0;37m\n");
+				return false;
+			}
+		}
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Erreur, répertoire du firmware \"%s\" non trouvé.\n\n", firmware_path);
+		}
+		printDisplay("\033[0;31m");
+		printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
+		printDisplay("\033[0;37m\n");
+		return false;
+	}
+	return false;
+}
+
 int main(int argc, char **argv)
 {
 	// init stuff
 	appInit();
-	if (debug_enabled) {
+	if (argc == 1 && debug_enabled) {
 		debug_log_start();
 	}
 	language_vars = set_translation_strings();
@@ -656,8 +769,31 @@ int main(int argc, char **argv)
 	set_emummc_values();
 	remove(TEMP_FILE);
 
+debug_log_write("Version du homebrew: %s\n", APP_VERSION);
 	if (isApplet()) {
+		if (debug_enabled) {
+			debug_log_write("Homebrew en mode applet.\n");
+		}
 		printf("\x1B[44m");
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Homebrew hors mode applet.\n");
+		}
+	}
+
+	if (debug_enabled) {
+		debug_log_write("\nInformations sur la console:\n");
+		debug_log_write("Version du pack: %s\n", pack_version);
+		debug_log_write("Dernière version du pack: %s\n", last_pack_version);
+		debug_log_write("Version du firmware: %s\n", firmware_version);
+		debug_log_write("Version d'Atmosphere: %s\n", atmosphere_version);
+		if (!is_emummc()) {
+		debug_log_write("Console en sysnand.\n");
+		} else {
+			debug_log_write("Console en emunand de type %s.\n", emummc_type);
+		}
+		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
+		debug_log_write("Modèle de la console: %s\n\n", console_model);
 	}
 
 	// main menu
@@ -695,76 +831,62 @@ int main(int argc, char **argv)
 			{
 			case UP_FW:
 			{
+				if (debug_enabled) {
+					debug_log_write("Installation d'un firmware.\n");
+				}
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_10"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_20"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					consoleSelect(&menu_console);
 					break;
 				}
 				bool update_firmware2 = false;
-				DIR *dir2;
 				update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 				if (update_firmware2) {
-					if (!beta_mode) {
-						dir2 = opendir(firmware_path);
-					} else {
-						dir2 = opendir(firmware_path_beta);
+					fnc_clean_theme();
+					if (fnc_install_firmware()) {
+						sleep(5);
+						simple_reboot();
 					}
-					if (dir2 != NULL) {
-						closedir(dir2);
-						fnc_clean_theme();
-						if (!beta_mode) {
-							if (daybreak_main(firmware_path, 2, 1, 2)) {
-								printDisplay("\033[0;32m\n");
-								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
-								printDisplay("\033[0;37m\n");
-								sleep(5);
-								simple_reboot();
-							} else {
-								printDisplay("\033[0;31m\n");
-								printDisplay(language_vars["lng_install_firmware_end_error"]);
-								printDisplay("\033[0;37m\n");
-							}
-						} else {
-							if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
-								printDisplay("\033[0;32m\n");
-								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
-								printDisplay("\033[0;37m\n");
-								sleep(5);
-								simple_reboot();
-							} else {
-								printDisplay("\033[0;31m\n");
-								printDisplay(language_vars["lng_install_firmware_end_error"]);
-								printDisplay("\033[0;37m\n");
-							}
-						}
-					} else {
-						printDisplay("\033[0;31m");
-						printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
-						printDisplay("\033[0;37m\n");
-						printDisplay(language_vars["lng_install_firmware_folder_location"], firmware_path);
-						printDisplay("\n");
+				} else {
+					if (debug_enabled) {
+						debug_log_write("Annulation de l'installation du firmware.\n\n");
 					}
 				}
 				consoleSelect(&menu_console);
@@ -772,20 +894,35 @@ int main(int argc, char **argv)
 			}
 			case UP_CFW:
 			{
+				if (debug_enabled) {
+					debug_log_write("Installation du pack.\n");
+				}
 				consoleSelect(&logs_console);
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_20"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					consoleSelect(&menu_console);
 					break;
@@ -797,7 +934,6 @@ int main(int argc, char **argv)
 				mkdir(APP_PATH, 0777);
 				bool update_firmware = false;
 				bool clean_theme = false;
-				DIR *dir;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
 						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
@@ -855,24 +991,50 @@ int main(int argc, char **argv)
 				printDisplay("\n");
 				bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
 				if (validate_choice) {
-					bool dl_pack_res;
-					if (!beta_mode) {
-						dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
-					} else {
-						dl_pack_res = downloadFile(CFW_URL_beta, TEMP_FILE, OFF, true);
-					}
-					if (dl_pack_res) {
-						bool not_has_enough_space_on_sd;
-						if (!beta_mode) {
-							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
-						} else {
-							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+						if (debug_enabled) {
+							debug_log_write("\nRécapitulatif des paramètres d'installation du pack:.\n");
+							if (update_firmware) {
+								debug_log_write("Installation du firmware.\n");
+							} else {
+								debug_log_write("Non installation du firmware.\n");
+								if (clean_theme) {
+									debug_log_write("Nettoyage du thème.\n");
+								} else {
+									debug_log_write("Non nettoyage du thème.\n");
+								}
+							}
+							if (clean_logos) {
+								debug_log_write("Nettoyage des logos.\n");
+							} else {
+								debug_log_write("Non nettoyage des logos.\n");
+							}
+							if (install_hbmenu_choice) {
+								debug_log_write("Installation du HBMenu.\n\n");
+							} else {
+								debug_log_write("Non installation du HBMenu.\n\n");
+							}
 						}
-						if (not_has_enough_space_on_sd) {
-							printDisplay("\033[0;31m");
-							printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
-							printDisplay("\033[0;37m\n");
+					bool not_has_enough_space_on_sd;
+					if (!beta_mode) {
+						not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
+					} else {
+						not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+					}
+					if (not_has_enough_space_on_sd) {
+						if (debug_enabled) {
+							debug_log_write("Pas assez d'espace sur la SD.\n\n");
+						}
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
+						printDisplay("\033[0;37m\n");
+					} else {
+						bool dl_pack_res;
+						if (!beta_mode) {
+							dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
 						} else {
+							dl_pack_res = downloadFile(CFW_URL_beta, TEMP_FILE, OFF, true);
+						}
+						if (dl_pack_res) {
 							set_90dns();
 							if (clean_theme) {
 								clean_sd(true);
@@ -898,54 +1060,10 @@ int main(int argc, char **argv)
 									install_hbmenu();
 								}
 								if (update_firmware) {
-									if (!beta_mode) {
-										dir = opendir(firmware_path);
-									} else {
-										dir = opendir(firmware_path_beta);
-									}
-									if (dir != NULL) {
-										closedir(dir);
-										/*
-										custom_cp((char*) "romfs:/nro/Daybreak-cli.nro", (char*) "/switch/AIO_LS_pack_Updater/Daybreak-cli.nro");
-										char temp_setting[FS_MAX_PATH+100]= "";
-										if (!beta_mode) {
-											strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path), "\" \"false\" \"true\" \"false\"");
-										} else {
-											strcat(strcat(strcat(temp_setting, "\"/switch/AIO_LS_pack_Updater/Daybreak-cli.nro\" \""), firmware_path_beta), "\" \"false\" \"true\" \"false\"");
-										}
-										printf("\033[0;32m\nFinis!\nApplication de la mise a jour dans 5 secondes :)\033[0;37m\n");
-										consoleUpdate(&logs_console);
-										sleep(5);
-										appExit();
-										envSetNextLoad("/switch/AIO_LS_pack_Updater/Daybreak-cli.nro", temp_setting);
-										return 0;
-										*/
-										if (!beta_mode) {
-											if (daybreak_main(firmware_path, 2, 1, 2)) {
-												printDisplay("\033[0;32m\n");
-												printDisplay(language_vars["lng_install_firmware_end_success"]);
-												printDisplay("\033[0;37m\n");
-											} else {
-												printDisplay("\033[0;31m\n");
-												printDisplay(language_vars["lng_install_firmware_end_error"]);
-												printDisplay("\033[0;37m\n");
-											}
-										} else {
-											if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
-												printDisplay("\033[0;32m\n");
-												printDisplay(language_vars["lng_install_firmware_end_success"]);
-												printDisplay("\033[0;37m\n");
-											} else {
-												printDisplay("\033[0;31m\n");
-												printDisplay(language_vars["lng_install_firmware_end_error"]);
-												printDisplay("\033[0;37m\n");
-											}
-										}
-									} else {
-										printDisplay("\033[0;31m");
-										printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
-										printDisplay("\033[0;37m\n");
-									}
+									fnc_install_firmware();
+								}
+								if (debug_enabled) {
+									debug_log_write("Installation du pack OK.\n\n");
 								}
 								printDisplay("\033[0;32m\n");
 								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
@@ -953,14 +1071,24 @@ int main(int argc, char **argv)
 								sleep(5);
 								aply_reboot();
 							} else {
+								if (debug_enabled) {
+									debug_log_write("Erreur durant la décompression du pack.\n\n");
+								}
 								remove(TEMP_FILE);
 							}
+						} else {
+							if (debug_enabled) {
+								debug_log_write("Erreur de téléchargement du pack.\n\n");
+							}
+							printDisplay("\033[0;31m");
+							printDisplay(language_vars["lng_install_pack_download_pack_error"]);
+							printDisplay("\033[0;37m\n");
+							remove(TEMP_FILE);
 						}
-					} else {
-						printDisplay("\033[0;31m");
-						printDisplay(language_vars["lng_install_pack_download_pack_error"]);
-						printDisplay("\033[0;37m\n");
-						remove(TEMP_FILE);
+					}
+				} else {
+					if (debug_enabled) {
+						debug_log_write("Annulation de l'installation du pack.\n\n");
 					}
 				}
 				consoleSelect(&menu_console);
@@ -969,25 +1097,37 @@ int main(int argc, char **argv)
 
 			case UP_APP:
 			{
+				if (debug_enabled) {
+					debug_log_write("Mise à jour de l'application.\n");
+				}
 				consoleSelect(&logs_console);
 				mkdir(APP_PATH, 0777);
+				if (get_sd_size_left() <= 4000000) {
+					if (debug_enabled) {
+						debug_log_write("Pas assez d'espace sur la SD.\n\n");
+					}
+					printDisplay("\033[0;31m");
+					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
+					printDisplay("\033[0;37m\n");
+				} else {
 					bool dl_app_res;
 					if (!beta_mode) {
 						dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
 					} else {
 						dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
 					}
-				if (dl_app_res) {
-					if (get_sd_size_left() <= 4000000) {
-						printDisplay("\033[0;31m");
-						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
-						printDisplay("\033[0;37m\n");
-					} else {
+					if (dl_app_res) {
 						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+							if (debug_enabled) {
+								debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+							}
 							printDisplay("\033[0;31m");;
 							printDisplay(language_vars["lng_error_copy_file"]);
 							printDisplay("\033[0;37m");;
 						} else {
+							if (debug_enabled) {
+								debug_log_write("Mise à jour de l'application OK.\n\n");
+							}
 							printDisplay("\033[0;32m\n");
 							printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 							printDisplay("\033[0;37m\n");
@@ -996,14 +1136,15 @@ int main(int argc, char **argv)
 							envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
 							return 0;
 						}
+					} else {
+						if (debug_enabled) {
+							debug_log_write("Erreur de téléchargement de l'application.\n\n");
+						}
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars["lng_install_app_download_app_error"]);
+						printDisplay("\033[0;37m\n");
+						remove(TEMP_FILE);
 					}
-				}
-				else
-				{
-					printDisplay("\033[0;31m");
-					printDisplay(language_vars["lng_install_app_download_app_error"]);
-					printDisplay("\033[0;37m\n");
-					remove(TEMP_FILE);
 				}
 				consoleSelect(&menu_console);
 				break;
@@ -1011,14 +1152,23 @@ int main(int argc, char **argv)
 
 			case UP_90DNS:
 			{
+				if (debug_enabled) {
+					debug_log_write("Mise en place de 90DNS.\n");
+				}
 				consoleSelect(&logs_console);
 				if (set_90dns()) {
+						if (debug_enabled) {
+							debug_log_write("Application de 90DNS OK.\n\n");
+						}
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
 					sleep(5);
 					simple_reboot();
 				} else {
+						if (debug_enabled) {
+							debug_log_write("Erreur durant l'application de 90DNS.\n\n");
+						}
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_dns_end_install_error"]);
 						printDisplay("\033[0;37m\n");
@@ -1029,10 +1179,16 @@ int main(int argc, char **argv)
 
 			case UP_ATMO_PROTECT_CONFIGS:
 			{
+				if (debug_enabled) {
+					debug_log_write("Mise en place des protections d'Atmosphere.\n");
+				}
 				consoleSelect(&logs_console);
 				printDisplay(language_vars["lng_protect_console_begin"]);
 				printDisplay("\n");
 				if (get_sd_size_left() <= 100000) {
+					if (debug_enabled) {
+						debug_log_write("Pas assez d'espace sur la SD.\n\n");
+					}
 					printDisplay("\033[0;31m");
 					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 					printDisplay("\033[0;37m\n");
@@ -1048,12 +1204,18 @@ int main(int argc, char **argv)
 					if (!custom_cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
 					if (!set_90dns()) test_cp = false;
 					if (test_cp) {
+						if (debug_enabled) {
+							debug_log_write("Application des protections OK.\n\n");
+						}
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 						printDisplay("\033[0;37m\n");
 						sleep(5);
 						simple_reboot();
 					} else {
+						if (debug_enabled) {
+							debug_log_write("Erreur durant l'application des protections.\n\n");
+						}
 						printDisplay("\033[0;31m\n");
 						printDisplay(language_vars["lng_protect_console_error"]);
 						printDisplay("\033[0;37m\n");
@@ -1084,6 +1246,7 @@ int main(int argc, char **argv)
 			logs_console_clear();
 			switch_app_mode();
 			get_last_version_pack();
+			debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);
