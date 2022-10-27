@@ -23,7 +23,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.3.3"
+#define APP_VERSION			 "4.3.4"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -92,7 +92,7 @@ void refreshScreen(int cursor)
 		printf(language_vars["lng_title_beta"], APP_VERSION);
 	}
 	if (debug_enabled) {
-		printf(" Debug");
+		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
 	printf(language_vars["lng_a_menu"]);
@@ -794,6 +794,28 @@ debug_log_write("Version du homebrew: %s\n", APP_VERSION);
 		}
 		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
 		debug_log_write("Modèle de la console: %s\n\n", console_model);
+	}
+
+	// set auto-update of the console off if it's not already done (FW 2.0.0+)
+	if (firmware_version[0] == '1' and firmware_version[1] == '.') {
+		if (debug_enabled) {
+			debug_log_write("Firmware inférieur au firmware 2.0.0 détecté, impossible de vérifier ou de désactiver la mise à jour automatique.\n\n");
+		}
+	} else {
+		setsysInitialize();
+		bool res;
+		setsysGetAutoUpdateEnableFlag(&res);
+		if (!res) {
+			if (debug_enabled) {
+				debug_log_write("désactivation de la mise à jour automatique de la console déjà effectuée.\n\n");
+			}
+		} else {
+			setsysSetAutoUpdateEnableFlag(false);
+			if (debug_enabled) {
+				debug_log_write("désactivation de la mise à jour automatique de la console effectuée.\n\n");
+			}
+		}
+		setsysExit();
 	}
 
 	// main menu
