@@ -797,7 +797,7 @@ debug_log_write("Version du homebrew: %s\n", APP_VERSION);
 	}
 
 	// set auto-update of the console off if it's not already done (FW 2.0.0+)
-	if (firmware_version[0] == '1' and firmware_version[1] == '.') {
+	if (firmware_version[0] == '1' && firmware_version[1] == '.') {
 		if (debug_enabled) {
 			debug_log_write("Firmware inférieur au firmware 2.0.0 détecté, impossible de vérifier ou de désactiver la mise à jour automatique.\n\n");
 		}
