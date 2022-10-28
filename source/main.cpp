@@ -1310,7 +1310,9 @@ int main(int argc, char **argv) {
 			logs_console_clear();
 			switch_app_mode();
 			get_last_version_pack();
-			debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
+			if (debug_enabled) {
+				debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
+			}
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);
