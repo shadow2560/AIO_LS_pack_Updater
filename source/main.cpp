@@ -23,7 +23,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.3.4"
+#define APP_VERSION			 "4.4.0"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -32,7 +32,7 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
-bool debug_enabled = true;
+bool debug_enabled = false;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -54,6 +54,8 @@ char hekate_nologo_file_path[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 int exit_mode_param = 0;
 int exit_mode_param_beta = 0;
+int debug_enabled_param = 0;
+int debug_enabled_param_beta = 0;
 
 char pack_version[15];
 char last_pack_version[15];
@@ -733,56 +735,37 @@ bool fnc_install_firmware() {
 	return false;
 }
 
-int main(int argc, char **argv)
-{
-	// init stuff
-	appInit();
-	if (argc == 1 && debug_enabled) {
-		debug_log_start();
-	}
-	language_vars = set_translation_strings();
-	menu_init();
-	strcpy(pack_version, language_vars["lng_unknown_1"]);
-	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
-	strcpy(firmware_version, language_vars["lng_unknown_1"]);
-	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
-	strcpy(emummc_value, language_vars["lng_unknown_1"]);
-	strcpy(emummc_type, language_vars["lng_unknown_0"]);
-	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"]);
-	strcpy(console_model, language_vars["lng_unknown_0"]);
-	configs_init();
-	padInitializeDefault(&pad);
-
-	// change directory to root (defaults to /switch/)
-	chdir(ROOT);
-
-	// set the cursor position to 0
-	short cursor = 0;
-
-	get_version_pack();
-	get_last_version_pack();
-	get_fw_version();
-	get_ams_version();
-	get_fusee_gelee_exploit();
-	get_device_id();
-	get_serial_number();
-	set_emummc_values();
-	remove(TEMP_FILE);
-
-debug_log_write("Version du homebrew: %s\n", APP_VERSION);
-	if (isApplet()) {
-		if (debug_enabled) {
-			debug_log_write("Homebrew en mode applet.\n");
-		}
-		printf("\x1B[44m");
-	} else {
-		if (debug_enabled) {
-			debug_log_write("Homebrew hors mode applet.\n");
-		}
-	}
-
+void debug_write_config_infos() {
 	if (debug_enabled) {
-		debug_log_write("\nInformations sur la console:\n");
+	debug_log_write("Configurations:\n");
+	debug_log_write("URL du pack: %s\n", CFW_URL);
+	debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
+	debug_log_write("URL de la version du pack: %s\n", pack_version_url);
+	debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
+	debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
+	debug_log_write("Chemin du fichier local de la version du pack beta: %s\n", pack_version_local_filepath_beta);
+	debug_log_write("Début du chemin du pack dans le zip: %s\n", subfolder_in_zip);
+	debug_log_write("Début du chemin du pack dans le zip beta: %s\n", subfolder_in_zip_beta);
+	debug_log_write("Taille du pack: %lli\n", pack_size);
+	debug_log_write("Taille du pack beta: %lli\n", pack_size_beta);
+	debug_log_write("URL de l'application: %s\n", APP_URL);
+	debug_log_write("URL de l'application beta: %s\n", APP_URL_beta);
+	debug_log_write("Chemin local du firmware: %s\n", firmware_path);
+	debug_log_write("Chemin local du firmware beta: %s\n", firmware_path_beta);
+	debug_log_write("Chemin du logo d'Atmosphere: %s\n", atmo_logo_dir);
+	debug_log_write("Chemin du logo d'Atmosphere beta: %s\n", atmo_logo_dir_beta);
+	debug_log_write("Chemin de la config sans logo de Hekate: %s\n", hekate_nologo_file_path);
+	debug_log_write("Chemin de la config sans logo de Hekate beta: %s\n", hekate_nologo_file_path_beta);
+	debug_log_write("Méthode de fermeture de l'application: %i\n", exit_mode_param);
+	debug_log_write("Méthode de fermeture de l'application beta: %i\n", exit_mode_param_beta);
+	debug_log_write("Mode debug: %i\n", debug_enabled_param);
+	debug_log_write("Mode debug beta: %i\n\n", debug_enabled_param_beta);
+	}
+}
+
+void debug_write_console_infos() {
+	if (debug_enabled) {
+		debug_log_write("Informations sur la console:\n");
 		debug_log_write("Version du pack: %s\n", pack_version);
 		debug_log_write("Dernière version du pack: %s\n", last_pack_version);
 		debug_log_write("Version du firmware: %s\n", firmware_version);
@@ -795,6 +778,65 @@ debug_log_write("Version du homebrew: %s\n", APP_VERSION);
 		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
 		debug_log_write("Modèle de la console: %s\n\n", console_model);
 	}
+}
+
+int main(int argc, char **argv) {
+	// init stuff
+	appInit();
+	bool debug_already_started = false;
+	if (argc == 1 && debug_enabled) {
+		debug_log_start();
+		debug_already_started = true;
+	}
+	configs_init();
+	if (argc == 1 && debug_enabled && !debug_already_started) {
+		debug_log_start();
+		debug_already_started = true;
+	}
+	language_vars = set_translation_strings();
+	menu_init();
+
+	strcpy(pack_version, language_vars["lng_unknown_1"]);
+	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
+	strcpy(firmware_version, language_vars["lng_unknown_1"]);
+	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
+	strcpy(emummc_value, language_vars["lng_unknown_1"]);
+	strcpy(emummc_type, language_vars["lng_unknown_0"]);
+	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"]);
+	strcpy(console_model, language_vars["lng_unknown_0"]);
+	padInitializeDefault(&pad);
+
+	// change directory to root (defaults to /switch/)
+	chdir(ROOT);
+
+	// set the cursor position to 0
+	short cursor = 0;
+
+	if (debug_enabled) {
+		debug_log_write("Version du homebrew: %s\n", APP_VERSION);
+	}
+	if (isApplet()) {
+		if (debug_enabled) {
+			debug_log_write("Homebrew en mode applet.\n");
+		}
+		printf("\x1B[44m");
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Homebrew hors mode applet.\n\n");
+		}
+	}
+	debug_write_config_infos();
+
+	get_version_pack();
+	get_last_version_pack();
+	get_fw_version();
+	get_ams_version();
+	get_fusee_gelee_exploit();
+	get_device_id();
+	get_serial_number();
+	set_emummc_values();
+	debug_write_console_infos();
+	remove(TEMP_FILE);
 
 	// set auto-update of the console off if it's not already done (FW 2.0.0+)
 	if (firmware_version[0] == '1' && firmware_version[1] == '.') {

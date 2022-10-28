@@ -28,6 +28,8 @@ extern char hekate_nologo_file_path[FS_MAX_PATH];
 extern char hekate_nologo_file_path_beta[FS_MAX_PATH];
 extern int exit_mode_param;
 extern int exit_mode_param_beta;
+extern int debug_enabled_param;
+extern int debug_enabled_param_beta;
 
 static int config_handler(void* config, const char* section, const char* name, const char* value)
 {
@@ -98,6 +100,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.exit_method = 0;
 		}
+	}else if(MATCH("config", "debug_enabled")){
+		if (value != 0) {
+			pconfig->s1.debug_enabled = atoll(value);
+		} else {
+			pconfig->s1.debug_enabled = 0;
+		}
 	}else{
 		return 0;
 	}
@@ -117,6 +125,7 @@ void configs_init() {
 	config.s1.hekate_nologo_file_path = "";
 	config.s1.pack_size = 0;
 	config.s1.exit_method = 0;
+	config.s1.debug_enabled = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
 	if (test_ini != NULL) {
@@ -161,6 +170,9 @@ void configs_init() {
 			if (config.s1.exit_method != 0) {
 				exit_mode_param = 1;
 			}
+			if (config.s1.debug_enabled != 0) {
+				debug_enabled_param = 1;
+			}
 		}
 	}
 	configuration config_beta;
@@ -174,6 +186,7 @@ void configs_init() {
 	config_beta.s1.hekate_nologo_file_path = "";
 	config_beta.s1.pack_size = 0;
 	config_beta.s1.exit_method = 0;
+	config_beta.s1.debug_enabled = 0;
 	FILE *test_ini_beta;
 	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
 	if (test_ini_beta != NULL) {
@@ -218,30 +231,17 @@ void configs_init() {
 			if (config_beta.s1.exit_method != 0) {
 				exit_mode_param_beta = 1;
 			}
+			if (config_beta.s1.debug_enabled != 0) {
+				debug_enabled_param_beta = 1;
+			}
 		}
 	}
-	if (debug_enabled) {
-debug_log_write("\nConfigurations:\n");
-debug_log_write("URL du pack: %s\n", CFW_URL);
-debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
-debug_log_write("URL de la version du pack: %s\n", pack_version_url);
-debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
-debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
-debug_log_write("Chemin du fichier local de la version du pack beta: %s\n", pack_version_local_filepath_beta);
-debug_log_write("Début du chemin du pack dans le zip: %s\n", subfolder_in_zip);
-debug_log_write("Début du chemin du pack dans le zip beta: %s\n", subfolder_in_zip_beta);
-debug_log_write("Taille du pack: %lli\n", pack_size);
-debug_log_write("Taille du pack beta: %lli\n", pack_size_beta);
-debug_log_write("URL de l'application: %s\n", APP_URL);
-debug_log_write("URL de l'application beta: %s\n", APP_URL_beta);
-debug_log_write("Chemin local du firmware: %s\n", firmware_path);
-debug_log_write("Chemin local du firmware beta: %s\n", firmware_path_beta);
-debug_log_write("Chemin du logo d'Atmosphere: %s\n", atmo_logo_dir);
-debug_log_write("Chemin du logo d'Atmosphere beta: %s\n", atmo_logo_dir_beta);
-debug_log_write("Chemin de la config sans logo de Hekate: %s\n", hekate_nologo_file_path);
-debug_log_write("Chemin de la config sans logo de Hekate beta: %s\n", hekate_nologo_file_path_beta);
-debug_log_write("Méthode de fermeture de l'application: %i\n", exit_mode_param);
-debug_log_write("Méthode de fermeture de l'application beta: %i\n\n", exit_mode_param_beta);
+	if (!debug_enabled) {
+		if (debug_enabled_param != 0 || debug_enabled_param_beta != 0) {
+			debug_enabled = true;
+		}
+	} else {
+		debug_log_write("Debug mode forcé.\n");
 	}
 }
 

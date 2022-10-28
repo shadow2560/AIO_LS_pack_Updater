@@ -18,6 +18,7 @@ typedef struct{
 	const char *atmo_logo_dir;
 	const char *hekate_nologo_file_path;
 	int exit_method;
+	int debug_enabled;
 } config_section;
 
 // define a structure for holding all of the config of the ini file.
