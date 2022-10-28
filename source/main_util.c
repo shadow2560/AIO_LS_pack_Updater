@@ -12,7 +12,8 @@
 extern bool debug_enabled;
 
 void debug_log_start() {
-		FILE *debug_log_file;
+	remove("/switch/AIO_LS_pack_Updater/debug.log");
+	FILE *debug_log_file;
 	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "w");
 	fclose(debug_log_file);
 }
