@@ -77,31 +77,50 @@ void fnc_clean_modules() {
 	printf(language_vars["lng_clean_modules_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
-	remove_directory("atmosphere/contents/00FF0000000002AA");
-	remove_directory("atmosphere/contents/054e4f4558454000");
-	remove_directory("atmosphere/contents/010000000000000D");
-	remove_directory("atmosphere/contents/0100000000001013");
-	remove_directory("atmosphere/contents/0100000000000352");
-	remove_directory("atmosphere/contents/0100000000000F12");
-	remove_directory("atmosphere/contents/010000000000CF12");
-	remove_directory("atmosphere/contents/010000000000C235");
-	remove_directory("atmosphere/contents/0100000000000faf");
-	remove_directory("atmosphere/contents/4200000000000010");
-	remove_directory("atmosphere/contents/010000000000bd00");
-	remove_directory("atmosphere/exefs_patches/bluetooth_patches");
-	remove_directory("atmosphere/contents/0100000000000081");
-	remove_directory("atmosphere/contents/0100000000000901");
-	remove_directory("atmosphere/contents/0000000000534C56");
-	remove_directory("atmosphere/contents/420000000000000F");
-	remove_directory("atmosphere/contents/0100000000000464");
-	remove_directory("atmosphere/contents/430000000000000B");
-	remove_directory("atmosphere/contents/00FF0000636C6BFF");
-	remove_directory("atmosphere/contents/690000000000000D");
-	remove_directory("atmosphere/contents/420000000000000E");
-	remove_directory("atmosphere/contents/43000000000000ff");
-	remove_directory("atmosphere/contents/4200000000000000");
-	remove_directory("atmosphere/contents/4200000000000FFF");
-	remove_directory("atmosphere/contents/0100000000001000");
+	FILE *modules_list_file = fopen("/switch/AIO_LS_pack_Updater/modules_folders_to_delete.txt", "r");
+	if (modules_list_file != NULL) {
+		if (debug_enabled) {
+			debug_log_write("Suppression des modules via un fichier personnalisé.\n");
+		}
+		char chaine[FS_MAX_PATH+1] = "";
+		while (fgets(chaine, FS_MAX_PATH+1, modules_list_file) != NULL) {
+			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
+				char *c1 = substr(chaine, 0, strlen(chaine)-2);
+				remove_directory(c1);
+				free(c1);
+			}
+		}
+		fclose(modules_list_file);
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Suppression des modules intégrée.\n");
+		}
+		remove_directory("atmosphere/contents/00FF0000000002AA");
+		remove_directory("atmosphere/contents/054e4f4558454000");
+		remove_directory("atmosphere/contents/010000000000000D");
+		remove_directory("atmosphere/contents/0100000000001013");
+		remove_directory("atmosphere/contents/0100000000000352");
+		remove_directory("atmosphere/contents/0100000000000F12");
+		remove_directory("atmosphere/contents/010000000000CF12");
+		remove_directory("atmosphere/contents/010000000000C235");
+		remove_directory("atmosphere/contents/0100000000000faf");
+		remove_directory("atmosphere/contents/4200000000000010");
+		remove_directory("atmosphere/contents/010000000000bd00");
+		remove_directory("atmosphere/exefs_patches/bluetooth_patches");
+		remove_directory("atmosphere/contents/0100000000000081");
+		remove_directory("atmosphere/contents/0100000000000901");
+		remove_directory("atmosphere/contents/0000000000534C56");
+		remove_directory("atmosphere/contents/420000000000000F");
+		remove_directory("atmosphere/contents/0100000000000464");
+		remove_directory("atmosphere/contents/430000000000000B");
+		remove_directory("atmosphere/contents/00FF0000636C6BFF");
+		remove_directory("atmosphere/contents/690000000000000D");
+		remove_directory("atmosphere/contents/420000000000000E");
+		remove_directory("atmosphere/contents/43000000000000ff");
+		remove_directory("atmosphere/contents/4200000000000000");
+		remove_directory("atmosphere/contents/4200000000000FFF");
+		remove_directory("atmosphere/contents/0100000000001000");
+	}
 }
 
 void clean_sd(bool clean_theme, bool clean_modules) {

@@ -8,6 +8,10 @@ The app can also auto-update itself, aply some protection for Atmosphere to be a
 
 This mode could be useful to test the new features of the pack and the app but this also could brake some functions and could be not backward compatible with the stable version so use it if you know what you're doing. Beta mode has his own config file if you want to customize some settings, see the "config" folder of the repository.
 
+## Modules folders deletion
+
+This function can be used when updating the pack or the firmware. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/modules_folders_to_delete.txt", see the "config" folder of the repository, be careful with this file cause it can brake all the SD if it's badly configured.
+
 ## Translate the project
 
 You can translate the project but for now there are some limitations:
