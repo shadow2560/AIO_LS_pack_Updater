@@ -8,9 +8,9 @@ The app can also auto-update itself, aply some protection for Atmosphere to be a
 
 This mode could be useful to test the new features of the pack and the app but this also could brake some functions and could be not backward compatible with the stable version so use it if you know what you're doing. Beta mode has his own config file if you want to customize some settings, see the "config" folder of the repository.
 
-## Modules folders deletion
+## Agressive clean function
 
-This function can be used when updating the pack or the firmware. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/modules_folders_to_delete.txt", see the "config" folder of the repository, be careful with this file cause it can brake all the SD if it's badly configured.
+This function can be used when updating the pack or the firmware if you have some modules not included in the pack or if you come from an other pack. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/folders_to_delete.txt" and the files could be configured with the file "switch/AIO_LS_pack_Updater/files_to_delete.txt", see the "config" folder of the repository, be careful with these files cause they can brake all the SD if they're badly configured. If you use one of these custom files the agressive clean integrated into the homebrew will be disabled.
 
 ## Translate the project
 

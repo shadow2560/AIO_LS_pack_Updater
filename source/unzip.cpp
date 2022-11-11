@@ -70,30 +70,49 @@ void fnc_clean_theme() {
 	// End full theme deletion
 }
 
-void fnc_clean_modules() {
+void fnc_agressive_clean() {
 	if (debug_enabled) {
-		debug_log_write("Suppression des modules.\n");
+		debug_log_write("Nettoyage agressif.\n");
 	}
-	printf(language_vars["lng_clean_modules_begin"]);
+	printf(language_vars["lng_agressive_clean_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
-	FILE *modules_list_file = fopen("/switch/AIO_LS_pack_Updater/modules_folders_to_delete.txt", "r");
-	if (modules_list_file != NULL) {
+	FILE *folders_list_file = fopen("/switch/AIO_LS_pack_Updater/folders_to_delete.txt", "r");
+	FILE *files_list_file = fopen("/switch/AIO_LS_pack_Updater/files_to_delete.txt", "r");
+	if (folders_list_file != NULL) {
 		if (debug_enabled) {
-			debug_log_write("Suppression des modules via un fichier personnalisé.\n");
+			debug_log_write("Suppression des répertoires  via un fichier personnalisé.\n");
 		}
 		char chaine[FS_MAX_PATH+1] = "";
-		while (fgets(chaine, FS_MAX_PATH+1, modules_list_file) != NULL) {
+		while (fgets(chaine, FS_MAX_PATH+1, folders_list_file) != NULL) {
 			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
 				char *c1 = substr(chaine, 0, strlen(chaine)-2);
 				remove_directory(c1);
 				free(c1);
 			}
 		}
-		fclose(modules_list_file);
-	} else {
+		fclose(folders_list_file);
+	}
+	if (files_list_file != NULL) {
 		if (debug_enabled) {
-			debug_log_write("Suppression des modules intégrée.\n");
+			debug_log_write("Suppression des fichiers  via un fichier personnalisé.\n");
+		}
+		char chaine[FS_MAX_PATH+1] = "";
+		while (fgets(chaine, FS_MAX_PATH+1, files_list_file) != NULL) {
+			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
+				char *c1 = substr(chaine, 0, strlen(chaine)-2);
+				remove(c1);
+				if (debug_enabled) {
+					debug_log_write("Suppression du fichier  \"%s\".\n", c1);
+				}
+				free(c1);
+			}
+		}
+		fclose(files_list_file);
+	}
+	if (folders_list_file == NULL && files_list_file == NULL) {
+		if (debug_enabled) {
+			debug_log_write("Nettoyage agressif intégré.\n");
 		}
 		remove_directory("atmosphere/contents/00FF0000000002AA");
 		remove_directory("atmosphere/contents/054e4f4558454000");
@@ -123,7 +142,7 @@ void fnc_clean_modules() {
 	}
 }
 
-void clean_sd(bool clean_theme, bool clean_modules) {
+void clean_sd(bool clean_theme, bool agressive_clean) {
 	if (debug_enabled) {
 		debug_log_write("Nettoyage de la SD.\n");
 	}
@@ -199,8 +218,8 @@ void clean_sd(bool clean_theme, bool clean_modules) {
 	if (clean_theme) {
 		fnc_clean_theme();
 	}
-	if (clean_modules) {
-		fnc_clean_modules();
+	if (agressive_clean) {
+		fnc_agressive_clean();
 	}
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_finish"]);

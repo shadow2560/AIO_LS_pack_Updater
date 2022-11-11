@@ -23,7 +23,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.5.1"
+#define APP_VERSION			 "4.5.2"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -941,13 +941,13 @@ int main(int argc, char **argv) {
 					break;
 				}
 				bool update_firmware2 = false;
-				bool clean_modules2 = false;
-				clean_modules2 = ask_question((char*) language_vars["lng_ask_clean_modules"]);
+				bool agressive_clean2 = false;
+				agressive_clean2 = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
 				update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 				if (update_firmware2) {
 					fnc_clean_theme();
-					if (clean_modules2) {
-						fnc_clean_modules();
+					if (agressive_clean2) {
+						fnc_agressive_clean();
 					}
 					if (fnc_install_firmware()) {
 						sleep(5);
@@ -1003,7 +1003,7 @@ int main(int argc, char **argv) {
 				mkdir(APP_PATH, 0777);
 				bool update_firmware = false;
 				bool clean_theme = false;
-				bool clean_modules = false;
+				bool agressive_clean = false;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
 						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
@@ -1018,7 +1018,7 @@ int main(int argc, char **argv) {
 				} else {
 					clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
 				}
-				clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
+				agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
 				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
 				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
 				/*
@@ -1048,11 +1048,11 @@ int main(int argc, char **argv) {
 						printDisplay("\n");
 					}
 				}
-				if (clean_modules) {
-					printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+				if (agressive_clean) {
+					printDisplay(language_vars["lng_install_pack_recap_agressive_clean"]);
 					printDisplay("\n");
 				} else {
-					printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
+					printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
 					printDisplay("\n");
 				}
 				if (clean_logos) {
@@ -1081,10 +1081,10 @@ int main(int argc, char **argv) {
 									debug_log_write("Non nettoyage du thème.\n");
 								}
 							}
-							if (clean_modules) {
-								debug_log_write("Nettoyage des modules.\n");
+							if (agressive_clean) {
+								debug_log_write("Nettoyage agressif.\n");
 							} else {
-								debug_log_write("Non nettoyage des modules.\n");
+								debug_log_write("Non nettoyage agressif.\n");
 							}
 							if (clean_logos) {
 								debug_log_write("Nettoyage des logos.\n");
@@ -1119,11 +1119,11 @@ int main(int argc, char **argv) {
 						}
 						if (dl_pack_res) {
 							set_90dns();
-							if (clean_theme && clean_modules) {
+							if (clean_theme && agressive_clean) {
 								clean_sd(true, true);
 							} else if (clean_theme) {
 								clean_sd(true, false);
-							} else if (clean_modules) {
+							} else if (agressive_clean) {
 								clean_sd(false, true);
 							} else {
 								clean_sd(false, false);

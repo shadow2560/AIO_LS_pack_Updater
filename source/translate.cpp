@@ -72,7 +72,7 @@ const char* translation_vars_list[] =
 
 	"lng_ask_update_firmware",
 	"lng_ask_clean_theme",
-	"lng_ask_clean_modules",
+	"lng_ask_agressive_clean",
 	"lng_ask_clean_logos",
 	"lng_ask_hbmenu_install",
 	"lng_ask_validate_choices",
@@ -136,8 +136,8 @@ const char* translation_vars_list[] =
 	"lng_install_pack_recap_not_install_firmware",
 	"lng_install_pack_recap_clean_theme",
 	"lng_install_pack_recap_not_clean_theme",
-	"lng_install_pack_recap_clean_modules",
-	"lng_install_pack_recap_not_clean_modules",
+	"lng_install_pack_recap_agressive_clean",
+	"lng_install_pack_recap_not_agressive_clean",
 	"lng_install_pack_recap_clean_logos",
 	"lng_install_pack_recap_not_clean_logos",
 	"lng_install_pack_recap_install_hbmenu",
@@ -150,7 +150,7 @@ const char* translation_vars_list[] =
 
 	"lng_clean_logos_begin",
 	"lng_clean_theme_begin",
-	"lng_clean_modules_begin",
+	"lng_agressive_clean_begin",
 	"lng_clean_sd_begin",
 	"lng_clean_sd_clean_unusful_files",
 	"lng_clean_sd_finish",

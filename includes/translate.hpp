@@ -73,7 +73,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 \
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
-	{"lng_ask_clean_modules", (char*) "Souhaitez-vous nettoyer les modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
+	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware si vous utilisez des modules non inclus dans le pack ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
@@ -137,8 +137,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_not_install_firmware", (char*) "Le firmware ne sera pas mis a jour."}, \
 	{"lng_install_pack_recap_clean_theme", (char*) "Nettoyage du theme de la console s'il y en a un."}, \
 	{"lng_install_pack_recap_not_clean_theme", (char*) "Le theme de la console, s'il y en a un, ne sera pas supprime."}, \
-	{"lng_install_pack_recap_clean_modules", (char*) "Nettoyage des modules de la console s'il y en a."}, \
-	{"lng_install_pack_recap_not_clean_modules", (char*) "Les modules de la console, s'il y en a, ne seront pas supprimes."}, \
+	{"lng_install_pack_recap_agressive_clean", (char*) "Nettoyage agrressif actif."}, \
+	{"lng_install_pack_recap_not_agressive_clean", (char*) "Nettoyage agressif non actif."}, \
 	{"lng_install_pack_recap_clean_logos", (char*) "Les logos du pack seront supprimes."}, \
 	{"lng_install_pack_recap_not_clean_logos", (char*) "Les logos du pack ne seront pas supprimes."}, \
 	{"lng_install_pack_recap_install_hbmenu", (char*) "L'icone du Homebrew Menu sera mis en place."}, \
@@ -151,7 +151,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 \
 	{"lng_clean_logos_begin", (char*) "Suppression des logos..."}, \
 	{"lng_clean_theme_begin", (char*) "Suppression d'un eventuel theme..."}, \
-	{"lng_clean_modules_begin", (char*) "Suppression d'eventuels modules..."}, \
+	{"lng_agressive_clean_begin", (char*) "Nettoyage agressif..."}, \
 	{"lng_clean_sd_begin", (char*) "Nettoyage de la SD:"}, \
 	{"lng_clean_sd_clean_unusful_files", (char*) "Nettoyage des fichiers inutiles..."}, \
 	{"lng_clean_sd_finish", (char*) "Nettoyage de la SD termine."}, \
