@@ -8,6 +8,7 @@
 
 #include "main_util.h"
 #include "90dns_setter.hpp"
+#include "90dns_tester.hpp"
 #include "download.hpp"
 #include "unzip.hpp"
 #include "reboot_to_payload.hpp"
@@ -23,7 +24,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.5.2"
+#define APP_VERSION			 "4.5.3"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -414,6 +415,17 @@ void display_infos() {
 	printf("\n");
 	printf(language_vars["lng_infos_actual_atmosphere_version"], atmosphere_version);
 	printf("\n");
+	int test_90dns=checkHostnames();
+	if (test_90dns == 0) {
+		printf(language_vars["lng_infos_90dns_status_ok"]);
+	} else if (test_90dns == 1) {
+		printf(language_vars["lng_infos_90dns_status_no_conection"]);
+	} else if (test_90dns == 2) {
+		printf(language_vars["lng_infos_90dns_status_not_protected"]);
+	} else {
+		printf(language_vars["lng_infos_90dns_status_error"]);
+	}
+	printf("\n");
 	if (GetChargerType() == 0) {
 		printf(language_vars["lng_infos_official_charge"], get_battery_charge());
 	} else if (GetChargerType() == 1) {
@@ -484,6 +496,17 @@ void record_infos() {
 	fprintf(log_infos, language_vars["lng_infos_actual_firmware_version"], firmware_version);
 	fprintf(log_infos, "\n");
 	fprintf(log_infos, language_vars["lng_infos_actual_atmosphere_version"], atmosphere_version);
+	fprintf(log_infos, "\n");
+	int test_90dns=checkHostnames();
+	if (test_90dns == 0) {
+		fprintf(log_infos, language_vars["lng_infos_90dns_status_ok"]);
+	} else if (test_90dns == 1) {
+		fprintf(log_infos, language_vars["lng_infos_90dns_status_no_conection"]);
+	} else if (test_90dns == 2) {
+		fprintf(log_infos, language_vars["lng_infos_90dns_status_not_protected"]);
+	} else {
+		fprintf(log_infos, language_vars["lng_infos_90dns_status_error"]);
+	}
 	fprintf(log_infos, "\n");
 	if (GetChargerType() == 0) {
 		fprintf(log_infos, language_vars["lng_infos_official_charge"], get_battery_charge());
@@ -858,6 +881,10 @@ int main(int argc, char **argv) {
 			}
 		}
 		setsysExit();
+	}
+
+	if (debug_enabled) {
+		checkHostnames();
 	}
 
 	// main menu

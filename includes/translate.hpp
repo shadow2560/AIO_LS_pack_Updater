@@ -54,6 +54,10 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_infos_fusee_gelee_patch", (char*) "Etat de l'exploit Fusee Gelee : %s"}, \
 	{"lng_infos_actual_firmware_version", (char*) "Version actuelle du firmware : %s"}, \
 	{"lng_infos_actual_atmosphere_version", (char*) "Version actuelle d'Atmosphere : %s"}, \
+	{"lng_infos_90dns_status_ok", (char*) "Protection 90DNS: Active, la console n'a pas acces aux serveurs de Nintendo."}, \
+	{"lng_infos_90dns_status_no_conection", (char*) "Protection 90DNS: Aucune connexion au reseau, impossible de tester."}, \
+	{"lng_infos_90dns_status_not_protected", (char*) "Protection 90DNS: Danger, un ou plusieurs serveurs de Nintendo ne sont pas bloques, fort risque de bannissement de la console."}, \
+	{"lng_infos_90dns_status_error", (char*) "Protection 90DNS: Erreur,  verification impossible."}, \
 	{"lng_infos_official_charge", (char*) "Charge active, charge batterie : %d%%, type de chargeur : officiel"}, \
 	{"lng_infos_usb_charge", (char*) "Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel"}, \
 	{"lng_infos_no_charge", (char*) "Charge inactive, charge batterie : %d%%"}, \
