@@ -12,6 +12,12 @@ This mode could be useful to test the new features of the pack and the app but t
 
 This function can be used when updating the pack or the firmware if you have some modules not included in the pack or if you come from an other pack. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/folders_to_delete.txt" and the files could be configured with the file "switch/AIO_LS_pack_Updater/files_to_delete.txt", see the "config" folder of the repository, be careful with these files cause they can brake all the SD if they're badly configured. If you use one of these custom files the agressive clean integrated into the homebrew will be disabled.
 
+## Files keeping function
+
+This function can be used during pack update. It is used to keep some files/folders during process update, for example to keep some configuration files. The files/folders can be configured with the "switch/AIO_LS_pack_Updater/files_to_keep.txt" (see the "configs" folder of this repository for an example), this file should contain one file or folder by line and the path of the file/folder to keep is indicated from the SD root; note also that one line of the file could be used to define more than one folder/file to delete cause only the first letters of the path indicated is compared during the program (for example a line containing the path "atmosphere/conf" will protect any files/folders starting with this path). Also note that if the file doesn't exist on the SD it will be copied even if it is listed in the config file, this function is only used to protect existing files on the SD.
+
+This function is not used during agressive clean, the agressive clean will delete any files/folders configured for it without taking care of this function's settings. In short, agressive clean take priority over this function.
+
 ## Translate the project
 
 You can translate the project but for now there are some limitations:

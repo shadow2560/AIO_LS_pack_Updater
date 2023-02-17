@@ -1,0 +1,4 @@
+atmosphere/config
+exosphere.ini
+bootloader/hekate_ipl.ini
+switch/DBI/dbi.config

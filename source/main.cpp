@@ -24,7 +24,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.5.3"
+#define APP_VERSION			 "4.7.0"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -33,7 +33,7 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
-bool debug_enabled = false;
+bool debug_enabled = true;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
@@ -71,6 +71,9 @@ SetSysSerialNumber console_serial;
 // bool sd_is_exfat;
 bool console_is_erista = false;
 bool beta_mode = false;
+
+
+
 PadState pad;
 
 PrintConsole menu_console;
@@ -1031,6 +1034,7 @@ int main(int argc, char **argv) {
 				bool update_firmware = false;
 				bool clean_theme = false;
 				bool agressive_clean = false;
+				bool keep_files=false;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
 						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
@@ -1046,6 +1050,7 @@ int main(int argc, char **argv) {
 					clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
 				}
 				agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+				keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
 				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
 				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
 				/*
@@ -1082,6 +1087,13 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
 					printDisplay("\n");
 				}
+				if (keep_files) {
+					printDisplay(language_vars["lng_install_pack_recap_keep_files"]);
+					printDisplay("\n");
+				} else {
+					printDisplay(language_vars["lng_install_pack_recap_not_keep_files"]);
+					printDisplay("\n");
+				}
 				if (clean_logos) {
 					printDisplay(language_vars["lng_install_pack_recap_clean_logos"]);
 				} else {
@@ -1113,6 +1125,11 @@ int main(int argc, char **argv) {
 							} else {
 								debug_log_write("Non nettoyage agressif.\n");
 							}
+							if (keep_files) {
+								debug_log_write("Fichiers non écrasés.\n");
+							} else {
+								debug_log_write("Fichiers écrasés.\n");
+							}
 							if (clean_logos) {
 								debug_log_write("Nettoyage des logos.\n");
 							} else {
@@ -1141,8 +1158,10 @@ int main(int argc, char **argv) {
 						bool dl_pack_res;
 						if (!beta_mode) {
 							dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
+							// dl_pack_res = true;
 						} else {
 							dl_pack_res = downloadFile(CFW_URL_beta, TEMP_FILE, OFF, true);
+							// dl_pack_res = true;
 						}
 						if (dl_pack_res) {
 							set_90dns();
@@ -1157,9 +1176,9 @@ int main(int argc, char **argv) {
 							}
 							int unzip_res;
 							if (!beta_mode) {
-								unzip_res = unzip(TEMP_FILE, subfolder_in_zip);
+								unzip_res = unzip(TEMP_FILE, subfolder_in_zip, keep_files);
 							} else {
-								unzip_res = unzip(TEMP_FILE, subfolder_in_zip_beta);
+								unzip_res = unzip(TEMP_FILE, subfolder_in_zip_beta, keep_files);
 							}
 							if (unzip_res == 0) {
 								remove(TEMP_FILE);

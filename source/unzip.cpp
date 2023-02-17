@@ -30,6 +30,59 @@ int check(unsigned const char type) {
 	return -1;
 }
 
+bool file_in_files_to_keep(char *file_to_test) {
+	FILE *files_list_file = fopen("/switch/AIO_LS_pack_Updater/files_to_keep.txt", "r");
+	if (files_list_file != NULL) {
+		char chaine[FS_MAX_PATH+1] = "";
+		while (fgets(chaine, FS_MAX_PATH+1, files_list_file) != NULL) {
+			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
+				char *c1 = substr(chaine, 0, strlen(chaine)-2);
+				if (strlen(c1) > strlen(file_to_test)) {
+					free(c1);
+					continue;
+				}
+				char *c2 = substr(file_to_test, 0, strlen(c1));
+				// debug_log_write("%s; %s\n", c1, c2);
+				// debug_log_write("%i\n\n", strcmp(c1, c2));
+				if (strcmp(c1, c2) == 0) {
+					free(c2);
+					free(c1);
+					fclose(files_list_file);
+					return true;
+				}
+				free(c2);
+				free(c1);
+			}
+		}
+		fclose(files_list_file);
+		return false;
+	} else {
+		const char* default_files_protect_list[] =
+		{
+			"atmosphere/config",
+			"bootloader/hekate_ipl.ini",
+			"bootloader/nyx.ini",
+			"exosphere.ini",
+			"config",
+			"boot.ini",
+			"switch/DBI/dbi.config"
+		};
+		for (size_t i=0; i<sizeof(default_files_protect_list)/sizeof(default_files_protect_list[0]); i++) {
+			if (strlen(default_files_protect_list[i]) > strlen(file_to_test)) {
+				continue;
+			}
+			char *c3 = substr(file_to_test, 0, strlen(default_files_protect_list[i]));
+			if (strcmp(default_files_protect_list[i], c3) == 0) {
+				free(c3);
+				return true;
+			}
+			free(c3);
+		}
+		return false;
+	}
+	return false;
+}
+
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 	if (debug_enabled) {
 		debug_log_write("Suppression des logos.\n");
@@ -339,7 +392,7 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 }
 */
 
-int unzip(const char *output, char *subfolder_in_zip) {
+int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	unzFile zfile = unzOpen(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);
@@ -369,6 +422,7 @@ int unzip(const char *output, char *subfolder_in_zip) {
 	DIR *dir;
 	FILE *outfile;
 	void *buf;
+	FsFileSystem *fs_sd = fsdevGetDeviceFileSystem("sdmc");
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
@@ -392,13 +446,52 @@ int unzip(const char *output, char *subfolder_in_zip) {
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
 			continue;
+		}
+		if (keep_files) {
+			bool test_if_file_exist = false;
+			/*
+			dir = opendir(filename_on_sd);
+			if (dir) {
+				closedir(dir);
+				test_if_file_exist = true;
+			}
+			outfile = fopen(filename_on_sd, "rb");
+			if (outfile != NULL) {
+				fclose(outfile);
+				test_if_file_exist = true;
+			}
+			*/
+			FsDirEntryType test_file_or_dir = (FsDirEntryType) -1;
+			char full_path_on_sd[FS_MAX_PATH+2] = "/";
+			strcat(full_path_on_sd, filename_on_sd);
+			fsFsGetEntryType(fs_sd, full_path_on_sd, &test_file_or_dir);
+			if (test_file_or_dir == 0 || test_file_or_dir == 1) {
+				test_if_file_exist = true;
+			}
+			if (file_in_files_to_keep(filename_on_sd) && test_if_file_exist) {
+				if (debug_enabled) {
+					debug_log_write("fichier ou dossier \"%s\" non copié car il est défini comme devant être conservé.\n", filename_on_sd);
+				}
+				printf("\033[0;35m");
+				printf(language_vars["lng_install_pack_file_skip"], filename_on_sd);
+				printf("\033[0;37m\n");
+				unzCloseCurrentFile(zfile);
+				unzGoToNextFile(zfile);
+				continue;
+			}
+		}
 		// check if the string ends with a /, if so, then its a directory.
-		} else if ((filename_on_sd[strlen(filename_on_sd) - 1]) == '/') {
+		if ((filename_on_sd[strlen(filename_on_sd) - 1]) == '/') {
 			// check if directory exists
 			dir = opendir(filename_on_sd);
 			if (dir) {
 				closedir(dir);
 			} else {
+				outfile = fopen(filename_on_sd, "rb");
+				if (outfile != NULL) {
+					fclose(outfile);
+					remove(filename_on_sd);
+				}
 				printf("\033[0;34m");
 				printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
 				printf("\033[0;37m\n");
@@ -411,8 +504,15 @@ int unzip(const char *output, char *subfolder_in_zip) {
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
 			continue;
+		} else {
+			dir = opendir(filename_on_sd);
+			if (dir) {
+				closedir(dir);
+				remove_directory(filename_on_sd);
+			}
+		}
 
-		} else if (strcmp(filename_on_sd, "payload.bin") == 0){
+		if (strcmp(filename_on_sd, "payload.bin") == 0){
 			detected_payload_bin = true;
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 

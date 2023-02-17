@@ -78,6 +78,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
 	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware si vous utilisez des modules non inclus dans le pack ou si vous venez d'un autre pack?"}, \
+	{"lng_ask_keep_files", (char*) "Souhaitez-vous activer la conservation de fichiers?"}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
@@ -143,11 +144,14 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_not_clean_theme", (char*) "Le theme de la console, s'il y en a un, ne sera pas supprime."}, \
 	{"lng_install_pack_recap_agressive_clean", (char*) "Nettoyage agrressif actif."}, \
 	{"lng_install_pack_recap_not_agressive_clean", (char*) "Nettoyage agressif non actif."}, \
+	{"lng_install_pack_recap_keep_files", (char*) "Conservation de fichiers active."}, \
+	{"lng_install_pack_recap_not_keep_files", (char*) "Conservation de fichiers non active."}, \
 	{"lng_install_pack_recap_clean_logos", (char*) "Les logos du pack seront supprimes."}, \
 	{"lng_install_pack_recap_not_clean_logos", (char*) "Les logos du pack ne seront pas supprimes."}, \
 	{"lng_install_pack_recap_install_hbmenu", (char*) "L'icone du Homebrew Menu sera mis en place."}, \
 	{"lng_install_pack_recap_not_install_hbmenu", (char*) "L'icone du Homebrew Menu ne sera pas mis en place."}, \
 	{"lng_install_pack_download_pack_error", (char*) "Une erreure est survenue lors du telechargement du pack."}, \
+	{"lng_install_pack_file_skip", (char*) "Saut de la copie du fichier ou dossier \"%s\" via la protection de fichiers"}, \
 	{"lng_install_pack_folder_create", (char*) "Creation du repertoir: %s"}, \
 	{"lng_install_pack_extract_file_protected", (char*) "Extraction de: %-5s"}, \
 	{"lng_install_pack_extract_file", (char*) "Extraction de: %s"}, \
