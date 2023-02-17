@@ -59,11 +59,11 @@ bool file_in_files_to_keep(char *file_to_test) {
 	} else {
 		const char* default_files_protect_list[] =
 		{
-			"atmosphere/config",
+			"atmosphere/config/",
 			"bootloader/hekate_ipl.ini",
 			"bootloader/nyx.ini",
 			"exosphere.ini",
-			"config",
+			"config/",
 			"boot.ini",
 			"switch/DBI/dbi.config"
 		};
