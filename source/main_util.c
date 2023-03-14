@@ -264,10 +264,14 @@ bool is_emummc() {
 	u64 is_emummc;
 	splInitialize();
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
-		splExit();
+		if (debug_enabled) {
+			debug_log_write("Erreur de détection du status de l'emummc.\n");
+		}
+	}
+	splExit();
+	if (!is_emummc) {
 		return false;
 	} else {
-		splExit();
 		return true;
 	}
 }
