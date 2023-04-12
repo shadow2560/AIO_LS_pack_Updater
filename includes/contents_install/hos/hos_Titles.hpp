@@ -96,7 +96,7 @@ namespace hos {
         NcmContentMetaKey meta_key;
         NcmStorageId storage_id;
         
-        NacpStruct TryGetNACP() const;
+        NacpStruct TryGetNacp() const;
         u8 *TryGetIcon() const;
         TitleContents GetContents() const;
         bool IsBaseTitle() const;

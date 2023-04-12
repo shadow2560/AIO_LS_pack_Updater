@@ -59,7 +59,7 @@ namespace hos {
         return this->meta.size + this->program.size + this->data.size + this->control.size + this->html_document.size + this->legal_info.size;
     }
 
-    NacpStruct Title::TryGetNACP() const {
+    NacpStruct Title::TryGetNacp() const {
         NsApplicationControlData control_data = {};
         size_t tmp = 0;
         if(R_SUCCEEDED(nsGetApplicationControlData(NsApplicationControlSource_Storage, this->app_id, &control_data, sizeof(control_data), &tmp))) {
