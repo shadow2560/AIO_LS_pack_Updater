@@ -24,6 +24,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_error_reboot_to_payload", (char*) "Payload non trouve."}, \
 	{"lng_error_not_enough_space_on_sd", (char*) "Erreur, pas assez d'espace sur la SD."}, \
 	{"lng_error_copy_file", (char*) "Erreur de copie de fichier."}, \
+	{"lng_calculate_sha256_of_downloaded_file", (char*) "Verification du sha256 du fichier telecharge..."}, \
 \
 	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
 	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \
@@ -77,7 +78,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 \
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
-	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware si vous utilisez des modules non inclus dans le pack ou si vous venez d'un autre pack?"}, \
+	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
+	{"lng_ask_clean_modules", (char*) "Souhaitez-vous faire un nettoyage des modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_keep_files", (char*) "Souhaitez-vous activer la conservation de fichiers?"}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
@@ -144,6 +146,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_not_clean_theme", (char*) "Le theme de la console, s'il y en a un, ne sera pas supprime."}, \
 	{"lng_install_pack_recap_agressive_clean", (char*) "Nettoyage agrressif actif."}, \
 	{"lng_install_pack_recap_not_agressive_clean", (char*) "Nettoyage agressif non actif."}, \
+	{"lng_install_pack_recap_clean_modules", (char*) "Nettoyage des modules actif."}, \
+	{"lng_install_pack_recap_not_clean_modules", (char*) "Nettoyage des modules non actif."}, \
 	{"lng_install_pack_recap_keep_files", (char*) "Conservation de fichiers active."}, \
 	{"lng_install_pack_recap_not_keep_files", (char*) "Conservation de fichiers non active."}, \
 	{"lng_install_pack_recap_clean_logos", (char*) "Les logos du pack seront supprimes."}, \
@@ -160,6 +164,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_clean_logos_begin", (char*) "Suppression des logos..."}, \
 	{"lng_clean_theme_begin", (char*) "Suppression d'un eventuel theme..."}, \
 	{"lng_agressive_clean_begin", (char*) "Nettoyage agressif..."}, \
+	{"lng_clean_modules_begin", (char*) "Nettoyage des modules..."}, \
 	{"lng_clean_sd_begin", (char*) "Nettoyage de la SD:"}, \
 	{"lng_clean_sd_clean_unusful_files", (char*) "Nettoyage des fichiers inutiles..."}, \
 	{"lng_clean_sd_finish", (char*) "Nettoyage de la SD termine."}, \

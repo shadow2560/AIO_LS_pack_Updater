@@ -20,6 +20,7 @@ u32 get_battery_charge();
 int GetChargerType();
 s64 get_sd_size_left();
 bool is_emummc();
+void get_sha256_file(const char *filepath, char *ret);
 
 #ifdef __cplusplus
 }

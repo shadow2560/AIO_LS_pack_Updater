@@ -24,7 +24,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.9.0"
+#define APP_VERSION			 "4.10.0"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -36,7 +36,9 @@ const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 bool debug_enabled = true;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
+char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack.txt";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
+char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
 char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
 char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/pack_version.txt";
 char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
@@ -46,7 +48,9 @@ char subfolder_in_zip_beta[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
 s64 pack_size = 1000000000;
 s64 pack_size_beta = 1000000000;
 char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
+char app_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_AIO_LS_pack_Updater.txt";
 char APP_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
+char app_sha256_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/sha256_AIO_LS_pack_Updater.txt";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char firmware_path_beta[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char atmo_logo_dir[FS_MAX_PATH] = "logo";
@@ -60,6 +64,8 @@ int debug_enabled_param_beta = 0;
 
 char pack_version[15];
 char last_pack_version[15];
+char pack_sha256[65];
+char app_sha256[65];
 char firmware_version[50];
 char atmosphere_version[50];
 char emummc_value[10];
@@ -250,6 +256,82 @@ void get_last_version_pack() {
 		fclose(pack_version_file);
 	}
 	consoleSelect(&menu_console);
+}
+
+void get_last_sha256_pack() {
+	FILE *pack_sha256_file;
+	bool res;
+	if (!beta_mode) {
+		if (strcmp(pack_sha256_url, "") == 0) {
+			return;
+		}
+		res = downloadFile(pack_sha256_url, TEMP_FILE, OFF, false);
+	} else {
+		if (strcmp(pack_sha256_url_beta, "") == 0) {
+			return;
+		}
+		res = downloadFile(pack_sha256_url_beta, TEMP_FILE, OFF, false);
+	}
+	if (res) {
+		logs_console_clear();
+		consoleSelect(&logs_console);
+		pack_sha256_file = fopen(TEMP_FILE, "r");
+		if (pack_sha256_file == NULL) {
+			return;
+		}
+		char * buffer = (char *) malloc( 65 );
+		fgets(buffer, 65, pack_sha256_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				pack_sha256[i] = buffer[i];
+			}
+			i++;
+		}
+		pack_sha256[i] = '\0';
+		free(buffer);
+		fclose(pack_sha256_file);
+	}
+}
+
+void get_last_sha256_app() {
+	FILE *app_sha256_file;
+	bool res;
+	if (!beta_mode) {
+		if (strcmp(app_sha256_url, "") == 0) {
+			return;
+		}
+		res = downloadFile(app_sha256_url, TEMP_FILE, OFF, false);
+	} else {
+		if (strcmp(app_sha256_url_beta, "") == 0) {
+			return;
+		}
+		res = downloadFile(app_sha256_url_beta, TEMP_FILE, OFF, false);
+	}
+	if (res) {
+		logs_console_clear();
+		consoleSelect(&logs_console);
+		app_sha256_file = fopen(TEMP_FILE, "r");
+		if (app_sha256_file == NULL) {
+			return;
+		}
+		char * buffer = (char *) malloc( 65 );
+		fgets(buffer, 65, app_sha256_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				app_sha256[i] = buffer[i];
+			}
+			i++;
+		}
+		app_sha256[i] = '\0';
+		free(buffer);
+		fclose(app_sha256_file);
+	}
 }
 
 void get_fw_version() {
@@ -765,7 +847,9 @@ void debug_write_config_infos() {
 	if (debug_enabled) {
 	debug_log_write("Configurations:\n");
 	debug_log_write("URL du pack: %s\n", CFW_URL);
+	debug_log_write("URL du sha256 du pack: %s\n", pack_sha256_url);
 	debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
+	debug_log_write("URL du sha256 du pack beta: %s\n", pack_sha256_url_beta);
 	debug_log_write("URL de la version du pack: %s\n", pack_version_url);
 	debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
 	debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
@@ -775,7 +859,9 @@ void debug_write_config_infos() {
 	debug_log_write("Taille du pack: %lli\n", pack_size);
 	debug_log_write("Taille du pack beta: %lli\n", pack_size_beta);
 	debug_log_write("URL de l'application: %s\n", APP_URL);
+	debug_log_write("URL du sha256 de l'application: %s\n", app_sha256_url);
 	debug_log_write("URL de l'application beta: %s\n", APP_URL_beta);
+	debug_log_write("URL du sha256 de l'application beta: %s\n", app_sha256_url_beta);
 	debug_log_write("Chemin local du firmware: %s\n", firmware_path);
 	debug_log_write("Chemin local du firmware beta: %s\n", firmware_path_beta);
 	debug_log_write("Chemin du logo d'Atmosphere: %s\n", atmo_logo_dir);
@@ -972,12 +1058,17 @@ int main(int argc, char **argv) {
 				}
 				bool update_firmware2 = false;
 				bool agressive_clean2 = false;
+				bool clean_modules_2 = false;
 				agressive_clean2 = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+				clean_modules_2 = ask_question((char*) language_vars["lng_ask_clean_modules"]);
 				update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
 				if (update_firmware2) {
 					fnc_clean_theme();
 					if (agressive_clean2) {
 						fnc_agressive_clean();
+					}
+					if (clean_modules_2) {
+						fnc_clean_modules();
 					}
 					if (fnc_install_firmware()) {
 						sleep(5);
@@ -1034,6 +1125,7 @@ int main(int argc, char **argv) {
 				bool update_firmware = false;
 				bool clean_theme = false;
 				bool agressive_clean = false;
+				bool clean_modules = false;
 				bool keep_files=false;
 				if (!beta_mode) {
 					if (strcmp(firmware_path, "") != 0) {
@@ -1050,6 +1142,7 @@ int main(int argc, char **argv) {
 					clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
 				}
 				agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+				clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
 				keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
 				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
 				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
@@ -1085,6 +1178,13 @@ int main(int argc, char **argv) {
 					printDisplay("\n");
 				} else {
 					printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
+					printDisplay("\n");
+				}
+				if (agressive_clean) {
+					printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+					printDisplay("\n");
+				} else {
+					printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
 					printDisplay("\n");
 				}
 				if (keep_files) {
@@ -1125,6 +1225,11 @@ int main(int argc, char **argv) {
 							} else {
 								debug_log_write("Non nettoyage agressif.\n");
 							}
+							if (clean_modules) {
+								debug_log_write("Nettoyage des modules.\n");
+							} else {
+								debug_log_write("Non nettoyage des modules.\n");
+							}
 							if (keep_files) {
 								debug_log_write("Fichiers non écrasés.\n");
 							} else {
@@ -1155,6 +1260,7 @@ int main(int argc, char **argv) {
 						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 						printDisplay("\033[0;37m\n");
 					} else {
+						get_last_sha256_pack();
 						bool dl_pack_res;
 						if (!beta_mode) {
 							dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
@@ -1164,6 +1270,26 @@ int main(int argc, char **argv) {
 							// dl_pack_res = true;
 						}
 						if (dl_pack_res) {
+							printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+							printDisplay("\n");
+							char dl_pack_sha256[65] = "";
+							get_sha256_file(TEMP_FILE, dl_pack_sha256);
+							debug_log_write("SHA256 du pack à télécharger: ");
+							debug_log_write("%s", pack_sha256);
+							debug_log_write("\n");
+							debug_log_write("SHA256 du pack téléchargé: ");
+							debug_log_write("%s", dl_pack_sha256);
+							debug_log_write("\n");
+							if (strcmp(pack_sha256, "") != 0) {
+								if (strcmp(pack_sha256, dl_pack_sha256) != 0) {
+									printDisplay("\033[0;31m");
+									printDisplay(language_vars["lng_install_pack_download_pack_error"]);
+									printDisplay("\033[0;37m\n");
+									remove(TEMP_FILE);
+									consoleSelect(&menu_console);
+									break;
+								}
+							}
 							set_90dns();
 							if (clean_theme && agressive_clean) {
 								clean_sd(true, true);
@@ -1173,6 +1299,9 @@ int main(int argc, char **argv) {
 								clean_sd(false, true);
 							} else {
 								clean_sd(false, false);
+							}
+							if (clean_modules) {
+								fnc_clean_modules();
 							}
 							int unzip_res;
 							if (!beta_mode) {
@@ -1243,6 +1372,7 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 					printDisplay("\033[0;37m\n");
 				} else {
+					get_last_sha256_app();
 					bool dl_app_res;
 					if (!beta_mode) {
 						dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
@@ -1250,6 +1380,26 @@ int main(int argc, char **argv) {
 						dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
 					}
 					if (dl_app_res) {
+						printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+						printDisplay("\n");
+						char dl_app_sha256[65] = "";
+						get_sha256_file(TEMP_FILE, dl_app_sha256);
+						debug_log_write("SHA256 de l'app à télécharger: ");
+						debug_log_write("%s", app_sha256);
+						debug_log_write("\n");
+						debug_log_write("SHA256 de l'app téléchargée: ");
+						debug_log_write("%s", dl_app_sha256);
+						debug_log_write("\n");
+						if (strcmp(app_sha256, "") != 0) {
+							if (strcmp(app_sha256, dl_app_sha256) != 0) {
+								printDisplay("\033[0;31m");
+								printDisplay(language_vars["lng_install_app_download_app_error"]);
+								printDisplay("\033[0;37m\n");
+								remove(TEMP_FILE);
+								consoleSelect(&menu_console);
+								break;
+							}
+						}
 						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
 							if (debug_enabled) {
 								debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");

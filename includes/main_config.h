@@ -9,11 +9,13 @@ extern "C" {
 // define a structure for holding the values in "config" section of the ini file.
 typedef struct{
 	const char* dl_pack;
+	const char* pack_sha256;
 	const char* dl_pack_version;
 	const char* pack_version_local_filepath;
 	const char* subfolder_in_zip_pack;
 	s64 pack_size;
 	const char* dl_app;
+	const char* app_sha256;
 	const char *firmware_path;
 	const char *atmo_logo_dir;
 	const char *hekate_nologo_file_path;

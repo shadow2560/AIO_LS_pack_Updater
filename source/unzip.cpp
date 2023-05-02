@@ -6,9 +6,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+// #include <iostream>
+// #include <fstream>
+
 #include "main_util.h"
 #include "unzip.hpp"
 #include "translate.hpp"
+// #include "json.hpp"
 // #include "zip.h"
 
 size_t WRITEBUFFERSIZE = 0x100000;
@@ -81,6 +85,53 @@ bool file_in_files_to_keep(char *file_to_test) {
 		return false;
 	}
 	return false;
+}
+
+void fnc_clean_modules() {
+	if (debug_enabled) {
+		debug_log_write("Suppression des modules.\n");
+	}
+	printf(language_vars["lng_clean_modules_begin"]);
+	printf("\n");
+	DIR *contents_dir = opendir("atmosphere/contents");
+	if (contents_dir != NULL) {
+		// auto contents_json = nlohmann::ordered_json::array();
+		struct dirent *ent;
+		while ((ent = readdir(contents_dir)) != NULL) {
+			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+				continue;
+			}
+			char temp_exefs_path[46] = "";
+			strcat(strcat(strcat(temp_exefs_path, "atmosphere/contents/"), ent->d_name), "/exefs.nsp");
+			char temp_module_path[36] = "";
+			strcat(strcat(temp_module_path, "atmosphere/contents/"), ent->d_name);
+			FILE* f=fopen(temp_exefs_path, "r");
+			if (f != NULL) {
+				fclose(f);
+				remove_directory(temp_module_path);
+				if (strcmp(ent->d_name, "010000000000bd00") == 0) {
+					remove_directory("atmosphere/exefs_patches/bluetooth_patches");
+				}
+				continue;
+			}
+			/*
+			std::ifstream sysconfig("atmosphere/contents/" + std::string(ent->d_name) + "/toolbox.json");
+			if (!sysconfig.fail()) {
+				auto data = nlohmann::ordered_json::parse(sysconfig);
+				contents_json.push_back(data);
+			}
+			*/
+		}
+		closedir(contents_dir);
+		/*
+		if (contents_json.size()) {
+			for (auto i : contents_json) {
+				std::string path = "atmosphere/contents/" + i["tid"].get<std::string>();
+				remove_directory(path.c_str());
+			}
+		}
+		*/
+	}
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
@@ -167,31 +218,7 @@ void fnc_agressive_clean() {
 		if (debug_enabled) {
 			debug_log_write("Nettoyage agressif intégré.\n");
 		}
-		remove_directory("atmosphere/contents/00FF0000000002AA");
-		remove_directory("atmosphere/contents/054e4f4558454000");
-		remove_directory("atmosphere/contents/010000000000000D");
-		remove_directory("atmosphere/contents/0100000000001013");
-		remove_directory("atmosphere/contents/0100000000000352");
-		remove_directory("atmosphere/contents/0100000000000F12");
-		remove_directory("atmosphere/contents/010000000000CF12");
-		remove_directory("atmosphere/contents/010000000000C235");
-		remove_directory("atmosphere/contents/0100000000000faf");
-		remove_directory("atmosphere/contents/4200000000000010");
-		remove_directory("atmosphere/contents/010000000000bd00");
-		remove_directory("atmosphere/exefs_patches/bluetooth_patches");
-		remove_directory("atmosphere/contents/0100000000000081");
-		remove_directory("atmosphere/contents/0100000000000901");
-		remove_directory("atmosphere/contents/0000000000534C56");
-		remove_directory("atmosphere/contents/420000000000000F");
-		remove_directory("atmosphere/contents/0100000000000464");
-		remove_directory("atmosphere/contents/430000000000000B");
-		remove_directory("atmosphere/contents/00FF0000636C6BFF");
-		remove_directory("atmosphere/contents/690000000000000D");
-		remove_directory("atmosphere/contents/420000000000000E");
-		remove_directory("atmosphere/contents/43000000000000ff");
-		remove_directory("atmosphere/contents/4200000000000000");
-		remove_directory("atmosphere/contents/4200000000000FFF");
-		remove_directory("atmosphere/contents/0100000000001000");
+		fnc_clean_modules();
 	}
 }
 

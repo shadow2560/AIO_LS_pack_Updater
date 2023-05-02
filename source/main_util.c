@@ -275,3 +275,28 @@ bool is_emummc() {
 		return true;
 	}
 }
+
+void get_sha256_file(const char* filepath, char* ret) {
+	// ret = "";
+	FILE *file = fopen(filepath, "rb");
+	if (file == NULL) {
+		return;
+	}
+	char sha256_hash[0x50] = "";
+	char * buf = (char *) malloc(1);
+	char * buf2 = (char *) malloc(3);
+	Sha256Context ctx;
+	sha256ContextCreate(&ctx);
+	size_t i;
+	while((i = fread(buf, 1, sizeof(buf), file)) > 0) {
+		sha256ContextUpdate(&ctx, buf, i);
+	}
+	sha256ContextGetHash(&ctx, sha256_hash);
+	free(buf);
+	fclose(file);
+	for(int j = 0; j < 32; j++) {
+		sprintf(buf2, "%02x", sha256_hash[j]);
+		strcat(ret, buf2);
+	}
+	free(buf2);
+}
