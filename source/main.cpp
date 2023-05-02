@@ -1270,17 +1270,17 @@ int main(int argc, char **argv) {
 							// dl_pack_res = true;
 						}
 						if (dl_pack_res) {
-							printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
-							printDisplay("\n");
-							char dl_pack_sha256[65] = "";
-							get_sha256_file(TEMP_FILE, dl_pack_sha256);
-							debug_log_write("SHA256 du pack à télécharger: ");
-							debug_log_write("%s", pack_sha256);
-							debug_log_write("\n");
-							debug_log_write("SHA256 du pack téléchargé: ");
-							debug_log_write("%s", dl_pack_sha256);
-							debug_log_write("\n");
 							if (strcmp(pack_sha256, "") != 0) {
+								printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+								printDisplay("\n");
+								char dl_pack_sha256[65] = "";
+								get_sha256_file(TEMP_FILE, dl_pack_sha256);
+								debug_log_write("SHA256 du pack à télécharger: ");
+								debug_log_write("%s", pack_sha256);
+								debug_log_write("\n");
+								debug_log_write("SHA256 du pack téléchargé: ");
+								debug_log_write("%s", dl_pack_sha256);
+								debug_log_write("\n");
 								if (strcmp(pack_sha256, dl_pack_sha256) != 0) {
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"]);
@@ -1380,17 +1380,17 @@ int main(int argc, char **argv) {
 						dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
 					}
 					if (dl_app_res) {
-						printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
-						printDisplay("\n");
-						char dl_app_sha256[65] = "";
-						get_sha256_file(TEMP_FILE, dl_app_sha256);
-						debug_log_write("SHA256 de l'app à télécharger: ");
-						debug_log_write("%s", app_sha256);
-						debug_log_write("\n");
-						debug_log_write("SHA256 de l'app téléchargée: ");
-						debug_log_write("%s", dl_app_sha256);
-						debug_log_write("\n");
 						if (strcmp(app_sha256, "") != 0) {
+							printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+							printDisplay("\n");
+							char dl_app_sha256[65] = "";
+							get_sha256_file(TEMP_FILE, dl_app_sha256);
+							debug_log_write("SHA256 de l'app à télécharger: ");
+							debug_log_write("%s", app_sha256);
+							debug_log_write("\n");
+							debug_log_write("SHA256 de l'app téléchargée: ");
+							debug_log_write("%s", dl_app_sha256);
+							debug_log_write("\n");
 							if (strcmp(app_sha256, dl_app_sha256) != 0) {
 								printDisplay("\033[0;31m");
 								printDisplay(language_vars["lng_install_app_download_app_error"]);
