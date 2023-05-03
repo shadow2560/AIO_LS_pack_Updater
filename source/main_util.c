@@ -283,7 +283,7 @@ void get_sha256_file(const char* filepath, char* ret) {
 		return;
 	}
 	char sha256_hash[0x50] = "";
-	char * buf = (char *) malloc(1);
+	char * buf = (char *) malloc(128);
 	char * buf2 = (char *) malloc(3);
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
