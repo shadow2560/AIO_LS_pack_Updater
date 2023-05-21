@@ -572,6 +572,9 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Prevent the home button from being pressed during installation. */
 	hiddbgDeactivateHomeButton();
 	m_install_state = InstallState::NeedsDraw;
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	}
 	/* We have drawn now, allow setup to occur. */
 	if (m_install_state == InstallState::NeedsDraw) {
 		printf(language_vars["lng_db_install_update_begin"]);
@@ -579,12 +582,21 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		consoleUpdate(&logs_console);
 		m_install_state = InstallState::NeedsSetup;
 	}
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	}
 	/* Transition to the next update state. */
 	if (m_install_state != InstallState::NeedsDraw && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
 	}
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	}
 	if (m_install_state != InstallState::NeedsSetup && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
+	}
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	}
 	if (m_install_state != InstallState::NeedsPrepare && m_install_state != InstallState::AwaitingReboot) {
 		while (1) {
@@ -596,8 +608,14 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 			// consoleUpdate(&logs_console);
 		}
 	}
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	}
 	if (m_install_state != InstallState::AwaitingPrepare && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
+	}
+	if (debug_enabled) {
+		debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	}
 	DaybreakAppExit();
 	return true;
