@@ -25,6 +25,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_error_not_enough_space_on_sd", (char*) "Erreur, pas assez d'espace sur la SD."}, \
 	{"lng_error_copy_file", (char*) "Erreur de copie de fichier."}, \
 	{"lng_calculate_sha256_of_downloaded_file", (char*) "Verification du sha256 du fichier telecharge..."}, \
+	{"lng_press_b_to_go_back", (char*) "Appuyer sur B pour revenir en arriere."}, \
 \
 	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
 	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \

@@ -24,7 +24,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.11.0"
+#define APP_VERSION			 "4.13.0"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -84,7 +84,6 @@ PadState pad;
 
 PrintConsole menu_console;
 PrintConsole logs_console;
-// PrintConsole infos_console;
 /* ConsoleFont custom_font;
 custom_font->gfx=;
 custom_font->asciiOffset=;
@@ -93,8 +92,8 @@ custom_font->tileWidth=;
 custom_font->tileHeight=;
 */
 
-void refreshScreen(int cursor)
-{
+void refreshScreen(int cursor) {
+	consoleSelect(&menu_console);
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
@@ -141,10 +140,14 @@ void printDisplay(const char *text, ...)
 	consoleUpdate(&logs_console);
 }
 
+void set_consoles_default_size() {
+	consoleSetWindow(&menu_console, 0, 0, 80, 26);
+	consoleSetWindow(&logs_console, 0, 27, 80, 18);
+}
+
 int appInit() {
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
-	consoleSetWindow(&menu_console, 0, 0, 80, 26);
 	/*
 	logs_console.font = menu_console->font;
 	logs_console.renderer = NULL;
@@ -152,7 +155,7 @@ int appInit() {
 	logs_console.cursorY = 0;
 	logs_console.prevCursorX = 0;
 	logs_console.prevCursorY = 0;
-	*/
+	//
 	logs_console.consoleWidth = 80;
 	logs_console.consoleHeight = 18;
 	logs_console.windowX = 0;
@@ -160,13 +163,13 @@ int appInit() {
 	logs_console.windowWidth = 80;
 	logs_console.windowHeight = 18;
 	logs_console.bg = 6;
-	/*
+	//
 	logs_console.tabSize = 3;
 	logs_console.fg = 7;
 	logs_console.flags = 0;
 	*/
 	consoleInit(&logs_console);
-	consoleSetWindow(&logs_console, 0, 27, 80, 18);
+	set_consoles_default_size();
 	consoleSelect(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
@@ -459,10 +462,15 @@ bool ask_question(char *question_text) {
 	return rc;
 }
 
-void display_infos() {
-	// consoleInit(&infos_console);
-	// consoleSetWindow(&infos_console, 1, 0, 80, 43);
+void display_infos(int cursor) {
 	consoleSelect(&logs_console);
+	consoleClear();
+	consoleUpdate(&logs_console);
+	consoleSetWindow(&logs_console, 0, 0, 0, 0);
+	consoleSelect(&menu_console);
+	consoleClear();
+	consoleUpdate(&menu_console);
+	consoleSetWindow(&menu_console, 0, 0, 80, 43);
 	if (debug_enabled) {
 		debug_log_write("Affichage des informations.\n");
 	}
@@ -519,8 +527,19 @@ void display_infos() {
 		printf(language_vars["lng_infos_no_charge"], get_battery_charge());
 	}
 	printf("\n");
-	consoleUpdate(&logs_console);
-	consoleSelect(&menu_console);
+	printf(language_vars["lng_press_b_to_go_back"]);
+	consoleUpdate(&menu_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_B) {
+			break;
+		}
+	}
+	consoleClear();
+	consoleUpdate(&menu_console);
+	set_consoles_default_size();
+	refreshScreen(cursor);
 }
 
 void record_infos() {
@@ -1519,7 +1538,7 @@ int main(int argc, char **argv) {
 
 		} else if (kDown & HidNpadButton_X) {
 			logs_console_clear();
-			display_infos();
+			display_infos(cursor);
 
 		} else if (kDown & HidNpadButton_Y) {
 			logs_console_clear();

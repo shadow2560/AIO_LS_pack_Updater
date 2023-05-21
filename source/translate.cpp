@@ -24,6 +24,7 @@ const char* translation_vars_list[] =
 	"lng_error_not_enough_space_on_sd",
 	"lng_error_copy_file",
 	"lng_calculate_sha256_of_downloaded_file",
+	"lng_press_b_to_go_back",
 
 	"lng_title",
 	"lng_title_beta",
@@ -268,10 +269,18 @@ translation_map set_translation_strings() {
 		for (size_t i=0; i < sizeof(translation_vars_list)/sizeof(translation_vars_list[0]); i++) {
 			if (strcmp(config[translation_vars_list[i]], "") != 0) {
 				language_temp.erase(translation_vars_list[i]);
-				language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+1];
+				/*
+				int j=0;
+				while (config[translation_vars_list[i]][j] != '\0') {
+					j++;
+				}
+				language_temp[translation_vars_list[i]] = new char[j+2];
+				*/
+				// language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+1]; // This create a bug when closing Daybreak service and I don't understand why, must be investigated
+				language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+2];
 				strcpy(language_temp[translation_vars_list[i]], config[translation_vars_list[i]]);
 				// sprintf(language_temp[translation_vars_list[i]], "%s", config[translation_vars_list[i]]);
-				// fprintf(test, "%s\n", language_temp[translation_vars_list[i]]);
+				// fprintf(test, "%s - %li - %li\n", language_temp[translation_vars_list[i]], strlen(config[translation_vars_list[i]]), sizeof(config[translation_vars_list[i]]));
 				free((char*)config[translation_vars_list[i]]);
 				// fprintf(test, "%s\n\n", language_temp[translation_vars_list[i]]);
 			}
