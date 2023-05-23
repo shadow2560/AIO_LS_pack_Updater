@@ -276,7 +276,7 @@ translation_map set_translation_strings() {
 				}
 				language_temp[translation_vars_list[i]] = new char[j+2];
 				*/
-				// language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+1]; // This create a bug when closing Daybreak service and I don't understand why, must be investigated
+				// language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+1]; // This create a bug when closing Daybreak service (end of firmmware installation, doesn't brick the firmware) and I don't understand why, must be investigated
 				language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+2];
 				strcpy(language_temp[translation_vars_list[i]], config[translation_vars_list[i]]);
 				// sprintf(language_temp[translation_vars_list[i]], "%s", config[translation_vars_list[i]]);

@@ -20,6 +20,7 @@ size_t WRITEBUFFERSIZE = 0x100000;
 extern translation_map language_vars;
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
+extern char atmo_logo_dir[FS_MAX_PATH];
 extern bool debug_enabled;
 
 bool prefix(const char* pre, const char *str){
@@ -450,6 +451,12 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	FILE *outfile;
 	void *buf;
 	FsFileSystem *fs_sd = fsdevGetDeviceFileSystem("sdmc");
+char atmo_bootlogo_dir[strlen(atmo_logo_dir)+30] = "";
+if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
+	strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir), "/");
+} else {
+	strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir);
+}
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
@@ -513,6 +520,19 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			dir = opendir(filename_on_sd);
 			if (dir) {
 				closedir(dir);
+				if (strcmp(filename_on_sd, atmo_bootlogo_dir) == 0) {
+					printf("\033[0;34m");
+					printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
+					printf("\033[0;37m\n");
+					remove_directory(filename_on_sd);
+					mkdir(filename_on_sd, 0777);
+					if (debug_enabled) {
+						debug_log_write("remplacement  du répertoire du bootlogo d'Atmmosphere \"%s\".\n", filename_on_sd);
+					}
+					unzCloseCurrentFile(zfile);
+					unzGoToNextFile(zfile);
+					continue;
+				}
 			} else {
 				outfile = fopen(filename_on_sd, "rb");
 				if (outfile != NULL) {

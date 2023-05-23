@@ -12,6 +12,9 @@ extern char CFW_URL[1003];
 extern char pack_sha256_url[1003];
 extern char CFW_URL_beta[1003];
 extern char pack_sha256_url_beta[1003];
+extern char pack_custom_files_url[1003];
+extern s64 pack_custom_files_size;
+extern char pack_custom_files_subfolder_in_zip[FS_MAX_PATH];
 extern char pack_version_url[1003];
 extern char pack_version_url_beta[1003];
 extern char pack_version_local_filepath[FS_MAX_PATH];
@@ -55,6 +58,18 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.pack_sha256 = strdup(value);
 		} else {
 			pconfig->s1.pack_sha256 = "";
+		}
+	} else if(MATCH("config", "pack_custom_files_adress")){
+		if (value != 0) {
+			pconfig->s1.pack_custom_files = strdup(value);
+		} else {
+			pconfig->s1.pack_custom_files = "";
+		}
+	} else if(MATCH("config", "custom_files_subfolder_in_zip_pack")){
+		if (value != 0) {
+			pconfig->s1.pack_custom_files_subfolder_in_zip = strdup(value);
+		} else {
+			pconfig->s1.pack_custom_files_subfolder_in_zip = "";
 		}
 	} else 	if(MATCH("config", "pack_version_adress")){
 		if (value != 0) {
@@ -110,6 +125,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.pack_size = 0;
 		}
+	}else if(MATCH("config", "pack_custom_files_size")){
+		if (value != 0) {
+			pconfig->s1.pack_custom_files_size = atoll(value);
+		} else {
+			pconfig->s1.pack_custom_files_size = 0;
+		}
 	}else if(MATCH("config", "exit_method")){
 		if (value != 0) {
 			pconfig->s1.exit_method = atoll(value);
@@ -133,6 +154,8 @@ void configs_init() {
 	configuration config;
 	config.s1.dl_pack = "";
 	config.s1.pack_sha256 = "";
+	config.s1.pack_custom_files = "";
+	config.s1.pack_custom_files_subfolder_in_zip = "";
 	config.s1.dl_pack_version = "";
 	config.s1.pack_version_local_filepath = "";
 	config.s1.subfolder_in_zip_pack = "";
@@ -142,6 +165,7 @@ void configs_init() {
 	config.s1.atmo_logo_dir = "";
 	config.s1.hekate_nologo_file_path = "";
 	config.s1.pack_size = 0;
+	config.s1.pack_custom_files_size = 0;
 	config.s1.exit_method = 0;
 	config.s1.debug_enabled = 0;
 	FILE *test_ini;
@@ -158,13 +182,21 @@ void configs_init() {
 				strcpy(pack_sha256_url, config.s1.pack_sha256);
 				free((void*)config.s1.pack_sha256);
 			}
+			if (strcmp(config.s1.pack_custom_files, "") != 0) {
+				strcpy(pack_custom_files_url, config.s1.pack_custom_files);
+				free((void*)config.s1.pack_custom_files);
+			}
+			if (strcmp(config.s1.pack_custom_files_subfolder_in_zip, "") != 0) {
+				strcpy(pack_custom_files_subfolder_in_zip, config.s1.pack_custom_files_subfolder_in_zip);
+				free((void*)config.s1.pack_custom_files_subfolder_in_zip);
+			}
 			if (strcmp(config.s1.dl_pack_version, "") != 0) {
 				strcpy(pack_version_url, config.s1.dl_pack_version);
 				free((void*)config.s1.dl_pack_version);
 			}
 			if (strcmp(config.s1.pack_version_local_filepath, "") != 0) {
 				strcpy(pack_version_local_filepath, config.s1.pack_version_local_filepath);
-				free((void*)config.s1.dl_pack_version);
+				free((void*)config.s1.pack_version_local_filepath);
 			}
 			if (strcmp(config.s1.subfolder_in_zip_pack, "") != 0) {
 				strcpy(subfolder_in_zip, config.s1.subfolder_in_zip_pack);
@@ -193,6 +225,9 @@ void configs_init() {
 			if (config.s1.pack_size != 0) {
 				pack_size = config.s1.pack_size;
 			}
+			if (config.s1.pack_custom_files_size != 0) {
+				pack_custom_files_size = config.s1.pack_custom_files_size;
+			}
 			if (config.s1.exit_method != 0) {
 				exit_mode_param = 1;
 			}
@@ -204,6 +239,8 @@ void configs_init() {
 	configuration config_beta;
 	config_beta.s1.dl_pack = "";
 	config_beta.s1.pack_sha256 = "";
+	config_beta.s1.pack_custom_files = "";
+	config_beta.s1.pack_custom_files_subfolder_in_zip = "";
 	config_beta.s1.dl_pack_version = "";
 	config_beta.s1.pack_version_local_filepath = "";
 	config_beta.s1.subfolder_in_zip_pack = "";
@@ -213,6 +250,7 @@ void configs_init() {
 	config_beta.s1.atmo_logo_dir = "";
 	config_beta.s1.hekate_nologo_file_path = "";
 	config_beta.s1.pack_size = 0;
+	config_beta.s1.pack_custom_files_size = 0;
 	config_beta.s1.exit_method = 0;
 	config_beta.s1.debug_enabled = 0;
 	FILE *test_ini_beta;
@@ -229,13 +267,21 @@ void configs_init() {
 				strcpy(pack_sha256_url_beta, config_beta.s1.pack_sha256);
 				free((void*)config_beta.s1.pack_sha256);
 			}
+			if (strcmp(config_beta.s1.pack_custom_files, "") != 0) {
+				strcpy(pack_custom_files_url, config_beta.s1.pack_custom_files);
+				free((void*)config_beta.s1.pack_custom_files);
+			}
+			if (strcmp(config_beta.s1.pack_custom_files_subfolder_in_zip, "") != 0) {
+				strcpy(pack_custom_files_subfolder_in_zip, config_beta.s1.pack_custom_files_subfolder_in_zip);
+				free((void*)config_beta.s1.pack_custom_files_subfolder_in_zip);
+			}
 			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
 				strcpy(pack_version_url_beta, config_beta.s1.dl_pack_version);
 				free((void*)config_beta.s1.dl_pack_version);
 			}
 			if (strcmp(config_beta.s1.pack_version_local_filepath, "") != 0) {
 				strcpy(pack_version_local_filepath_beta, config_beta.s1.pack_version_local_filepath);
-				free((void*)config_beta.s1.dl_pack_version);
+				free((void*)config_beta.s1.pack_version_local_filepath);
 			}
 			if (strcmp(config_beta.s1.subfolder_in_zip_pack, "") != 0) {
 				strcpy(subfolder_in_zip_beta, config_beta.s1.subfolder_in_zip_pack);
@@ -263,6 +309,9 @@ void configs_init() {
 			}
 			if (config_beta.s1.pack_size != 0) {
 				pack_size_beta = config_beta.s1.pack_size;
+			}
+			if (config_beta.s1.pack_custom_files_size != 0) {
+				pack_custom_files_size = config_beta.s1.pack_custom_files_size;
 			}
 			if (config_beta.s1.exit_method != 0) {
 				exit_mode_param_beta = 1;

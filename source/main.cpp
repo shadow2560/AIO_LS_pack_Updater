@@ -39,6 +39,9 @@ char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switc
 char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack.txt";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
+char pack_custom_files_url[1003] = "";
+char pack_custom_files_subfolder_in_zip[FS_MAX_PATH] = "";
+s64 pack_custom_files_size = 10000000;
 char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
 char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/pack_version.txt";
 char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
@@ -869,6 +872,9 @@ void debug_write_config_infos() {
 	debug_log_write("URL du sha256 du pack: %s\n", pack_sha256_url);
 	debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
 	debug_log_write("URL du sha256 du pack beta: %s\n", pack_sha256_url_beta);
+	debug_log_write("URL du zip complémentaire au pack: %s\n", pack_custom_files_url);
+	debug_log_write("Début du chemin du pack dans le zip complémentaire au pack: %s\n", pack_custom_files_subfolder_in_zip);
+	debug_log_write("Taille du zip complémentaire au pack: %lli\n", pack_custom_files_size);
 	debug_log_write("URL de la version du pack: %s\n", pack_version_url);
 	debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
 	debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
@@ -1266,10 +1272,18 @@ int main(int argc, char **argv) {
 							}
 						}
 					bool not_has_enough_space_on_sd;
-					if (!beta_mode) {
-						not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
+					if (strcmp(pack_custom_files_url, "") == 0) {
+						if (!beta_mode) {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
+						} else {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+						}
 					} else {
-						not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+						if (!beta_mode) {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size + pack_custom_files_size;
+						} else {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta + pack_custom_files_size;
+						}
 					}
 					if (not_has_enough_space_on_sd) {
 						if (debug_enabled) {
@@ -1330,6 +1344,17 @@ int main(int argc, char **argv) {
 							}
 							if (unzip_res == 0) {
 								remove(TEMP_FILE);
+								if (strcmp(pack_custom_files_url, "") != 0) {
+									dl_pack_res = false;
+									dl_pack_res = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
+									if (dl_pack_res) {
+										unzip_res = -1;
+										unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
+										if (unzip_res == 0) {
+											remove(TEMP_FILE);
+										}
+									}
+								}
 								if (clean_logos) {
 										if (!beta_mode) {
 											fnc_clean_logo(atmo_logo_dir, hekate_nologo_file_path);

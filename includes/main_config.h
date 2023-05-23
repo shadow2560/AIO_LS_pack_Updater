@@ -10,6 +10,9 @@ extern "C" {
 typedef struct{
 	const char* dl_pack;
 	const char* pack_sha256;
+	const char* pack_custom_files;
+	const char* pack_custom_files_subfolder_in_zip;
+	s64 pack_custom_files_size;
 	const char* dl_pack_version;
 	const char* pack_version_local_filepath;
 	const char* subfolder_in_zip_pack;
