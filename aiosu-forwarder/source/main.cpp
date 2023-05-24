@@ -19,15 +19,23 @@ int removeDir(const char* path)
 	return 0;
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char **argv) {
 	std::filesystem::create_directory(PATH);
-	if(std::filesystem::exists(BAD_PATH)){
-		std::filesystem::remove(BAD_PATH);
-	}
-	if(std::filesystem::exists(CONFIG_PATH)){
-		std::filesystem::remove(FULL_PATH);
-		std::filesystem::rename(CONFIG_PATH, FULL_PATH);
+	if (argc == 2) {
+		if(std::filesystem::exists(argv[1])) {
+			std::filesystem::rename(std::string(argv[1]), FULL_PATH);
+		}
+		if(std::filesystem::exists(BAD_PATH)) {
+			std::filesystem::remove(BAD_PATH);
+		}
+	} else {
+		if(std::filesystem::exists(BAD_PATH)) {
+			std::filesystem::remove(BAD_PATH);
+		}
+		if(std::filesystem::exists(CONFIG_PATH)) {
+			std::filesystem::remove(FULL_PATH);
+			std::filesystem::rename(CONFIG_PATH, FULL_PATH);
+		}
 	}
 
 	std::filesystem::remove(FORWARDER_PATH);

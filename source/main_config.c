@@ -13,8 +13,11 @@ extern char pack_sha256_url[1003];
 extern char CFW_URL_beta[1003];
 extern char pack_sha256_url_beta[1003];
 extern char pack_custom_files_url[1003];
-extern s64 pack_custom_files_size;
+extern char pack_custom_files_url_beta[1003];
 extern char pack_custom_files_subfolder_in_zip[FS_MAX_PATH];
+extern char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH];
+extern s64 pack_custom_files_size;
+extern s64 pack_custom_files_size_beta;
 extern char pack_version_url[1003];
 extern char pack_version_url_beta[1003];
 extern char pack_version_local_filepath[FS_MAX_PATH];
@@ -268,11 +271,11 @@ void configs_init() {
 				free((void*)config_beta.s1.pack_sha256);
 			}
 			if (strcmp(config_beta.s1.pack_custom_files, "") != 0) {
-				strcpy(pack_custom_files_url, config_beta.s1.pack_custom_files);
+				strcpy(pack_custom_files_url_beta, config_beta.s1.pack_custom_files);
 				free((void*)config_beta.s1.pack_custom_files);
 			}
 			if (strcmp(config_beta.s1.pack_custom_files_subfolder_in_zip, "") != 0) {
-				strcpy(pack_custom_files_subfolder_in_zip, config_beta.s1.pack_custom_files_subfolder_in_zip);
+				strcpy(pack_custom_files_subfolder_in_zip_beta, config_beta.s1.pack_custom_files_subfolder_in_zip);
 				free((void*)config_beta.s1.pack_custom_files_subfolder_in_zip);
 			}
 			if (strcmp(config_beta.s1.dl_pack_version, "") != 0) {
@@ -311,7 +314,7 @@ void configs_init() {
 				pack_size_beta = config_beta.s1.pack_size;
 			}
 			if (config_beta.s1.pack_custom_files_size != 0) {
-				pack_custom_files_size = config_beta.s1.pack_custom_files_size;
+				pack_custom_files_size_beta = config_beta.s1.pack_custom_files_size;
 			}
 			if (config_beta.s1.exit_method != 0) {
 				exit_mode_param_beta = 1;
@@ -379,6 +382,7 @@ int get_emunand_type() {
 	if (!is_emummc()) {
 		return 0;
 	}
+	int ret = 0;
 	// config for holding ini file values.
 	emummc_configuration emummc_config;
 	emummc_config.e1.enabled = 0;
@@ -393,23 +397,17 @@ int get_emunand_type() {
 		// parse the .ini file
 		if (ini_parse("/emuMMC/emummc.ini", emummc_config_handler, &emummc_config) == 0) {
 			if (emummc_config.e1.sector == 0) {
-				if (strcmp(emummc_config.e1.path, "") != 0) {
-					free((void*)emummc_config.e1.path);
-					if (strcmp(emummc_config.e1.nintendo_path, "") != 0) {
-						free((void*)emummc_config.e1.nintendo_path);
-					}
-					return 1;
-				}
+				ret = 1;
 			} else {
-				if (strcmp(emummc_config.e1.path, "") != 0) {
-					free((void*)emummc_config.e1.path);
-				}
-				if (strcmp(emummc_config.e1.nintendo_path, "") != 0) {
-					free((void*)emummc_config.e1.nintendo_path);
-				}
-				return 2;
+				ret = 2;
+			}
+			if (strcmp(emummc_config.e1.path, "") != 0) {
+				free((void*)emummc_config.e1.path);
+			}
+			if (strcmp(emummc_config.e1.nintendo_path, "") != 0) {
+				free((void*)emummc_config.e1.nintendo_path);
 			}
 		}
 	}
-	return 0;
+	return ret;
 }

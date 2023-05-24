@@ -161,6 +161,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_extract_file_protected", (char*) "Extraction de: %-5s"}, \
 	{"lng_install_pack_extract_file", (char*) "Extraction de: %s"}, \
 	{"lng_install_pack_file_write_error", (char*) "Erreur d'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD."}, \
+	{"lng_installing_pack_custom_files", (char*) "Installation de fichiers complementaires au pack..."}, \
 \
 	{"lng_clean_logos_begin", (char*) "Suppression des logos..."}, \
 	{"lng_clean_theme_begin", (char*) "Suppression d'un eventuel theme..."}, \

@@ -40,8 +40,11 @@ char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pa
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
 char pack_custom_files_url[1003] = "";
+char pack_custom_files_url_beta[1003] = "";
 char pack_custom_files_subfolder_in_zip[FS_MAX_PATH] = "";
+char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH] = "";
 s64 pack_custom_files_size = 10000000;
+s64 pack_custom_files_size_beta = 10000000;
 char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
 char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/pack_version.txt";
 char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
@@ -71,9 +74,9 @@ char pack_sha256[65];
 char app_sha256[65];
 char firmware_version[50];
 char atmosphere_version[50];
-char emummc_value[10];
-char emummc_type[10];
-char fusee_gelee_patch[15];
+char emummc_value[50];
+char emummc_type[50];
+char fusee_gelee_patch[50];
 char console_model[50];
 u64 console_id = 0;
 SetSysSerialNumber console_serial;
@@ -184,6 +187,8 @@ int appInit() {
 appletBeginBlockingHomeButton(0);
 appletSetAutoSleepDisabled(true);
 // hiddbgDeactivateHomeButton();
+	chdir(ROOT);
+	mkdir(APP_PATH, 0777);
 	return 0;
 }
 
@@ -873,8 +878,11 @@ void debug_write_config_infos() {
 	debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
 	debug_log_write("URL du sha256 du pack beta: %s\n", pack_sha256_url_beta);
 	debug_log_write("URL du zip complémentaire au pack: %s\n", pack_custom_files_url);
+	debug_log_write("URL du zip complémentaire au pack beta: %s\n", pack_custom_files_url_beta);
 	debug_log_write("Début du chemin du pack dans le zip complémentaire au pack: %s\n", pack_custom_files_subfolder_in_zip);
+	debug_log_write("Début du chemin du pack dans le zip complémentaire au pack beta: %s\n", pack_custom_files_subfolder_in_zip_beta);
 	debug_log_write("Taille du zip complémentaire au pack: %lli\n", pack_custom_files_size);
+	debug_log_write("Taille du zip complémentaire au pack beta: %lli\n", pack_custom_files_size_beta);
 	debug_log_write("URL de la version du pack: %s\n", pack_version_url);
 	debug_log_write("URL de la version du pack beta: %s\n", pack_version_url_beta);
 	debug_log_write("Chemin du fichier local de la version du pack: %s\n", pack_version_local_filepath);
@@ -930,6 +938,34 @@ int main(int argc, char **argv) {
 		debug_log_start();
 		debug_already_started = true;
 	}
+	int first_char_slash_argv_0 = 0;
+	for (size_t i = 0; i < strlen(argv[0]); i++) {
+		if (argv[0][i] == '/') {
+			break;
+		}
+		first_char_slash_argv_0++;
+	}
+	char* arg0_substring = substr(argv[0], first_char_slash_argv_0, strlen(argv[0]));;
+	if (strcmp(arg0_substring, "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
+		free(arg0_substring);
+		if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+			if (debug_enabled) {
+				debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+				appExit();
+				return 0;
+			}
+		} else {
+			if (debug_enabled) {
+				debug_log_write("Reconfiguration de l'application OK.\n\n");
+			}
+			char temp_app_nro_path[2000] = "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"";
+			strcat(strcat(strcat(temp_app_nro_path, " \""), argv[0]), "\"");
+			appExit();
+			envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", temp_app_nro_path);
+			return 0;
+		}
+	}
+	free(arg0_substring);
 	language_vars = set_translation_strings();
 	menu_init();
 
@@ -1272,17 +1308,17 @@ int main(int argc, char **argv) {
 							}
 						}
 					bool not_has_enough_space_on_sd;
-					if (strcmp(pack_custom_files_url, "") == 0) {
-						if (!beta_mode) {
+					if (!beta_mode) {
+						if (strcmp(pack_custom_files_url, "") == 0) {
 							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size;
 						} else {
-							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size + pack_custom_files_size;
 						}
 					} else {
-						if (!beta_mode) {
-							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size + pack_custom_files_size;
+						if (strcmp(pack_custom_files_url_beta, "") == 0) {
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta;
 						} else {
-							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta + pack_custom_files_size;
+							not_has_enough_space_on_sd = get_sd_size_left() <= pack_size_beta + pack_custom_files_size_beta;
 						}
 					}
 					if (not_has_enough_space_on_sd) {
@@ -1344,14 +1380,32 @@ int main(int argc, char **argv) {
 							}
 							if (unzip_res == 0) {
 								remove(TEMP_FILE);
-								if (strcmp(pack_custom_files_url, "") != 0) {
-									dl_pack_res = false;
-									dl_pack_res = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
-									if (dl_pack_res) {
-										unzip_res = -1;
-										unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
-										if (unzip_res == 0) {
-											remove(TEMP_FILE);
+								if (!beta_mode) {
+									if (strcmp(pack_custom_files_url, "") != 0) {
+										printDisplay(language_vars["lng_installing_pack_custom_files"]);
+										printDisplay("\n");
+										dl_pack_res = false;
+										dl_pack_res = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
+										if (dl_pack_res) {
+											unzip_res = -1;
+											unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
+											if (unzip_res == 0) {
+												remove(TEMP_FILE);
+											}
+										}
+									}
+								} else {
+									if (strcmp(pack_custom_files_url_beta, "") != 0) {
+										printDisplay(language_vars["lng_installing_pack_custom_files"]);
+										printDisplay("\n");
+										dl_pack_res = false;
+										dl_pack_res = downloadFile(pack_custom_files_url_beta, TEMP_FILE, OFF, true);
+										if (dl_pack_res) {
+											unzip_res = -1;
+											unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip_beta, keep_files);
+											if (unzip_res == 0) {
+												remove(TEMP_FILE);
+											}
 										}
 									}
 								}

@@ -44,7 +44,7 @@ DATA		:=	data
 INCLUDES	:=	include
 APP_TITLE	:=	AIO_LS_pack_Updater forwarder
 APP_AUTHOR	:=	shadow256
-APP_VERSION :=  1.0
+APP_VERSION :=  1.1
 #ROMFS	:=	romfs
 
 #---------------------------------------------------------------------------------
