@@ -959,7 +959,7 @@ void debug_write_console_infos() {
 
 bool auto_update_app(bool update_app) {
 	if (app_version < last_app_version && !update_app) {
-		debug_log_write("Nouvelle version %i de l'app trouvée, la version actuelle de l'app est %i.\n", last_app_version, app_version);
+		debug_log_write("Nouvelle version %i de l'app trouvée, la version actuelle de l'app est %i.\n\n", last_app_version, app_version);
 		update_app = ask_question((char*) language_vars["lng_ask_update_app"]);
 	}
 	if (update_app) {
@@ -1193,6 +1193,19 @@ int main(int argc, char **argv) {
 					debug_log_write("Installation d'un firmware.\n");
 				}
 				consoleSelect(&logs_console);
+				if (app_version < last_app_version) {
+					bool need_update_app = false;
+					debug_log_write("Le homebrew doit être mis à jour.\n");
+					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
+					if (need_update_app) {
+						if (auto_update_app(true)) {
+							return 0;
+						}
+					} else {
+						debug_log_write("Installation annulée.\n\n");
+						break;
+					}
+				}
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
 					if (debug_enabled) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
@@ -1266,6 +1279,19 @@ int main(int argc, char **argv) {
 					debug_log_write("Installation du pack.\n");
 				}
 				consoleSelect(&logs_console);
+				if (app_version < last_app_version) {
+					bool need_update_app = false;
+					debug_log_write("Le homebrew doit être mis à jour.\n");
+					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
+					if (need_update_app) {
+						if (auto_update_app(true)) {
+							return 0;
+						}
+					} else {
+						debug_log_write("Installation annulée.\n\n");
+						break;
+					}
+				}
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
 					if (debug_enabled) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");

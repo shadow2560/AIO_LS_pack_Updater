@@ -78,6 +78,7 @@ const char* translation_vars_list[] =
 
 	"lng_ask_update_firmware",
 	"lng_ask_update_app",
+	"lng_ask_app_need_update",
 	"lng_ask_clean_theme",
 	"lng_ask_agressive_clean",
 	"lng_ask_clean_modules",
