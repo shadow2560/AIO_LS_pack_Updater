@@ -957,83 +957,82 @@ void debug_write_console_infos() {
 	}
 }
 
-bool auto_update_app() {
-	if (app_version < last_app_version) {
-		bool update_app = false;
+bool auto_update_app(bool update_app) {
+	if (app_version < last_app_version && !update_app) {
 		debug_log_write("Nouvelle version %i de l'app trouvée, la version actuelle de l'app est %i.\n", last_app_version, app_version);
 		update_app = ask_question((char*) language_vars["lng_ask_update_app"]);
-		if (update_app) {
+	}
+	if (update_app) {
+		if (debug_enabled) {
+			debug_log_write("Mise à jour de l'application.\n");
+		}
+		consoleSelect(&logs_console);
+		mkdir(APP_PATH, 0777);
+		if (get_sd_size_left() <= 4000000) {
 			if (debug_enabled) {
-				debug_log_write("Mise à jour de l'application.\n");
-			}
-			consoleSelect(&logs_console);
-			mkdir(APP_PATH, 0777);
-			if (get_sd_size_left() <= 4000000) {
-				if (debug_enabled) {
-					debug_log_write("Pas assez d'espace sur la SD.\n\n");
-					}
-				printDisplay("\033[0;31m");
-				printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
-				printDisplay("\033[0;37m\n");
-			} else {
-				get_last_sha256_app();
-				bool dl_app_res;
-				if (!beta_mode) {
-					dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
-				} else {
-					dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
+				debug_log_write("Pas assez d'espace sur la SD.\n\n");
 				}
-				if (dl_app_res) {
-					if (strcmp(app_sha256, "") != 0) {
-						printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
-						printDisplay("\n");
-						char dl_app_sha256[65] = "";
-						get_sha256_file(TEMP_FILE, dl_app_sha256);
+			printDisplay("\033[0;31m");
+			printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
+			printDisplay("\033[0;37m\n");
+		} else {
+			get_last_sha256_app();
+			bool dl_app_res;
+			if (!beta_mode) {
+				dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
+			} else {
+				dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
+			}
+			if (dl_app_res) {
+				if (strcmp(app_sha256, "") != 0) {
+					printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+					printDisplay("\n");
+					char dl_app_sha256[65] = "";
+					get_sha256_file(TEMP_FILE, dl_app_sha256);
 						debug_log_write("SHA256 de l'app à télécharger: ");
-						debug_log_write("%s", app_sha256);
-						debug_log_write("\n");
-						debug_log_write("SHA256 de l'app téléchargée: ");
-						debug_log_write("%s", dl_app_sha256);
-						debug_log_write("\n");
-						if (strcmp(app_sha256, dl_app_sha256) != 0) {
-							printDisplay("\033[0;31m");
-							printDisplay(language_vars["lng_install_app_download_app_error"]);
-							printDisplay("\033[0;37m\n");
-							remove(TEMP_FILE);
-							consoleSelect(&menu_console);
-						}
-					}
-					if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-						if (debug_enabled) {
-							debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-						}
-						printDisplay("\033[0;31m");;
-						printDisplay(language_vars["lng_error_copy_file"]);
-						printDisplay("\033[0;37m");;
-					} else {
-						if (debug_enabled) {
-							debug_log_write("Mise à jour de l'application OK.\n\n");
-						}
-						printDisplay("\033[0;32m\n");
-						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
+					debug_log_write("%s", app_sha256);
+					debug_log_write("\n");
+					debug_log_write("SHA256 de l'app téléchargée: ");
+					debug_log_write("%s", dl_app_sha256);
+					debug_log_write("\n");
+					if (strcmp(app_sha256, dl_app_sha256) != 0) {
+						printDisplay("\033[0;31m");
+						printDisplay(language_vars["lng_install_app_download_app_error"]);
 						printDisplay("\033[0;37m\n");
-						sleep(5);
-						appExit();
-						envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-						return true;
+						remove(TEMP_FILE);
+						consoleSelect(&menu_console);
 					}
+				}
+				if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+					if (debug_enabled) {
+						debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+					}
+					printDisplay("\033[0;31m");;
+					printDisplay(language_vars["lng_error_copy_file"]);
+					printDisplay("\033[0;37m");;
 				} else {
 					if (debug_enabled) {
-						debug_log_write("Erreur de téléchargement de l'application.\n\n");
+						debug_log_write("Mise à jour de l'application OK.\n\n");
 					}
-					printDisplay("\033[0;31m");
-					printDisplay(language_vars["lng_install_app_download_app_error"]);
+					printDisplay("\033[0;32m\n");
+					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
-					remove(TEMP_FILE);
+					sleep(5);
+					appExit();
+					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+					return true;
 				}
+			} else {
+				if (debug_enabled) {
+					debug_log_write("Erreur de téléchargement de l'application.\n\n");
+				}
+				printDisplay("\033[0;31m");
+				printDisplay(language_vars["lng_install_app_download_app_error"]);
+				printDisplay("\033[0;37m\n");
+				remove(TEMP_FILE);
 			}
-			consoleSelect(&menu_console);
 		}
+		consoleSelect(&menu_console);
 	}
 	return false;
 }
@@ -1154,7 +1153,7 @@ int main(int argc, char **argv) {
 	// main menu
 	refreshScreen(cursor);
 
-	if (auto_update_app()) {
+	if (auto_update_app(false)) {
 		return 0;
 	}
 
@@ -1575,77 +1574,9 @@ int main(int argc, char **argv) {
 
 			case UP_APP:
 			{
-				if (debug_enabled) {
-					debug_log_write("Mise à jour de l'application.\n");
+				if (auto_update_app(true)) {
+					return 0;
 				}
-				consoleSelect(&logs_console);
-				mkdir(APP_PATH, 0777);
-				if (get_sd_size_left() <= 4000000) {
-					if (debug_enabled) {
-						debug_log_write("Pas assez d'espace sur la SD.\n\n");
-					}
-					printDisplay("\033[0;31m");
-					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
-					printDisplay("\033[0;37m\n");
-				} else {
-					get_last_sha256_app();
-					bool dl_app_res;
-					if (!beta_mode) {
-						dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
-					} else {
-						dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
-					}
-					if (dl_app_res) {
-						if (strcmp(app_sha256, "") != 0) {
-							printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
-							printDisplay("\n");
-							char dl_app_sha256[65] = "";
-							get_sha256_file(TEMP_FILE, dl_app_sha256);
-							debug_log_write("SHA256 de l'app à télécharger: ");
-							debug_log_write("%s", app_sha256);
-							debug_log_write("\n");
-							debug_log_write("SHA256 de l'app téléchargée: ");
-							debug_log_write("%s", dl_app_sha256);
-							debug_log_write("\n");
-							if (strcmp(app_sha256, dl_app_sha256) != 0) {
-								printDisplay("\033[0;31m");
-								printDisplay(language_vars["lng_install_app_download_app_error"]);
-								printDisplay("\033[0;37m\n");
-								remove(TEMP_FILE);
-								consoleSelect(&menu_console);
-								break;
-							}
-						}
-						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-							if (debug_enabled) {
-								debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-							}
-							printDisplay("\033[0;31m");;
-							printDisplay(language_vars["lng_error_copy_file"]);
-							printDisplay("\033[0;37m");;
-						} else {
-							if (debug_enabled) {
-								debug_log_write("Mise à jour de l'application OK.\n\n");
-							}
-							printDisplay("\033[0;32m\n");
-							printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
-							printDisplay("\033[0;37m\n");
-							sleep(5);
-							appExit();
-							envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-							return 0;
-						}
-					} else {
-						if (debug_enabled) {
-							debug_log_write("Erreur de téléchargement de l'application.\n\n");
-						}
-						printDisplay("\033[0;31m");
-						printDisplay(language_vars["lng_install_app_download_app_error"]);
-						printDisplay("\033[0;37m\n");
-						remove(TEMP_FILE);
-					}
-				}
-				consoleSelect(&menu_console);
 				break;
 			}
 
@@ -1752,7 +1683,7 @@ int main(int argc, char **argv) {
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);
-			if (auto_update_app()) {
+			if (auto_update_app(false)) {
 				return 0;
 			}
 
