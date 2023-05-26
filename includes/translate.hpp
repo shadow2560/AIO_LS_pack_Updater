@@ -78,6 +78,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_battery_error_30", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie."}, \
 \
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
+	{"lng_ask_update_app", (char*) "Nouvelle version du homebrew trouvee, souhaitez-vous le mettre a jour?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
 	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_clean_modules", (char*) "Souhaitez-vous faire un nettoyage des modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \

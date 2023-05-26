@@ -28,8 +28,10 @@ extern s64 pack_size;
 extern s64 pack_size_beta;
 extern char APP_URL[1003];
 extern char app_sha256_url[1003];
+extern char app_version_url[1003];
 extern char APP_URL_beta[1003];
 extern char app_sha256_url_beta[1003];
+extern char app_version_url_beta[1003];
 extern char firmware_path[FS_MAX_PATH];
 extern char firmware_path_beta[FS_MAX_PATH];
 extern char atmo_logo_dir[FS_MAX_PATH];
@@ -104,6 +106,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.app_sha256 = "";
 		}
+	}else if(MATCH("config", "app_version_adress")){
+		if (value != 0) {
+			pconfig->s1.app_version = strdup(value);
+		} else {
+			pconfig->s1.app_version = "";
+		}
 	}else if(MATCH("config", "firmware_path")){
 		if (value != 0) {
 			pconfig->s1.firmware_path = strdup(value);
@@ -164,6 +172,7 @@ void configs_init() {
 	config.s1.subfolder_in_zip_pack = "";
 	config.s1.dl_app = "";
 	config.s1.app_sha256 = "";
+	config.s1.app_version = "";
 	config.s1.firmware_path = "";
 	config.s1.atmo_logo_dir = "";
 	config.s1.hekate_nologo_file_path = "";
@@ -213,6 +222,10 @@ void configs_init() {
 				strcpy(app_sha256_url, config.s1.app_sha256);
 				free((void*)config.s1.app_sha256);
 			}
+			if (strcmp(config.s1.app_version, "") != 0) {
+				strcpy(app_version_url, config.s1.app_version);
+				free((void*)config.s1.app_version);
+			}
 			if (strcmp(config.s1.firmware_path, "") != 0) {
 				strcpy(firmware_path, config.s1.firmware_path);
 				free((void*)config.s1.firmware_path);
@@ -249,6 +262,7 @@ void configs_init() {
 	config_beta.s1.subfolder_in_zip_pack = "";
 	config_beta.s1.dl_app = "";
 	config_beta.s1.app_sha256 = "";
+	config_beta.s1.app_version = "";
 	config_beta.s1.firmware_path = "";
 	config_beta.s1.atmo_logo_dir = "";
 	config_beta.s1.hekate_nologo_file_path = "";
@@ -297,6 +311,10 @@ void configs_init() {
 			if (strcmp(config_beta.s1.app_sha256, "") != 0) {
 				strcpy(app_sha256_url_beta, config_beta.s1.app_sha256);
 				free((void*)config_beta.s1.app_sha256);
+			}
+			if (strcmp(config_beta.s1.app_version, "") != 0) {
+				strcpy(app_version_url_beta, config_beta.s1.app_version);
+				free((void*)config_beta.s1.app_version);
 			}
 			if (strcmp(config_beta.s1.firmware_path, "") != 0) {
 				strcpy(firmware_path_beta, config_beta.s1.firmware_path);

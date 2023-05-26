@@ -19,6 +19,7 @@ typedef struct{
 	s64 pack_size;
 	const char* dl_app;
 	const char* app_sha256;
+	const char* app_version;
 	const char *firmware_path;
 	const char *atmo_logo_dir;
 	const char *hekate_nologo_file_path;

@@ -24,7 +24,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.13.0"
+#define APP_VERSION			 "4.14.0"
+int app_version = 4140;
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -55,8 +56,10 @@ s64 pack_size = 1000000000;
 s64 pack_size_beta = 1000000000;
 char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
 char app_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_AIO_LS_pack_Updater.txt";
+char app_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/app_version.txt";
 char APP_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
 char app_sha256_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/sha256_AIO_LS_pack_Updater.txt";
+char app_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/app_version.txt";
 char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char firmware_path_beta[FS_MAX_PATH] = "/dernier_firmware_compatible";
 char atmo_logo_dir[FS_MAX_PATH] = "logo";
@@ -72,6 +75,7 @@ char pack_version[15];
 char last_pack_version[15];
 char pack_sha256[65];
 char app_sha256[65];
+int last_app_version = 0;
 char firmware_version[50];
 char atmosphere_version[50];
 char emummc_value[50];
@@ -343,6 +347,32 @@ void get_last_sha256_app() {
 		free(buffer);
 		fclose(app_sha256_file);
 	}
+}
+
+void get_last_version_app() {
+	last_app_version = app_version;
+	FILE *pack_version_file;
+	bool res;
+	consoleSelect(&logs_console);
+	if (!beta_mode) {
+		res = downloadFile(app_version_url, TEMP_FILE, OFF, false);
+	} else {
+		res = downloadFile(app_version_url_beta, TEMP_FILE, OFF, false);
+	}
+	if (res) {
+		logs_console_clear();
+		pack_version_file = fopen(TEMP_FILE, "r");
+		if (pack_version_file == NULL) {
+			consoleSelect(&menu_console);
+			return;
+		}
+		char * buffer = (char *) malloc( 15 );
+		fgets(buffer, 15, pack_version_file);
+		last_app_version = atoi(buffer);
+		free(buffer);
+		fclose(pack_version_file);
+	}
+	consoleSelect(&menu_console);
 }
 
 void get_fw_version() {
@@ -893,8 +923,10 @@ void debug_write_config_infos() {
 	debug_log_write("Taille du pack beta: %lli\n", pack_size_beta);
 	debug_log_write("URL de l'application: %s\n", APP_URL);
 	debug_log_write("URL du sha256 de l'application: %s\n", app_sha256_url);
+	debug_log_write("URL de la dernière version de l'application: %s\n", app_version_url);
 	debug_log_write("URL de l'application beta: %s\n", APP_URL_beta);
 	debug_log_write("URL du sha256 de l'application beta: %s\n", app_sha256_url_beta);
+	debug_log_write("URL de la dernière version de l'application beta: %s\n", app_version_url_beta);
 	debug_log_write("Chemin local du firmware: %s\n", firmware_path);
 	debug_log_write("Chemin local du firmware beta: %s\n", firmware_path_beta);
 	debug_log_write("Chemin du logo d'Atmosphere: %s\n", atmo_logo_dir);
@@ -923,6 +955,87 @@ void debug_write_console_infos() {
 		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
 		debug_log_write("Modèle de la console: %s\n\n", console_model);
 	}
+}
+
+bool auto_update_app() {
+	if (app_version < last_app_version) {
+		bool update_app = false;
+		debug_log_write("Nouvelle version %i de l'app trouvée, la version actuelle de l'app est %i.\n", last_app_version, app_version);
+		update_app = ask_question((char*) language_vars["lng_ask_update_app"]);
+		if (update_app) {
+			if (debug_enabled) {
+				debug_log_write("Mise à jour de l'application.\n");
+			}
+			consoleSelect(&logs_console);
+			mkdir(APP_PATH, 0777);
+			if (get_sd_size_left() <= 4000000) {
+				if (debug_enabled) {
+					debug_log_write("Pas assez d'espace sur la SD.\n\n");
+					}
+				printDisplay("\033[0;31m");
+				printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
+				printDisplay("\033[0;37m\n");
+			} else {
+				get_last_sha256_app();
+				bool dl_app_res;
+				if (!beta_mode) {
+					dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
+				} else {
+					dl_app_res = downloadFile(APP_URL_beta, TEMP_FILE, OFF, true);
+				}
+				if (dl_app_res) {
+					if (strcmp(app_sha256, "") != 0) {
+						printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+						printDisplay("\n");
+						char dl_app_sha256[65] = "";
+						get_sha256_file(TEMP_FILE, dl_app_sha256);
+						debug_log_write("SHA256 de l'app à télécharger: ");
+						debug_log_write("%s", app_sha256);
+						debug_log_write("\n");
+						debug_log_write("SHA256 de l'app téléchargée: ");
+						debug_log_write("%s", dl_app_sha256);
+						debug_log_write("\n");
+						if (strcmp(app_sha256, dl_app_sha256) != 0) {
+							printDisplay("\033[0;31m");
+							printDisplay(language_vars["lng_install_app_download_app_error"]);
+							printDisplay("\033[0;37m\n");
+							remove(TEMP_FILE);
+							consoleSelect(&menu_console);
+						}
+					}
+					if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+						if (debug_enabled) {
+							debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+						}
+						printDisplay("\033[0;31m");;
+						printDisplay(language_vars["lng_error_copy_file"]);
+						printDisplay("\033[0;37m");;
+					} else {
+						if (debug_enabled) {
+							debug_log_write("Mise à jour de l'application OK.\n\n");
+						}
+						printDisplay("\033[0;32m\n");
+						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
+						printDisplay("\033[0;37m\n");
+						sleep(5);
+						appExit();
+						envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+						return true;
+					}
+				} else {
+					if (debug_enabled) {
+						debug_log_write("Erreur de téléchargement de l'application.\n\n");
+					}
+					printDisplay("\033[0;31m");
+					printDisplay(language_vars["lng_install_app_download_app_error"]);
+					printDisplay("\033[0;37m\n");
+					remove(TEMP_FILE);
+				}
+			}
+			consoleSelect(&menu_console);
+		}
+	}
+	return false;
 }
 
 int main(int argc, char **argv) {
@@ -1002,6 +1115,7 @@ int main(int argc, char **argv) {
 
 	get_version_pack();
 	get_last_version_pack();
+	get_last_version_app();
 	get_fw_version();
 	get_ams_version();
 	get_fusee_gelee_exploit();
@@ -1039,6 +1153,10 @@ int main(int argc, char **argv) {
 
 	// main menu
 	refreshScreen(cursor);
+
+	if (auto_update_app()) {
+		return 0;
+	}
 
 	// Loop for the menu
 	while(appletMainLoop())
@@ -1627,12 +1745,16 @@ int main(int argc, char **argv) {
 			logs_console_clear();
 			switch_app_mode();
 			get_last_version_pack();
+			get_last_version_app();
 			if (debug_enabled) {
 				debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
 			}
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);
+			if (auto_update_app()) {
+				return 0;
+			}
 
 		// exit...
 		} else if (kDown & HidNpadButton_Plus) {
