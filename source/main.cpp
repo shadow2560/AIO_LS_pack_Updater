@@ -24,8 +24,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.14.0"
-int app_version = 4140;
+#define APP_VERSION			 "4.14.1"
+int app_version = 4141;
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -42,6 +42,8 @@ char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/arch
 char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
 char pack_custom_files_url[1003] = "";
 char pack_custom_files_url_beta[1003] = "";
+char pack_custom_files_sha256_url[1003] = "";
+char pack_custom_files_sha256_url_beta[1003] = "";
 char pack_custom_files_subfolder_in_zip[FS_MAX_PATH] = "";
 char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH] = "";
 s64 pack_custom_files_size = 10000000;
@@ -74,6 +76,7 @@ int debug_enabled_param_beta = 0;
 char pack_version[15];
 char last_pack_version[15];
 char pack_sha256[65];
+char custom_files_pack_sha256[65];
 char app_sha256[65];
 int last_app_version = 0;
 char firmware_version[50];
@@ -271,6 +274,42 @@ void get_last_version_pack() {
 		fclose(pack_version_file);
 	}
 	consoleSelect(&menu_console);
+}
+
+void get_last_sha256_custom_files_pack() {
+	FILE *pack_sha256_file;
+	bool res;
+	if (!beta_mode) {
+		if (strcmp(pack_custom_files_sha256_url, "") == 0) {
+			return;
+		}
+		res = downloadFile(pack_custom_files_sha256_url, TEMP_FILE, OFF, false);
+	} else {
+		if (strcmp(pack_custom_files_sha256_url_beta, "") == 0) {
+			return;
+		}
+		res = downloadFile(pack_custom_files_sha256_url_beta, TEMP_FILE, OFF, false);
+	}
+	if (res) {
+		pack_sha256_file = fopen(TEMP_FILE, "r");
+		if (pack_sha256_file == NULL) {
+			return;
+		}
+		char * buffer = (char *) malloc( 65 );
+		fgets(buffer, 65, pack_sha256_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				custom_files_pack_sha256[i] = buffer[i];
+			}
+			i++;
+		}
+		custom_files_pack_sha256[i] = '\0';
+		free(buffer);
+		fclose(pack_sha256_file);
+	}
 }
 
 void get_last_sha256_pack() {
@@ -909,6 +948,8 @@ void debug_write_config_infos() {
 	debug_log_write("URL du sha256 du pack beta: %s\n", pack_sha256_url_beta);
 	debug_log_write("URL du zip complémentaire au pack: %s\n", pack_custom_files_url);
 	debug_log_write("URL du zip complémentaire au pack beta: %s\n", pack_custom_files_url_beta);
+	debug_log_write("URL du sha256 du zip complémentaire au pack: %s\n", pack_custom_files_url);
+	debug_log_write("URL du sha256 du zip complémentaire au pack beta: %s\n", pack_custom_files_url_beta);
 	debug_log_write("Début du chemin du pack dans le zip complémentaire au pack: %s\n", pack_custom_files_subfolder_in_zip);
 	debug_log_write("Début du chemin du pack dans le zip complémentaire au pack beta: %s\n", pack_custom_files_subfolder_in_zip_beta);
 	debug_log_write("Taille du zip complémentaire au pack: %lli\n", pack_custom_files_size);
@@ -1527,9 +1568,28 @@ int main(int argc, char **argv) {
 									if (strcmp(pack_custom_files_url, "") != 0) {
 										printDisplay(language_vars["lng_installing_pack_custom_files"]);
 										printDisplay("\n");
+										get_last_sha256_custom_files_pack();
 										dl_pack_res = false;
 										dl_pack_res = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
 										if (dl_pack_res) {
+											if (strcmp(custom_files_pack_sha256, "") != 0) {
+												printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"]);
+												printDisplay("\n");
+												char dl_custom_files_pack_sha256[65] = "";
+												get_sha256_file(TEMP_FILE, dl_custom_files_pack_sha256);
+												debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
+												debug_log_write("%s", custom_files_pack_sha256);
+												debug_log_write("\n");
+												debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
+												debug_log_write("%s", dl_custom_files_pack_sha256);
+												debug_log_write("\n");
+												if (strcmp(custom_files_pack_sha256, dl_custom_files_pack_sha256) != 0) {
+													printDisplay("\033[0;31m");
+													printDisplay(language_vars["lng_install_custom_files_pack_download_error"]);
+													printDisplay("\033[0;37m\n");
+													remove(TEMP_FILE);
+												}
+											}
 											unzip_res = -1;
 											unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
 											if (unzip_res == 0) {

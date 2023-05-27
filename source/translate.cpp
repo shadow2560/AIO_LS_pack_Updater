@@ -157,6 +157,7 @@ const char* translation_vars_list[] =
 	"lng_install_pack_recap_install_hbmenu",
 	"lng_install_pack_recap_not_install_hbmenu",
 	"lng_install_pack_download_pack_error",
+	"lng_install_custom_files_pack_download_error",
 	"lng_install_pack_file_skip",
 	"lng_install_pack_folder_create",
 	"lng_install_pack_extract_file_protected",

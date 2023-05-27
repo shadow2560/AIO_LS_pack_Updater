@@ -14,6 +14,8 @@ extern char CFW_URL_beta[1003];
 extern char pack_sha256_url_beta[1003];
 extern char pack_custom_files_url[1003];
 extern char pack_custom_files_url_beta[1003];
+extern char pack_custom_files_sha256_url[1003];
+extern char pack_custom_files_sha256_url_beta[1003];
 extern char pack_custom_files_subfolder_in_zip[FS_MAX_PATH];
 extern char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH];
 extern s64 pack_custom_files_size;
@@ -69,6 +71,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.pack_custom_files = strdup(value);
 		} else {
 			pconfig->s1.pack_custom_files = "";
+		}
+	} else if(MATCH("config", "pack_custom_files_sha256_adress")){
+		if (value != 0) {
+			pconfig->s1.pack_custom_files_sha256 = strdup(value);
+		} else {
+			pconfig->s1.pack_custom_files_sha256 = "";
 		}
 	} else if(MATCH("config", "custom_files_subfolder_in_zip_pack")){
 		if (value != 0) {
@@ -166,6 +174,7 @@ void configs_init() {
 	config.s1.dl_pack = "";
 	config.s1.pack_sha256 = "";
 	config.s1.pack_custom_files = "";
+	config.s1.pack_custom_files_sha256 = "";
 	config.s1.pack_custom_files_subfolder_in_zip = "";
 	config.s1.dl_pack_version = "";
 	config.s1.pack_version_local_filepath = "";
@@ -197,6 +206,10 @@ void configs_init() {
 			if (strcmp(config.s1.pack_custom_files, "") != 0) {
 				strcpy(pack_custom_files_url, config.s1.pack_custom_files);
 				free((void*)config.s1.pack_custom_files);
+			}
+			if (strcmp(config.s1.pack_custom_files_sha256, "") != 0) {
+				strcpy(pack_custom_files_sha256_url, config.s1.pack_custom_files_sha256);
+				free((void*)config.s1.pack_custom_files_sha256);
 			}
 			if (strcmp(config.s1.pack_custom_files_subfolder_in_zip, "") != 0) {
 				strcpy(pack_custom_files_subfolder_in_zip, config.s1.pack_custom_files_subfolder_in_zip);
@@ -256,6 +269,7 @@ void configs_init() {
 	config_beta.s1.dl_pack = "";
 	config_beta.s1.pack_sha256 = "";
 	config_beta.s1.pack_custom_files = "";
+	config_beta.s1.pack_custom_files_sha256 = "";
 	config_beta.s1.pack_custom_files_subfolder_in_zip = "";
 	config_beta.s1.dl_pack_version = "";
 	config_beta.s1.pack_version_local_filepath = "";
@@ -287,6 +301,10 @@ void configs_init() {
 			if (strcmp(config_beta.s1.pack_custom_files, "") != 0) {
 				strcpy(pack_custom_files_url_beta, config_beta.s1.pack_custom_files);
 				free((void*)config_beta.s1.pack_custom_files);
+			}
+			if (strcmp(config_beta.s1.pack_custom_files_sha256, "") != 0) {
+				strcpy(pack_custom_files_sha256_url_beta, config_beta.s1.pack_custom_files_sha256);
+				free((void*)config_beta.s1.pack_custom_files_sha256);
 			}
 			if (strcmp(config_beta.s1.pack_custom_files_subfolder_in_zip, "") != 0) {
 				strcpy(pack_custom_files_subfolder_in_zip_beta, config_beta.s1.pack_custom_files_subfolder_in_zip);

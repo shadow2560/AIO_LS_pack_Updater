@@ -158,6 +158,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_install_hbmenu", (char*) "L'icone du Homebrew Menu sera mis en place."}, \
 	{"lng_install_pack_recap_not_install_hbmenu", (char*) "L'icone du Homebrew Menu ne sera pas mis en place."}, \
 	{"lng_install_pack_download_pack_error", (char*) "Une erreure est survenue lors du telechargement du pack."}, \
+	{"lng_install_custom_files_pack_download_error", (char*) "Une erreure est survenue lors du telechargement du fichier zip complementaire au pack."}, \
 	{"lng_install_pack_file_skip", (char*) "Saut de la copie du fichier ou dossier \"%s\" via la protection de fichiers"}, \
 	{"lng_install_pack_folder_create", (char*) "Creation du repertoir: %s"}, \
 	{"lng_install_pack_extract_file_protected", (char*) "Extraction de: %-5s"}, \
