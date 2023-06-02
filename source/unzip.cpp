@@ -89,11 +89,14 @@ bool file_in_files_to_keep(char *file_to_test) {
 }
 
 bool module_is_running(u64 module) {
-    u64 pid = 0;
-    if (R_FAILED(pmdmntGetProcessId(&pid, module)))
-        return false;
-
-    return pid > 0;
+	pmdmntInitialize();
+	u64 pid = 0;
+	if (R_FAILED(pmdmntGetProcessId(&pid, module))) {
+		pmdmntExit();
+		return false;
+	}
+	pmdmntExit();
+	return pid > 0;
 }
 
 void fnc_clean_modules() {
