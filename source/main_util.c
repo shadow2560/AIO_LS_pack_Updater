@@ -300,3 +300,22 @@ void get_sha256_file(const char* filepath, char* ret) {
 	}
 	free(buf2);
 }
+
+bool module_is_running(u64 module) {
+	pmdmntInitialize();
+	u64 pid = 0;
+	if (R_FAILED(pmdmntGetProcessId(&pid, module))) {
+		pmdmntExit();
+		return false;
+	}
+	pmdmntExit();
+	return pid > 0;
+}
+
+void close_module(u64 module) {
+	if (module_is_running(module)) {
+		pmshellInitialize();
+		pmshellTerminateProgram(module);
+		pmshellExit();
+	}
+}

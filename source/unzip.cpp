@@ -88,19 +88,7 @@ bool file_in_files_to_keep(char *file_to_test) {
 	return false;
 }
 
-bool module_is_running(u64 module) {
-	pmdmntInitialize();
-	u64 pid = 0;
-	if (R_FAILED(pmdmntGetProcessId(&pid, module))) {
-		pmdmntExit();
-		return false;
-	}
-	pmdmntExit();
-	return pid > 0;
-}
-
 void fnc_clean_modules() {
-	pmshellInitialize();
 	if (debug_enabled) {
 		debug_log_write("Suppression des modules.\n");
 	}
@@ -123,9 +111,7 @@ void fnc_clean_modules() {
 			if (f != NULL) {
 				fclose(f);
 				module_id = strtoul(ent->d_name, NULL, 16);
-				if (module_is_running(module_id)) {
-					pmshellTerminateProgram(module_id);
-				}
+				close_module(module_id);
 				remove_directory(temp_module_path);
 				if (strcmp(ent->d_name, "010000000000bd00") == 0) {
 					remove_directory("atmosphere/exefs_patches/bluetooth_patches");
@@ -150,7 +136,6 @@ void fnc_clean_modules() {
 		}
 		*/
 	}
-	pmshellExit();
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
