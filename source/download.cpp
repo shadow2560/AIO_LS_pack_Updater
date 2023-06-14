@@ -19,10 +19,10 @@ extern translation_map language_vars;
 extern PrintConsole logs_console;
 extern bool debug_enabled;
 
-static time_t prevtime;
+time_t prevtime;
 time_t currtime;
 double dif;
-static bool first = true;
+bool first = true;
 double dlold;
 
 typedef struct {
@@ -52,7 +52,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 	return realsize;
 }
 
-int download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
+size_t download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
 	if (first) {
 		time(&prevtime);
 		first = false;
@@ -65,7 +65,7 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
-			if (dif > 1.2f) {
+			if (dif >= 1.0f ) {
 				printf(language_vars["lng_dl_progress_0"], dlnow / _1MiB, (dlnow - dlold) / dif);
 				printf("\r");
 			} else {
@@ -81,7 +81,7 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 			for (int i = 0; i < 10 - numberOfEqual; i++) {
 				printf(" ");
 			}
-			if (dif > 1.2f) {
+			if (dif >= 1.0f) {
 				printf("]   ");
 				printf(language_vars["lng_dl_progress_with_bar_0"], dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
 			} else {
@@ -90,10 +90,12 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 			}
 		}
 		consoleUpdate(&logs_console);
+		if (dif >= 1.0f) {
+			prevtime = currtime;
+		}
 	}
 
 	dlold = dlnow;
-	prevtime = currtime;
 	return 0;
 }
 
@@ -107,6 +109,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 	if (debug_enabled) {
 		debug_log_write("Téléchargement de \"%s\".\n", url);
 	}
+first = true;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl) {
