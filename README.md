@@ -58,15 +58,22 @@ To build the project you have to download devkitPro, install devkitPro and the m
  
 ## Issues 🚩 
 
-* Can't use accents or special chars when printing to the screen.
-* Don't use special chars like accents in your files' name, included with files contained in your pack zip.
-* Can't detect if SD is in EXFAT or FAT32
+* Can't use accents or special chars when printing to the screen, don't use them in translations.
+* Don't use special chars like accents in your files' name, included with files contained in your pack zip  (old issue, must be realy re-tested).
+
+##  Todo list
+
+* Display correctly accents or special chars when printing to the screen.
+* Detect if SD is in EXFAT or FAT32.
+* Detect emunand type using Atmosphere's detection and not using a file(s) analyse witch is unreliable.
+* Install NSP(s) (forwarders or homebrews) contained in a configured folder (TitleID of the NSP should be detected to uninstall the Title on the console before installing it or eventuals orpheans files should be cleaned after installation).
 
 ## Credits 📜 
 
 - Thanks all the contributors of the [Libnx project](https://github.com/switchbrew/libnx) and the [Homebrew Loader](https://github.com/switchbrew/nx-hbloader)
 - Thanks [PoloNX](https://github.com/PoloNX) for [AtmoPackUpdater](https://github.com/PoloNX/AtmoPackUpdater) witch is the project from where mine is forked
 - Thanks [benhoyt](https://github.com/benhoyt/) for [Inih](https://github.com/benhoyt/inih)
+- Thanks [arnavyc](https://github.com/arnavyc/) for [getdelim](https://github.com/arnavyc/getdelim)
 - Thanks [SciresM](https://github.com/SciresM) for [Reboot_to_payload](https://github.com/Atmosphere-NX/Atmosphere/tree/master/troposphere/reboot_to_payload) and [Daybreak](https://github.com/Atmosphere-NX/Atmosphere/tree/master/troposphere/daybreak) and probably for others things in Atmosphere
 - Thanks [Team Neptune](https://github.com/Team-Neptune]) for your [rcm payload](https://github.com/Team-Neptune/DeepSea-Updater/tree/master/rcm)
 - Thanks [HamletDuFromage](https://github.com/HamletDuFromage) for your help and for some code in [AIO_Switch_Updater](https://github.com/HamletDuFromage/AIO-switch-updater) and also for some other codes taken from your projects (get fw version, get Atmosphere version, etc...).
