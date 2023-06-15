@@ -42,10 +42,17 @@ extern char hekate_nologo_file_path[FS_MAX_PATH];
 extern char hekate_nologo_file_path_beta[FS_MAX_PATH];
 extern int exit_mode_param;
 extern int exit_mode_param_beta;
+extern int install_pack_hekate_autoboot_choice_time;
+extern int install_pack_hekate_autoboot_choice_time_beta;
 extern int debug_enabled_param;
 extern int debug_enabled_param_beta;
 
-static int config_handler(void* config, const char* section, const char* name, const char* value)
+extern int hekate_autoboot;
+extern int hekate_autoboot_lineno;
+extern int hekate_autoboot_config;
+extern int hekate_autoboot_config_lineno;
+
+static int config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
 {
 	// config instance for filling in the values.
 	configuration* pconfig = (configuration*)config;
@@ -156,6 +163,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.exit_method = 0;
 		}
+	}else if(MATCH("config", "hekate_autoboot_choice_time")){
+		if (value != 0) {
+			pconfig->s1.hekate_autoboot_choice_time = atoll(value);
+		} else {
+			pconfig->s1.hekate_autoboot_choice_time = 0;
+		}
 	}else if(MATCH("config", "debug_enabled")){
 		if (value != 0) {
 			pconfig->s1.debug_enabled = atoll(value);
@@ -188,6 +201,7 @@ void configs_init() {
 	config.s1.pack_size = 0;
 	config.s1.pack_custom_files_size = 0;
 	config.s1.exit_method = 0;
+	config.s1.hekate_autoboot_choice_time = 0;
 	config.s1.debug_enabled = 0;
 	FILE *test_ini;
 	test_ini = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.ini", "r");
@@ -260,6 +274,9 @@ void configs_init() {
 			if (config.s1.exit_method != 0) {
 				exit_mode_param = 1;
 			}
+			if (config.s1.hekate_autoboot_choice_time != 0) {
+				install_pack_hekate_autoboot_choice_time = config.s1.hekate_autoboot_choice_time;
+			}
 			if (config.s1.debug_enabled != 0) {
 				debug_enabled_param = 1;
 			}
@@ -283,6 +300,7 @@ void configs_init() {
 	config_beta.s1.pack_size = 0;
 	config_beta.s1.pack_custom_files_size = 0;
 	config_beta.s1.exit_method = 0;
+	config_beta.s1.hekate_autoboot_choice_time = 0;
 	config_beta.s1.debug_enabled = 0;
 	FILE *test_ini_beta;
 	test_ini_beta = fopen("/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater_beta.ini", "r");
@@ -355,6 +373,9 @@ void configs_init() {
 			if (config_beta.s1.exit_method != 0) {
 				exit_mode_param_beta = 1;
 			}
+			if (config_beta.s1.hekate_autoboot_choice_time != 0) {
+				install_pack_hekate_autoboot_choice_time_beta = config_beta.s1.hekate_autoboot_choice_time;
+			}
 			if (config_beta.s1.debug_enabled != 0) {
 				debug_enabled_param_beta = 1;
 			}
@@ -369,7 +390,7 @@ void configs_init() {
 	}
 }
 
-static int emummc_config_handler(void* config, const char* section, const char* name, const char* value)
+static int emummc_config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
 {
 	// config instance for filling in the values.
 	emummc_configuration* pconfig = (emummc_configuration*)config;
@@ -446,4 +467,66 @@ int get_emunand_type() {
 		}
 	}
 	return ret;
+}
+
+static int hekate_config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
+{
+	// config instance for filling in the values.
+	hekate_configuration* pconfig = (hekate_configuration*)config;
+
+	// define a macro for checking Sections and keys under the sections.
+	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+
+	// fill the values in config struct for config 1.
+	if(MATCH("config", "autoboot")){
+		if (value != 0) {
+			pconfig->h1.autoboot = atoll(value);
+			pconfig->h1.autoboot_lineno = lineno;
+		} else {
+			pconfig->h1.autoboot = 0;
+			pconfig->h1.autoboot_lineno = -1;
+		}
+	} else if(MATCH("config", "autoboot_list")){
+		if (value != 0) {
+			pconfig->h1.autoboot_config = atoll(value);
+			pconfig->h1.autoboot_config_lineno = lineno;
+		} else {
+			pconfig->h1.autoboot_config = 0;
+			pconfig->h1.autoboot_config_lineno = -1;
+		}
+	// }else{
+		// return 0;
+	}
+	return 1;
+}
+
+void get_hekate_autoboot_status() {
+	// config for holding ini file values.
+	hekate_configuration hekate_config;
+	hekate_config.h1.autoboot = 0;
+	hekate_config.h1.autoboot_lineno = -1;
+	hekate_config.h1.autoboot_config = 0;
+	hekate_config.h1.autoboot_config_lineno = -1;
+	FILE *test_ini;
+	test_ini = fopen("/bootloader/hekate_ipl.ini", "r");
+	if (test_ini != NULL) {
+		fclose(test_ini);
+		// parse the .ini file
+		if (ini_parse("/bootloader/hekate_ipl.ini", hekate_config_handler, &hekate_config) == 0) {
+			if (hekate_config.h1.autoboot != 0) {
+				hekate_autoboot = hekate_config.h1.autoboot_config;
+				hekate_autoboot_lineno = hekate_config.h1.autoboot_lineno;
+			} else {
+				hekate_autoboot = 0;
+				hekate_autoboot_lineno = hekate_config.h1.autoboot_lineno;
+			}
+			if (hekate_config.h1.autoboot_config != 0) {
+				hekate_autoboot_config = hekate_config.h1.autoboot_config;
+				hekate_autoboot_config_lineno = hekate_config.h1.autoboot_config_lineno;
+			} else {
+				hekate_autoboot_config = 0;
+				hekate_autoboot_config_lineno = hekate_config.h1.autoboot_config_lineno;
+			}
+		}
+	}
 }

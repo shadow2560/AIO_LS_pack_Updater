@@ -25,15 +25,22 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_error_not_enough_space_on_sd", (char*) "Erreur, pas assez d'espace sur la SD."}, \
 	{"lng_error_copy_file", (char*) "Erreur de copie de fichier."}, \
 	{"lng_calculate_sha256_of_downloaded_file", (char*) "Verification du sha256 du fichier telecharge..."}, \
-	{"lng_press_b_to_go_back", (char*) "Appuyer sur B pour revenir en arriere."}, \
+	{"lng_press_b_to_go_back", (char*) "Appuyer sur (B) pour revenir au menu precedent."}, \
 \
 	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
 	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \
+	{"lng_ls_or_rs_menu", (char*) "Appuyez sur (LS) ou (RS) pour afficher les controles du homebrew"}, \
+	{"lng_move_menu", (char*) "Appuyez sur haut ou bas sur les sticks ou la croix pour vous déplacer dans les menus"}, \
 	{"lng_a_menu", (char*) "Appuyez sur (A) pour selectionner une option"}, \
 	{"lng_x_menu", (char*) "Appuyez sur (X) pour afficher diverses informations"}, \
 	{"lng_y_menu", (char*) "Appuyez sur (Y) pour enregistrer diverses informations dans un fichier"}, \
 	{"lng_minus_menu", (char*) "Appuyez sur (-) pour passer en mode beta"}, \
 	{"lng_minus_menu_beta", (char*) "Appuyez sur (-) pour passer en mode stable"}, \
+	{"lng_minus_menu_switch", (char*) "Appuyez sur (-) pour passer entre le mode stable et le mode beta"}, \
+	{"lng_l_r_menu", (char*) "Appuyez sur (L+R) pour redemarrer la console"}, \
+	{"lng_zl_zr_menu", (char*) "Appuyez sur (ZL+ZR) pour redemarrer la console en utilisant le payload de nettoyage de l'app (a ne faire que si vous savez se que vous faite)"}, \
+	{"lng_l_zl_menu", (char*) "Appuyez sur (L+ZL) pour desactiver l'autoboot sur une configuration de Hekate"}, \
+	{"lng_r_zr_menu", (char*) "Appuyez sur (R+ZR) pour activer l'autoboot sur une configuration de Hekate"}, \
 	{"lng_plus_menu", (char*) "Appuyez sur (+) pour quitter l'application"}, \
 	{"lng_update_app_menu", (char*) "= Mise a jour de l'application"}, \
 	{"lng_update_pack_menu", (char*) "= Mise a jour du pack"}, \
@@ -51,7 +58,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_infos_serial_incognito", (char*) "Numero de serie de la console  indetectable, Incognito est actif."}, \
 	{"lng_infos_serial", (char*) "Numero de serie de la console : %s"}, \
 	{"lng_infos_sysnand", (char*) "Type de systeme : %s"}, \
-	{"lng_infos_emunand", (char*) "Type de systeme : %s via %s"}, \
+	{"lng_infos_emunand", (char*) "Type de systeme : %s"}, \
 	{"lng_infos_console_model", (char*) "Modele de la console : %s"}, \
 	{"lng_infos_fusee_gelee_patch", (char*) "Etat de l'exploit Fusee Gelee : %s"}, \
 	{"lng_infos_actual_firmware_version", (char*) "Version actuelle du firmware : %s"}, \
@@ -63,8 +70,21 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_infos_official_charge", (char*) "Charge active, charge batterie : %d%%, type de chargeur : officiel"}, \
 	{"lng_infos_usb_charge", (char*) "Charge active, charge batterie : %d%%, type de chargeur : USB ou non officiel"}, \
 	{"lng_infos_no_charge", (char*) "Charge inactive, charge batterie : %d%%"}, \
+	{"lng_infos_hekate_autoboot_enabled", (char*) "Autoboot de Hekate : actif"}, \
+	{"lng_infos_hekate_autoboot_disabled", (char*) "Autoboot de Hekate : inactif"}, \
 	{"lng_record_infos_log_not_open_error", (char*) "Le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\" n'a pas pu etre enregistre."}, \
 	{"lng_record_infos_success", (char*) "Le fichier contenant les informations de la console ont ete enregistrees dans le fichier \"switch/AIO_LS_pack_Updater/console_infos.log\"."}, \
+\
+	{"lng_hekate_config_choice_menu_title", (char*) "Choix de la  configuration lancee  par  l'autoboot de Hekate :"}, \
+	{"lng_hekate_config_choice_no_configs_found", (char*) "Aucune configuration trouvee."}, \
+	{"lng_no_hekate_autoboot_config_set_error", (char*) "Parametre Parametre autoboot de Hekate non defini ou fichiers de configurations non existants."}, \
+	{"lng_hekate_autoboot_config_canceled", (char*) "Configuration de l'autoboot de Hekate annulee."}, \
+	{"lng_hekate_param_already_set", (char*) "Parametre autoboot de Hekate deja defini ainsi."}, \
+	{"lng_hekate_error_config_file_read", (char*) "Erreur de lecture du fichier de configuration de Hekate."}, \
+	{"lng_hekate_error_temp_file_write", (char*) "Erreur d'ecriture du fichier temporaire de configuration de Hekate."}, \
+	{"lng_hekate_replace_config_error", (char*) "Erreur durant le remplacement du fichier de configuration de Hekate."}, \
+	{"lng_hekate_autoboot_enabled_success", (char*) "Autoboot de Hekate actif."}, \
+	{"lng_hekate_autoboot_disabled_success", (char*) "Autoboot de Hekate inactif."}, \
 \
 	{"lng_hbmenu_install_begin", (char*) "Installation du forwarder du Homebrew Menu en cours..."}, \
 	{"lng_hbmenu_install_uninstall_begin", (char*) "Ancienne version du forwarder trouvee, desinstallation de celle-ci..."}, \
@@ -83,7 +103,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
 	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_clean_modules", (char*) "Souhaitez-vous faire un nettoyage des modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
-	{"lng_ask_keep_files", (char*) "Souhaitez-vous activer la conservation de fichiers?"}, \
+	{"lng_ask_keep_files", (char*) "Souhaitez-vous activer la conservation de certains fichiers (non recommande en general)?"}, \
+	{"lng_ask_hekate_autoboot", (char*) "Souhaitez-vous activer l'autoboot sur une configuration de Hekate (le choix de la configuration lancee sera a faire durant l'installation du pack et sera obligatoire; pour demarrer sous Hekate avec l'autoboot actif il faut maintenir \"vol-\" au lancement de Hekate (avec certaines puces maintenir le bouton juste apres le glitch))? Si non l'autoboot de Hekate sera desactivé."}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
@@ -153,6 +174,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_not_clean_modules", (char*) "Nettoyage des modules non actif."}, \
 	{"lng_install_pack_recap_keep_files", (char*) "Conservation de fichiers active."}, \
 	{"lng_install_pack_recap_not_keep_files", (char*) "Conservation de fichiers non active."}, \
+	{"lng_install_pack_recap_enable_hekate_autoboot", (char*) "Autoboot  sur une configuration de Hekate actif."}, \
+	{"lng_install_pack_recap_not_enable_hekate_autoboot", (char*) "Autoboot  sur une configuration de Hekate non  actif."}, \
 	{"lng_install_pack_recap_clean_logos", (char*) "Les logos du pack seront supprimes."}, \
 	{"lng_install_pack_recap_not_clean_logos", (char*) "Les logos du pack ne seront pas supprimes."}, \
 	{"lng_install_pack_recap_install_hbmenu", (char*) "L'icone du Homebrew Menu sera mis en place."}, \
@@ -165,6 +188,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_extract_file", (char*) "Extraction de: %s"}, \
 	{"lng_install_pack_file_write_error", (char*) "Erreur d'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD."}, \
 	{"lng_installing_pack_custom_files", (char*) "Installation de fichiers complementaires au pack..."}, \
+	{"lng_install_pack_configuring_hekate_autoboot", (char*) "Configuration de l'autoboot de Hekate..."}, \
 \
 	{"lng_clean_logos_begin", (char*) "Suppression des logos..."}, \
 	{"lng_clean_theme_begin", (char*) "Suppression d'un eventuel theme..."}, \
@@ -193,10 +217,10 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_protect_console_begin", (char*) "Application des configurations de protection..."}, \
 	{"lng_protect_console_error", (char*) "Une erreur s'est produite durant l'application des parametres pour proteger la console, verifiez l'espace restant sur votre SD."}, \
 \
-	{"lng_dl_progress_0", (char*) "* Telechargement: %.2fMB a %.2f MB/s *"}, \
-	{"lng_dl_progress_1", (char*) "* Telechargement: %.2fMB *"}, \
-	{"lng_dl_progress_with_bar_0", (char*) "Telechargement: %.2fMB sur %.2fMB a %.2f MB/s"}, \
-	{"lng_dl_progress_with_bar_1", (char*) "Telechargement: %.2fMB sur %.2fMB"}, \
+	{"lng_dl_progress_0", (char*) "* Telechargement: %.2fMO a %.2f MO/s *"}, \
+	{"lng_dl_progress_1", (char*) "* Telechargement: %.2fMO *"}, \
+	{"lng_dl_progress_with_bar_0", (char*) "Telechargement: %.2fMO sur %.2fMO a %.2f MO/s"}, \
+	{"lng_dl_progress_with_bar_1", (char*) "Telechargement: %.2fMO sur %.2fMO"}, \
 	{"lng_dl_begin", (char*) "Telechargement de\n%s\nVeuillez patienter..."}, \
 	{"lng_dl_file_write_error", (char*) "Erreur d'ecriture du fichier telecharge, verifiez l'espace libre sur la SD."}, \
 	{"lng_dl_success", (char*) "Telechargement complete."}, \

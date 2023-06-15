@@ -13,7 +13,8 @@
 #include "translate.hpp"
 
 #define API_AGENT "PoloNX"
-#define _1MiB   0x100000
+// #define _1MiB   0x100000
+#define _1MO   1000000
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
@@ -23,6 +24,8 @@ time_t prevtime;
 time_t currtime;
 double dif;
 bool first = true;
+bool dl_speed_displayed = false;
+float dl_speed = 0;
 double dlold;
 
 typedef struct {
@@ -52,7 +55,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 	return realsize;
 }
 
-size_t download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
+int download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
 	if (first) {
 		time(&prevtime);
 		first = false;
@@ -65,11 +68,12 @@ size_t download_progress(void *p, double dltotal, double dlnow, double ultotal, 
 
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
-			if (dif >= 1.0f ) {
-				printf(language_vars["lng_dl_progress_0"], dlnow / _1MiB, (dlnow - dlold) / dif);
-				printf("\r");
+			if (dif >= 1.0f || dl_speed_displayed) {
+				printf(language_vars["lng_dl_progress_0"], dlnow / _1MO, dl_speed);
+				printf("\033[0K\r");
+				dl_speed_displayed = true;
 			} else {
-				printf(language_vars["lng_dl_progress_1"], dlnow / _1MiB);
+				printf(language_vars["lng_dl_progress_1"], dlnow / _1MO);
 				printf("\r");
 			}
 		} else {
@@ -81,21 +85,24 @@ size_t download_progress(void *p, double dltotal, double dlnow, double ultotal, 
 			for (int i = 0; i < 10 - numberOfEqual; i++) {
 				printf(" ");
 			}
-			if (dif >= 1.0f) {
+			if (dif >= 1.0f || dl_speed_displayed) {
 				printf("]   ");
-				printf(language_vars["lng_dl_progress_with_bar_0"], dlnow / _1MiB, dltotal / _1MiB, (dlnow - dlold) / dif);
+				printf(language_vars["lng_dl_progress_with_bar_0"], dlnow / _1MO, dltotal / _1MO, dl_speed);
+				printf("\033[0K");
+				dl_speed_displayed = true;
 			} else {
 				printf("]   ");
-				printf(language_vars["lng_dl_progress_with_bar_1"], dlnow / _1MiB, dltotal / _1MiB);
+				printf(language_vars["lng_dl_progress_with_bar_1"], dlnow / _1MO, dltotal / _1MO);
 			}
 		}
 		consoleUpdate(&logs_console);
 		if (dif >= 1.0f) {
 			prevtime = currtime;
+			dl_speed = ((dlnow - dlold) / dif) / _1MO;
+			// debug_log_write("%.2f\n", dl_speed);
+			dlold = dlnow;
 		}
 	}
-
-	dlold = dlnow;
 	return 0;
 }
 
@@ -110,6 +117,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		debug_log_write("Téléchargement de \"%s\".\n", url);
 	}
 first = true;
+dl_speed_displayed = false;
+dl_speed = 0;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl) {
@@ -120,8 +129,8 @@ first = true;
 			}
 
 			ntwrk_struct_t chunk = {0};
-			chunk.data = (u_int8_t*) malloc(_1MiB);
-			chunk.data_size = _1MiB;
+			chunk.data = (u_int8_t*) malloc(_1MO);
+			chunk.data_size = _1MO;
 			chunk.out = fp;
 
 			curl_easy_setopt(curl, CURLOPT_URL, url);

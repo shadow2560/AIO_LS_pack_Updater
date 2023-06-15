@@ -28,11 +28,18 @@ const char* translation_vars_list[] =
 
 	"lng_title",
 	"lng_title_beta",
+	"lng_ls_or_rs_menu",
+	"lng_move_menu",
 	"lng_a_menu",
 	"lng_x_menu",
 	"lng_y_menu",
 	"lng_minus_menu",
 	"lng_minus_menu_beta",
+	"lng_minus_switch_menu",
+	"lng_l_r_menu",
+	"lng_zl_zr_menu",
+	"lng_l_zl_menu",
+	"lng_r_zr_menu",
 	"lng_plus_menu",
 	"lng_update_app_menu",
 	"lng_update_pack_menu",
@@ -62,8 +69,21 @@ const char* translation_vars_list[] =
 	"lng_infos_official_charge",
 	"lng_infos_usb_charge",
 	"lng_infos_no_charge",
+	"lng_infos_hekate_autoboot_enabled",
+	"lng_infos_hekate_autoboot_disabled",
 	"lng_record_infos_log_not_open_error",
 	"lng_record_infos_success",
+
+"lng_hekate_config_choice_menu_title",
+"lng_hekate_config_choice_no_configs_found",
+	"lng_no_hekate_autoboot_config_set_error",
+	"lng_hekate_autoboot_config_canceled",
+	"lng_hekate_param_already_set",
+	"lng_hekate_error_config_file_read",
+	"lng_hekate_error_temp_file_write",
+	"lng_hekate_replace_config_error",
+	"lng_hekate_autoboot_enabled_success",
+	"lng_hekate_autoboot_disabled_success",
 
 	"lng_hbmenu_install_begin",
 	"lng_hbmenu_install_uninstall_begin",
@@ -83,6 +103,7 @@ const char* translation_vars_list[] =
 	"lng_ask_agressive_clean",
 	"lng_ask_clean_modules",
 	"lng_ask_keep_files",
+	"lng_ask_hekate_autoboot",
 	"lng_ask_clean_logos",
 	"lng_ask_hbmenu_install",
 	"lng_ask_validate_choices",
@@ -152,6 +173,8 @@ const char* translation_vars_list[] =
 	"lng_install_pack_recap_not_clean_modules",
 	"lng_install_pack_recap_keep_files",
 	"lng_install_pack_recap_not_keep_files",
+	"lng_install_pack_recap_enable_hekate_autoboot",
+	"lng_install_pack_recap_not_enable_hekate_autoboot",
 	"lng_install_pack_recap_clean_logos",
 	"lng_install_pack_recap_not_clean_logos",
 	"lng_install_pack_recap_install_hbmenu",
@@ -164,6 +187,7 @@ const char* translation_vars_list[] =
 	"lng_install_pack_extract_file",
 	"lng_install_pack_file_write_error",
 	"lng_installing_pack_custom_files",
+	"lng_install_pack_configuring_hekate_autoboot",
 
 	"lng_clean_logos_begin",
 	"lng_clean_theme_begin",
@@ -204,7 +228,7 @@ const char* translation_vars_list[] =
 	"lng_dl_curl_init_error"
 };
 
-static int translation_handler(void* config, const char * section, const char * name, const char * value)
+static int translation_handler(void* config, const char * section, const char * name, const char * value, int lineno)
 {
 	// config instance for filling in the values.
 	translation_map* pconfig = (translation_map*)config;

@@ -25,6 +25,7 @@ typedef struct{
 	const char *atmo_logo_dir;
 	const char *hekate_nologo_file_path;
 	int exit_method;
+	int hekate_autoboot_choice_time;
 	int debug_enabled;
 } config_section;
 
@@ -49,8 +50,23 @@ typedef struct
 	emummc_config_section e1;
 } emummc_configuration;
 
+// define a structure for holding the values in "config" section of the hekate ini file.
+typedef struct{
+	int autoboot;
+	int autoboot_lineno;
+	int autoboot_config;
+	int autoboot_config_lineno;
+} hekate_config_section;
+
+// define a structure for holding all of the config of the ini file.
+typedef struct
+{
+	hekate_config_section h1;
+} hekate_configuration;
+
 void configs_init();
 int get_emunand_type();
+void get_hekate_autoboot_status();
 
 #ifdef __cplusplus
 }

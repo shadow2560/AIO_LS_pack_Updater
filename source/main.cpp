@@ -5,8 +5,16 @@
 #include <switch.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+
+#include <filesystem>
+#include <vector>
+#include "contents_install/sdInstall.hpp"
+#include "contents_install/hos/hos_Titles.hpp"
+#include "contents_install/util/util.hpp"
 
 #include "main_util.h"
+#include "ini_hekate_configs_parse.h"
 #include "90dns_setter.hpp"
 #include "90dns_tester.hpp"
 #include "download.hpp"
@@ -24,8 +32,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "4.15.0"
-int app_version = 4150;
+#define APP_VERSION			 "5.51.00"
+int app_version = 55100;
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -70,6 +78,8 @@ char hekate_nologo_file_path[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 int exit_mode_param = 0;
 int exit_mode_param_beta = 0;
+int install_pack_hekate_autoboot_choice_time = 0;
+int install_pack_hekate_autoboot_choice_time_beta = 0;
 int debug_enabled_param = 0;
 int debug_enabled_param_beta = 0;
 
@@ -89,6 +99,10 @@ u64 console_id = 0;
 SetSysSerialNumber console_serial;
 // bool sd_is_exfat;
 bool console_is_erista = false;
+int hekate_autoboot = 0;
+int hekate_autoboot_lineno = -1;
+int hekate_autoboot_config = 0;
+int hekate_autoboot_config_lineno = -1;
 bool beta_mode = false;
 
 
@@ -106,8 +120,7 @@ custom_font->tileHeight=;
 */
 
 void refreshScreen(int cursor) {
-	consoleSelect(&menu_console);
-	consoleClear();
+	consoleSelect(&menu_console);	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
 		printf(language_vars["lng_title"], APP_VERSION);
@@ -119,17 +132,13 @@ void refreshScreen(int cursor) {
 		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
-	printf(language_vars["lng_a_menu"]);
-	printf("\n\n");
-	printf(language_vars["lng_x_menu"]);
-	printf("\n");
-	printf(language_vars["lng_y_menu"]);
-	printf("\n");
 	if (!beta_mode) {
 		printf(language_vars["lng_minus_menu"]);
 	} else {
 		printf(language_vars["lng_minus_menu_beta"]);
 	}
+	printf("\n\n");
+	printf(language_vars["lng_ls_or_rs_menu"]);
 	printf("\n\n");
 	printf(language_vars["lng_plus_menu"]);
 	printf("\n\n");
@@ -154,13 +163,88 @@ void printDisplay(const char *text, ...)
 }
 
 void set_consoles_default_size() {
+	PrintConsole* temp;
 	consoleSetWindow(&menu_console, 0, 0, 80, 26);
 	consoleSetWindow(&logs_console, 0, 27, 80, 18);
+	temp = consoleSelect(&menu_console);
+	consoleClear();
+	consoleSelect(&logs_console);
+	consoleClear();
+	consoleSelect(temp);
+	consoleUpdate(&menu_console);
+	consoleUpdate(&logs_console);
+		//  logs_console.windowWidth = 80;
+	// logs_console.windowHeight = 18;
+		// logs_console.windowX = 0;
+	// logs_console.windowY = 27;
+}
+
+void fullscreen_menu() {
+	consoleSetWindow(&logs_console, 0, 0, 0, 0);
+	//  logs_console.windowWidth = 0;
+	// logs_console.windowHeight = 0;
+	// logs_console.windowX = 0;
+	// logs_console.windowY = 0;
+	consoleSelect(&menu_console);
+	consoleSetWindow(&menu_console, 0, 0, 80, 43);
+	consoleClear();
+	consoleUpdate(&menu_console);
+	consoleUpdate(&logs_console);
+}
+
+void help_menu() {
+	fullscreen_menu();
+	if (!beta_mode) {
+		printf("\x1B[36m");
+		printf(language_vars["lng_title"], APP_VERSION);
+	} else {
+		printf("\x1B[31m");
+		printf(language_vars["lng_title_beta"], APP_VERSION);
+	}
+	if (debug_enabled) {
+		printf(" - Debug");
+	}
+	printf("\x1B[37m\n\n");
+	printf(language_vars["lng_move_menu"]);
+	printf("\n");
+	printf(language_vars["lng_a_menu"]);
+	printf("\n");
+	printf(language_vars["lng_minus_switch_menu"]);
+	printf("\n\n");
+	printf(language_vars["lng_x_menu"]);
+	printf("\n");
+	printf(language_vars["lng_y_menu"]);
+	printf("\n");
+	printf(language_vars["lng_l_r_menu"]);
+	printf("\n");
+	printf(language_vars["lng_zl_zr_menu"]);
+	printf("\n");
+	printf(language_vars["lng_l_zl_menu"]);
+	printf("\n");
+	printf(language_vars["lng_r_zr_menu"]);
+	printf("\n\n");
+	printf(language_vars["lng_plus_menu"]);
+	printf("\n\n");
+	printf(language_vars["lng_press_b_to_go_back"]);
+	consoleUpdate(&menu_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_B) {
+			break;
+		}
+	}
+	consoleClear();
+	consoleUpdate(&menu_console);
+	set_consoles_default_size();
 }
 
 int appInit() {
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
+	if (isApplet()) {
+		menu_console.bg = 4;
+	}
 	/*
 	logs_console.font = menu_console->font;
 	logs_console.renderer = NULL;
@@ -175,7 +259,7 @@ int appInit() {
 	logs_console.windowY = 27;
 	logs_console.windowWidth = 80;
 	logs_console.windowHeight = 18;
-	logs_console.bg = 6;
+	logs_console.bg = 0;
 	//
 	logs_console.tabSize = 3;
 	logs_console.fg = 7;
@@ -204,7 +288,6 @@ void logs_console_clear() {
 	consoleClear();
 	consoleUpdate(&logs_console);
 	consoleSelect(&menu_console);
-	
 }
 
 void appExit() {
@@ -540,17 +623,21 @@ bool ask_question(char *question_text) {
 }
 
 void display_infos(int cursor) {
-	consoleSelect(&logs_console);
-	consoleClear();
-	consoleUpdate(&logs_console);
-	consoleSetWindow(&logs_console, 0, 0, 0, 0);
-	consoleSelect(&menu_console);
-	consoleClear();
-	consoleUpdate(&menu_console);
-	consoleSetWindow(&menu_console, 0, 0, 80, 43);
+	fullscreen_menu();
 	if (debug_enabled) {
 		debug_log_write("Affichage des informations.\n");
 	}
+	if (!beta_mode) {
+		printf("\x1B[36m");
+		printf(language_vars["lng_title"], APP_VERSION);
+	} else {
+		printf("\x1B[31m");
+		printf(language_vars["lng_title_beta"], APP_VERSION);
+	}
+	if (debug_enabled) {
+		printf(" - Debug");
+	}
+	printf("\x1B[37m\n\n");
 	printf(language_vars["lng_infos_begin"]);
 	printf("\n\n");
 	if (isApplet()) {
@@ -574,7 +661,8 @@ void display_infos(int cursor) {
 	if (!is_emummc()) {
 		printf(language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		// printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		printf(language_vars["lng_infos_emunand"], emummc_value);
 	}
 	printf("\n");
 	printf(language_vars["lng_infos_console_model"], console_model);
@@ -604,6 +692,12 @@ void display_infos(int cursor) {
 		printf(language_vars["lng_infos_no_charge"], get_battery_charge());
 	}
 	printf("\n");
+	if (hekate_autoboot == 0) {
+		printf(language_vars["lng_infos_hekate_autoboot_enabled"]);
+	} else {
+		printf(language_vars["lng_infos_hekate_autoboot_disabled"]);
+	}
+	printf("\n\n");
 	printf(language_vars["lng_press_b_to_go_back"]);
 	consoleUpdate(&menu_console);
 	while(1) {
@@ -616,7 +710,6 @@ void display_infos(int cursor) {
 	consoleClear();
 	consoleUpdate(&menu_console);
 	set_consoles_default_size();
-	refreshScreen(cursor);
 }
 
 void record_infos() {
@@ -655,7 +748,8 @@ void record_infos() {
 	if (!is_emummc()) {
 		fprintf(log_infos, language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		// fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value);
 	}
 	fprintf(log_infos, "\n");
 	fprintf(log_infos, language_vars["lng_infos_console_model"], console_model);
@@ -695,6 +789,12 @@ void record_infos() {
 		fprintf(log_infos, language_vars["lng_infos_usb_charge"], get_battery_charge());
 	} else {
 		fprintf(log_infos, language_vars["lng_infos_no_charge"], get_battery_charge());
+	}
+	fprintf(log_infos, "\n");
+	if (hekate_autoboot == 0) {
+		fprintf(log_infos, language_vars["lng_infos_hekate_autoboot_enabled"]);
+	} else {
+		fprintf(log_infos, language_vars["lng_infos_hekate_autoboot_disabled"]);
 	}
 	fprintf(log_infos, "\n");
 	// fprintf(log_infos, "Infos batterie et chargeur : %i, %d%% %i", IsChargingEnabled(), get_battery_charge(), GetChargerType());
@@ -751,12 +851,6 @@ void switch_app_mode() {
 		beta_mode = false;
 	}
 }
-
-#include <filesystem>
-#include <vector>
-#include "contents_install/sdInstall.hpp"
-#include "contents_install/hos/hos_Titles.hpp"
-#include "contents_install/util/util.hpp"
 
 bool install_hbmenu() {
 	if (debug_enabled) {
@@ -991,10 +1085,16 @@ void debug_write_console_infos() {
 		if (!is_emummc()) {
 		debug_log_write("Console en sysnand.\n");
 		} else {
-			debug_log_write("Console en emunand de type %s.\n", emummc_type);
+			//  debug_log_write("Console en emunand de type %s.\n", emummc_type);
+			debug_log_write("Console en emunand.\n");
 		}
 		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
-		debug_log_write("Modèle de la console: %s\n\n", console_model);
+		debug_log_write("Modèle de la console: %s\n", console_model);
+		debug_log_write("Paramètre autoboot de Hekate: %i\n", hekate_autoboot);
+		debug_log_write("Ligne du paramètre autoboot de Hekate dans le fichier de config: %i\n", hekate_autoboot_lineno);
+				debug_log_write("Paramètre autoboot_list de Hekate: %i\n", hekate_autoboot_config);
+		debug_log_write("Ligne du paramètre autoboot_list de Hekate dans le fichier de config: %i\n", hekate_autoboot_config_lineno);
+		debug_log_write("\n");
 	}
 }
 
@@ -1009,7 +1109,7 @@ bool auto_update_app(bool update_app) {
 		}
 		consoleSelect(&logs_console);
 		mkdir(APP_PATH, 0777);
-		if (get_sd_size_left() <= 4000000) {
+		if (get_sd_size_left() <= 10000000) {
 			if (debug_enabled) {
 				debug_log_write("Pas assez d'espace sur la SD.\n\n");
 				}
@@ -1030,12 +1130,14 @@ bool auto_update_app(bool update_app) {
 					printDisplay("\n");
 					char dl_app_sha256[65] = "";
 					get_sha256_file(TEMP_FILE, dl_app_sha256);
+					if (debug_enabled) {
 						debug_log_write("SHA256 de l'app à télécharger: ");
-					debug_log_write("%s", app_sha256);
-					debug_log_write("\n");
-					debug_log_write("SHA256 de l'app téléchargée: ");
-					debug_log_write("%s", dl_app_sha256);
-					debug_log_write("\n");
+						debug_log_write("%s", app_sha256);
+						debug_log_write("\n");
+						debug_log_write("SHA256 de l'app téléchargée: ");
+						debug_log_write("%s", dl_app_sha256);
+						debug_log_write("\n");
+					}
 					if (strcmp(app_sha256, dl_app_sha256) != 0) {
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"]);
@@ -1076,6 +1178,287 @@ bool auto_update_app(bool update_app) {
 		consoleSelect(&menu_console);
 	}
 	return false;
+}
+
+void hekate_config_menu_refreshScreen(int hekate_config_choice_cursor, const IniData* iniData) {
+	consoleSelect(&menu_console);
+	consoleClear();
+	if (!beta_mode) {
+		printf("\x1B[36m");
+		printf(language_vars["lng_title"], APP_VERSION);
+	} else {
+		printf("\x1B[31m");
+		printf(language_vars["lng_title_beta"], APP_VERSION);
+	}
+	if (debug_enabled) {
+		printf(" - Debug");
+	}
+	printf("\x1B[37m\n\n");
+	printf(language_vars["lng_hekate_config_choice_menu_title"]);
+	printf("\n\n");
+	int limit_display_config = 15;
+	int  min_display_config  = 0;
+	int  max_display_config  = 0;
+	if (hekate_config_choice_cursor  - limit_display_config > 0) {
+		min_display_config = hekate_config_choice_cursor  - limit_display_config;
+	}
+	if (min_display_config + limit_display_config >= (int)iniData->numSections) {
+		max_display_config = (int)iniData->numSections;
+	} else {
+		max_display_config = min_display_config + limit_display_config;
+	}
+	if (iniData->numSections <= 0) {
+		printf(language_vars["lng_hekate_config_choice_no_configs_found"]);
+	}
+	for (int i = min_display_config; i < max_display_config; i++) {
+		Section* section = &(iniData->sections[i]);
+		if (hekate_config_choice_cursor == i) {
+			printf("\x1B[31m%s\x1B[37m\n", section->section);
+		} else {
+			printf("%s\n", section->section);
+		}
+	}
+	printf("\n\n");
+	printf(language_vars["lng_press_b_to_go_back"]);
+	printf("n\n");
+	consoleUpdate(&menu_console);
+}
+
+int* hekate_config_choice_menu(bool enable_calculate_time) {
+	IniData iniData = {NULL, 0};
+	// fullscreen_menu();
+	static int hekate_selected_config_index[2];
+	hekate_selected_config_index[0] = 0;
+	hekate_selected_config_index[1] = 0;
+	parseIniFile("/bootloader/hekate_ipl.ini", &iniData, true);
+	for (size_t i = 0; i < iniData.numSections; i++) {
+		Section* section = &(iniData.sections[i]);
+		if (strcmp(section->section, "config") == 0) {
+			removeSection(&iniData, i);
+		}
+	}
+	int number_of__main_configs = iniData.numSections;
+	//Process any file-based boot entries from ini folder
+	DIR *dr = opendir("/bootloader/ini");
+	struct dirent *de;
+	std::vector<std::string> iniFiles;
+while ((de = readdir(dr)) != nullptr)
+		iniFiles.push_back(de->d_name);
+	closedir(dr);
+	std::sort(iniFiles.begin(), iniFiles.end());
+	if (!iniFiles.empty()) {
+		// get boot entries from ini folder files
+		for (auto const &iniFile : iniFiles) {
+			char file[FS_MAX_PATH] = "/bootloader/ini/";
+			strcat(file, iniFile.c_str());
+			parseIniFile(file, &iniData,  false);
+		}
+	}
+	
+	for (size_t i = 0; i < iniData.numSections; i++) {
+		Section* section = &(iniData.sections[i]);
+		if (strcmp(section->section, "config") == 0) {
+			removeSection(&iniData, i);
+		}
+		if (section->numKeyValues == 0) {
+			removeSection(&iniData, i);
+		}
+	}
+	hekate_config_menu_refreshScreen(hekate_selected_config_index[0], &iniData);
+	bool time_calculate = false;
+	int install_pack_hekate_autoboot_choice_time_local = 0;
+	if (!beta_mode) {
+		if (install_pack_hekate_autoboot_choice_time > 0 && enable_calculate_time) {
+			time_calculate = true;
+			install_pack_hekate_autoboot_choice_time_local = install_pack_hekate_autoboot_choice_time;
+		}
+	} else {
+		if (install_pack_hekate_autoboot_choice_time_beta > 0 && enable_calculate_time) {
+			time_calculate = true;
+			install_pack_hekate_autoboot_choice_time_local = install_pack_hekate_autoboot_choice_time_beta;
+		}
+	}
+	time_t start_time = time( NULL );
+	time_t end_time = time( NULL );
+	int passed_time = 0;
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+
+		if (iniData.numSections > 0) {
+			// move cursor down...
+			if (kDown & HidNpadButton_StickLDown || kDown & HidNpadButton_StickRDown || kDown & HidNpadButton_Down) // Could be replaced by HidNpadButton_AnyDown
+			{
+				time_calculate = false;
+				if (hekate_selected_config_index[0] == (int)iniData.numSections - 1) hekate_selected_config_index[0] = 0;
+				else hekate_selected_config_index[0]++;
+				hekate_config_menu_refreshScreen(hekate_selected_config_index[0], &iniData);
+			}
+
+			// move cursor up...
+			else if (kDown & HidNpadButton_StickLUp || kDown & HidNpadButton_StickRUp || kDown & HidNpadButton_Up) // Could be replaced by HidNpadButton_AnyUp
+			{
+				time_calculate = false;
+				if (hekate_selected_config_index[0] == 0) hekate_selected_config_index[0] = (int)iniData.numSections - 1;
+				else hekate_selected_config_index[0]--;
+				hekate_config_menu_refreshScreen(hekate_selected_config_index[0], &iniData);
+			}
+
+			else if (kDown & HidNpadButton_A || (time_calculate && passed_time > install_pack_hekate_autoboot_choice_time_local)) {
+				time_calculate = false;
+				if (iniData.sections[hekate_selected_config_index[0]].is_main_config) {
+					hekate_selected_config_index[0]++;
+					hekate_selected_config_index[1] = 0;
+				} else {
+					hekate_selected_config_index[0] = hekate_selected_config_index[0] + 1 - number_of__main_configs;
+					hekate_selected_config_index[1] = 1;
+				}
+				break;;
+			}
+
+			else if (kDown & HidNpadButton_B) {
+				time_calculate = false;
+				hekate_selected_config_index[0] = -1;
+				hekate_selected_config_index[1] = -1;
+				break;
+			}
+		}  else {
+			if (kDown & HidNpadButton_B || (time_calculate && passed_time > install_pack_hekate_autoboot_choice_time_local)) {
+				time_calculate = false;
+				hekate_selected_config_index[0] = -2;
+				hekate_selected_config_index[1] = -2;
+				break;
+			}
+		}
+		if (time_calculate) {
+			end_time = time( NULL );
+			passed_time = (int) difftime(end_time, start_time);
+			printf("Dans %i secondes le choix par defaut sera choisi. ", passed_time);
+			printf("\r");
+			consoleUpdate(&menu_console);
+		}
+	}
+
+	freeIniData(&iniData);
+	consoleClear();
+	consoleUpdate(&menu_console);
+	// set_consoles_default_size();
+	return hekate_selected_config_index;
+}
+
+void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
+	consoleSelect(&logs_console);
+	if (hekate_autoboot_lineno == -1  ||  hekate_autoboot_config_lineno == -1) {
+		if (debug_enabled) {
+			debug_log_write("Paramètre autoboot de Hekate inexistant.\n\n");
+		}
+		printDisplay(language_vars["lng_no_hekate_autoboot_config_set_error"]);
+		return;
+	}
+	char autoboot_param[21] = "autoboot=";
+	char autoboot_index_str[11];
+	char autoboot_config_param[26] = "autoboot_list=";
+	int* autoboot_config_index;
+	char autoboot_config_index_str[11];
+	if (enable) {
+		if (bootentry[0] <= 0) {
+			autoboot_config_index = hekate_config_choice_menu(false);
+			consoleSelect(&logs_console);
+		} else {
+			autoboot_config_index  = bootentry;
+		}
+		if (autoboot_config_index[0] < 0) {
+			if (debug_enabled) {
+				debug_log_write("Configuration de l'autoboot de Hekate interrompu par l'utilisateur.\n\n");
+			}
+			printDisplay(language_vars["lng_hekate_autoboot_config_canceled"]);
+			return;
+		} else {
+			sprintf(autoboot_index_str, "%d", autoboot_config_index[0]);
+			strcat(strcat(autoboot_param, autoboot_index_str), "\n");
+			sprintf(autoboot_config_index_str, "%d", autoboot_config_index[1]);
+			strcat(strcat(autoboot_config_param, autoboot_config_index_str), "\n");
+		}
+	}
+	/*
+	if (hekate_autoboot == 0 && enable) {
+		if (debug_enabled) {
+			debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_param_already_set"]);
+		return;
+	}
+	*/
+	if (hekate_autoboot != 0 && !enable) {
+		if (debug_enabled) {
+			debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_param_already_set"]);
+		return;
+	}
+	FILE* hekate_in=fopen("/bootloader/hekate_ipl.ini", "r");
+	if (hekate_in == NULL) {
+		if (debug_enabled) {
+			debug_log_write("Erreur de lecture du fichier de config de Hekate.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_error_config_file_read"]);
+		return;
+	}
+	FILE* hekate_out=fopen("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", "w");
+	if (hekate_out == NULL) {
+		if (debug_enabled) {
+			debug_log_write("Erreur d'écriture du fichier temporaire de la config de Hekate.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_error_temp_file_write"]);
+		return;
+	}
+	char buffer[1000];
+	int i=1;
+	while (fgets( buffer, 1000, hekate_in ) != NULL) {
+		if (buffer[strlen(buffer)-1] != '\n') {
+			fputs(buffer, hekate_out);
+			continue;
+		}
+		if (i == hekate_autoboot_lineno) {
+			if (enable) {
+				fputs(autoboot_param, hekate_out);
+			} else {
+				fputs("autoboot=0\n", hekate_out);
+			}
+		} else if (i == hekate_autoboot_config_lineno) {
+			if (enable) {
+				fputs(autoboot_config_param, hekate_out);
+			} else {
+				fputs(buffer, hekate_out);
+			}
+		} else {
+			fputs(buffer, hekate_out);
+		}
+		i++;
+	}
+	fclose(hekate_in);
+	fclose(hekate_out);
+	if (!custom_cp((char*) "/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", (char*) "/bootloader/hekate_ipl.ini")) {
+		if (debug_enabled) {
+			debug_log_write("Erreur de copie de la nouvelle config de Hekate.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_replace_config_error"]);
+		return;
+	} else {
+		remove("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini");
+	}
+	if (enable) {
+		if (debug_enabled) {
+			debug_log_write("Paramètre autoboot de Hekate activé.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_autoboot_enabled_success"]);
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Paramètre autoboot de Hekate désactivé.\n\n");
+		}
+		printDisplay(language_vars["lng_hekate_autoboot_disabled_success"]);
+	}
+	get_hekate_autoboot_status();
 }
 
 int main(int argc, char **argv) {
@@ -1145,7 +1528,8 @@ int main(int argc, char **argv) {
 		if (debug_enabled) {
 			debug_log_write("Homebrew en mode applet.\n");
 		}
-		printf("\x1B[44m");
+		// Display background of the menu console in blue
+		// printf("\x1B[44m");
 	} else {
 		if (debug_enabled) {
 			debug_log_write("Homebrew hors mode applet.\n\n");
@@ -1162,6 +1546,7 @@ int main(int argc, char **argv) {
 	get_device_id();
 	get_serial_number();
 	set_emummc_values();
+	get_hekate_autoboot_status();
 	debug_write_console_infos();
 	remove(TEMP_FILE);
 
@@ -1190,7 +1575,6 @@ int main(int argc, char **argv) {
 	if (debug_enabled) {
 		checkHostnames();
 	}
-
 	// main menu
 	refreshScreen(cursor);
 
@@ -1199,11 +1583,55 @@ int main(int argc, char **argv) {
 	}
 
 	// Loop for the menu
+	bool hekate_autoboot_enable_combot_disable = false;
+	bool hekate_autoboot_disable_combot_disable = false;
+	int hekate_autoboot_chosen[2];
+	hekate_autoboot_chosen[0] = -1;
+	hekate_autoboot_chosen[1] = -1;
 	while(appletMainLoop())
 	{
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
-		// u64 kHeld = padGetButtons(&pad);
+		u64 kHeld = padGetButtons(&pad);
+
+		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R) {
+			if (debug_enabled) {
+				debug_log_write("Appel du redémarrage de la console.");
+			}
+			simple_reboot();
+		}
+		if (kHeld & HidNpadButton_ZL && kHeld & HidNpadButton_ZR) {
+			if (debug_enabled) {
+				debug_log_write("Appel du redémarrage avec payload de nettoyage de la console.");
+			}
+			aply_reboot();
+		}
+		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZR && !hekate_autoboot_enable_combot_disable) {
+			if (debug_enabled) {
+				debug_log_write("Activation de l'auto-boot de Hekate.\n");
+			}
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"]);
+			printDisplay("\n");
+			update_hekate_autoboot_param(true, hekate_autoboot_chosen);
+			refreshScreen(cursor);
+			//  hekate_autoboot_enable_combot_disable = true;
+			hekate_autoboot_disable_combot_disable = false;
+		}
+		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZL && !hekate_autoboot_disable_combot_disable) {
+			if (debug_enabled) {
+				debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
+			}
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"]);
+			printDisplay("\n");
+			update_hekate_autoboot_param(false, hekate_autoboot_chosen);
+			consoleSelect(&menu_console);
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = true;
+		}
 
 		// move cursor down...
 		if (kDown & HidNpadButton_StickLDown || kDown & HidNpadButton_StickRDown || kDown & HidNpadButton_Down) // Could be replaced by HidNpadButton_AnyDown
@@ -1212,6 +1640,8 @@ int main(int argc, char **argv) {
 			else cursor++;
 			logs_console_clear();
 			refreshScreen(cursor);
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 		}
 
 		// move cursor up...
@@ -1221,11 +1651,23 @@ int main(int argc, char **argv) {
 			else cursor--;
 			logs_console_clear();
 			refreshScreen(cursor);
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
+		}
+
+		else if (kDown & HidNpadButton_StickL || kDown & HidNpadButton_StickR) {
+			logs_console_clear();
+			help_menu();
+			refreshScreen(cursor);
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 		}
 
 		else if (kDown & HidNpadButton_A)
 		{
 			logs_console_clear();
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 			switch (cursor)
 			{
 			case UP_FW:
@@ -1389,6 +1831,7 @@ int main(int argc, char **argv) {
 				agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
 				clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
 				keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
+					bool hekate_autoboot_enable = ask_question((char*) language_vars["lng_ask_hekate_autoboot"]);;
 				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
 				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
 				/*
@@ -1425,7 +1868,7 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
 					printDisplay("\n");
 				}
-				if (agressive_clean) {
+				if (clean_modules) {
 					printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
 					printDisplay("\n");
 				} else {
@@ -1439,6 +1882,12 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_install_pack_recap_not_keep_files"]);
 					printDisplay("\n");
 				}
+				if (hekate_autoboot_enable) {
+					printDisplay(language_vars["lng_install_pack_recap_enable_hekate_autoboot"]);
+				} else  {
+					printDisplay(language_vars["lng_install_pack_recap_not_enable_hekate_autoboot"]);
+				}
+				printDisplay("\n");
 				if (clean_logos) {
 					printDisplay(language_vars["lng_install_pack_recap_clean_logos"]);
 				} else {
@@ -1479,6 +1928,11 @@ int main(int argc, char **argv) {
 								debug_log_write("Fichiers non écrasés.\n");
 							} else {
 								debug_log_write("Fichiers écrasés.\n");
+							}
+							if (hekate_autoboot_enable) {
+								debug_log_write("Autoboot  de Hekate à activer.\n");
+							} else {
+								debug_log_write("Autoboot  de Hekate à désactiver.\n");
 							}
 							if (clean_logos) {
 								debug_log_write("Nettoyage des logos.\n");
@@ -1528,12 +1982,14 @@ int main(int argc, char **argv) {
 								printDisplay("\n");
 								char dl_pack_sha256[65] = "";
 								get_sha256_file(TEMP_FILE, dl_pack_sha256);
-								debug_log_write("SHA256 du pack à télécharger: ");
-								debug_log_write("%s", pack_sha256);
-								debug_log_write("\n");
-								debug_log_write("SHA256 du pack téléchargé: ");
-								debug_log_write("%s", dl_pack_sha256);
-								debug_log_write("\n");
+								if (debug_enabled) {
+									debug_log_write("SHA256 du pack à télécharger: ");
+									debug_log_write("%s", pack_sha256);
+									debug_log_write("\n");
+									debug_log_write("SHA256 du pack téléchargé: ");
+									debug_log_write("%s", dl_pack_sha256);
+									debug_log_write("\n");
+								}
 								if (strcmp(pack_sha256, dl_pack_sha256) != 0) {
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"]);
@@ -1577,12 +2033,14 @@ int main(int argc, char **argv) {
 												printDisplay("\n");
 												char dl_custom_files_pack_sha256[65] = "";
 												get_sha256_file(TEMP_FILE, dl_custom_files_pack_sha256);
-												debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
-												debug_log_write("%s", custom_files_pack_sha256);
-												debug_log_write("\n");
-												debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
-												debug_log_write("%s", dl_custom_files_pack_sha256);
-												debug_log_write("\n");
+												if (debug_enabled) {
+													debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
+													debug_log_write("%s", custom_files_pack_sha256);
+													debug_log_write("\n");
+													debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
+													debug_log_write("%s", dl_custom_files_pack_sha256);
+													debug_log_write("\n");
+												}
 												if (strcmp(custom_files_pack_sha256, dl_custom_files_pack_sha256) != 0) {
 													printDisplay("\033[0;31m");
 													printDisplay(language_vars["lng_install_custom_files_pack_download_error"]);
@@ -1618,6 +2076,41 @@ int main(int argc, char **argv) {
 										} else {
 											fnc_clean_logo(atmo_logo_dir_beta, hekate_nologo_file_path_beta);
 										}
+								}
+								printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"]);
+								printDisplay("\n");
+								get_hekate_autoboot_status();
+								if (hekate_autoboot_enable) {
+									hiddbgInitialize();
+									hiddbgDeactivateHomeButton();
+									hiddbgExit();
+									if (debug_enabled) {
+										debug_log_write("Activation de l'auto-boot de Hekate.\n");
+									}
+									int* temp_hekate_autoboot_chosen;
+									while(1) {
+										temp_hekate_autoboot_chosen = hekate_config_choice_menu(true);
+										refreshScreen(cursor);
+										consoleSelect(&logs_console);
+										if (temp_hekate_autoboot_chosen[0] == -2) {
+											if (debug_enabled) {
+												debug_log_write("Aucune configuration de Hekate trouvée, désactivation de l'autoboot de Hekate forcée.");
+											}
+											update_hekate_autoboot_param(false, hekate_autoboot_chosen);
+											break;
+										} else if (temp_hekate_autoboot_chosen[0] > -1) {
+											hekate_autoboot_chosen[0] = temp_hekate_autoboot_chosen[0];
+											hekate_autoboot_chosen[1] = temp_hekate_autoboot_chosen[1];
+											update_hekate_autoboot_param(true, hekate_autoboot_chosen);
+											break;
+										}
+										
+									}
+								} else  {
+									if (debug_enabled) {
+										debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
+									}
+									update_hekate_autoboot_param(false, hekate_autoboot_chosen);
 								}
 								if (install_hbmenu_choice) {
 									install_hbmenu();
@@ -1752,14 +2245,21 @@ int main(int argc, char **argv) {
 
 		} else if (kDown & HidNpadButton_X) {
 			logs_console_clear();
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 			display_infos(cursor);
+			refreshScreen(cursor);
 
 		} else if (kDown & HidNpadButton_Y) {
 			logs_console_clear();
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 			record_infos();
 
 		} else if (kDown & HidNpadButton_Minus) {
 			logs_console_clear();
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
 			switch_app_mode();
 			get_last_version_pack();
 			get_last_version_app();
