@@ -63,10 +63,19 @@ To build the project you have to download devkitPro, install devkitPro and the m
 
 ##  Todo list
 
+### Things that I don't know how to do
+
 * Display correctly accents or special chars when printing to the screen.
 * Detect if SD is in EXFAT or FAT32.
 * Detect emunand type using Atmosphere's detection and not using a file(s) analyse witch is unreliable.
 * Install NSP(s) (forwarders or homebrews) contained in a configured folder (TitleID of the NSP should be detected to uninstall the Title on the console before installing it or eventuals orpheans files should be cleaned after installation).
+
+### Improvements that could be made
+
+* Verify the  consoleSelect(), consoleClear() and consoleUpdate() usage, there is probably no need for it sometimes.
+* Improve configs files of the app datas storage, could be improved using globals Configuration structures to store the datas and witch be cleaned  when  closing the app  or  switching app mode  (second solution could be better for memory used by the app because only one global Configuration structure could  be  used against two for the first solution witch need to store the config for Normal Mode and an other for the Beta Mode).
+* Improve storage of the datas for emunand config and Hekate's global config values  using a  global structure (one for the emunand and one for Hekate's global configs).
+* Rewrite translation  method without  using  vectors to  have a pur C code for it, using structures could probably be a solution but it's a massive work to do.
 
 ## Credits 📜 
 
