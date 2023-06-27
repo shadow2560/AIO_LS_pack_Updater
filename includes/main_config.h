@@ -64,9 +64,30 @@ typedef struct
 	hekate_config_section h1;
 } hekate_configuration;
 
+// define a structure for holding the values in "autoconfig" section of the autoconfig ini file.
+typedef struct{
+	short use_all_app_functions;
+	short pack_beta_enable;
+	short install_firmware;
+	short delete_theme;
+	short agressive_clean;
+	short module_clean;
+	short delete_some_files_protection;
+	short hekate_autoboot_enable;
+	short delete_logos;
+	short hbmenu_install;
+} autoconfig_config_section;
+
+// define a structure for holding all of the config of the ini file.
+typedef struct
+{
+	autoconfig_config_section c1;
+} autoconfig_configuration;
+
 void configs_init();
 int get_emunand_type();
 void get_hekate_autoboot_status();
+void get_autoconfig();
 
 #ifdef __cplusplus
 }

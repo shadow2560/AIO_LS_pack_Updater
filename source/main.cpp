@@ -32,8 +32,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.51.00"
-int app_version = 55100;
+#define APP_VERSION			 "5.60.00"
+int app_version = 56000;
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -103,6 +103,10 @@ int hekate_autoboot = 0;
 int hekate_autoboot_lineno = -1;
 int hekate_autoboot_config = 0;
 int hekate_autoboot_config_lineno = -1;
+
+autoconfig_configuration autoconfig_config;
+bool autoconfig_enabled = false;
+
 bool beta_mode = false;
 
 
@@ -594,6 +598,21 @@ void get_serial_number() {
 		return;
 	}
 	setsysExit();
+}
+
+void pause_homebrew() {
+	consoleSelect(&logs_console);
+	printf("%s\n", language_vars["lng_press_any_key_to_continue"]);
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown != 0) {
+			break;
+		}
+	}
+	logs_console_clear();
+	consoleSelect(&logs_console);
 }
 
 bool ask_question(char *question_text) {
@@ -1537,6 +1556,33 @@ int main(int argc, char **argv) {
 	}
 	debug_write_config_infos();
 
+	u64 kDown = 0;
+	u64 kHeld = 0;
+
+	//  verify  autoconfig
+	get_autoconfig();
+	if (autoconfig_enabled) {
+		if (autoconfig_config.c1.use_all_app_functions != 1) {
+			if (debug_enabled) {
+				debug_log_write("Homebrew en mode Autoconfig uniquement.\n");
+			}
+			cursor = UP_CFW;
+			kDown = HidNpadButton_A;
+			__nx_applet_exit_mode = 1;
+		} else {
+			if (debug_enabled) {
+				debug_log_write("Homebrew en mode Autoconfig avec accès aux autres fonctions du homebrew.\n");
+			}
+		}
+		if (autoconfig_config.c1.pack_beta_enable == 1) {
+			switch_app_mode();
+		}
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Autoconfig du homebrew désactivée.\n");
+	}
+	}
+
 	get_version_pack();
 	get_last_version_pack();
 	get_last_version_app();
@@ -1588,11 +1634,12 @@ int main(int argc, char **argv) {
 	int hekate_autoboot_chosen[2];
 	hekate_autoboot_chosen[0] = -1;
 	hekate_autoboot_chosen[1] = -1;
-	while(appletMainLoop())
-	{
-		padUpdate(&pad);
-		u64 kDown = padGetButtonsDown(&pad);
-		u64 kHeld = padGetButtons(&pad);
+	while(appletMainLoop()) {
+		if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
+			padUpdate(&pad);
+			kDown = padGetButtonsDown(&pad);
+			kHeld = padGetButtons(&pad);
+		}
 
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R) {
 			if (debug_enabled) {
@@ -1759,7 +1806,11 @@ int main(int argc, char **argv) {
 			case UP_CFW:
 			{
 				if (debug_enabled) {
-					debug_log_write("Installation du pack.\n");
+					if (!autoconfig_enabled) {
+						debug_log_write("Installation du pack.\n");
+					} else {
+						debug_log_write("Installation du pack avec les parammètres de configurations automatiques.\n");
+					}
 				}
 				consoleSelect(&logs_console);
 				if (app_version < last_app_version) {
@@ -1772,6 +1823,9 @@ int main(int argc, char **argv) {
 						}
 					} else {
 						debug_log_write("Installation annulée.\n\n");
+						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+							goto exit_homebrew;
+						}
 						break;
 					}
 				}
@@ -1780,6 +1834,9 @@ int main(int argc, char **argv) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					}
 					printDisplay(language_vars["lng_battery_error_20"]);
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
@@ -1787,6 +1844,9 @@ int main(int argc, char **argv) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
@@ -1794,6 +1854,9 @@ int main(int argc, char **argv) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
@@ -1801,10 +1864,19 @@ int main(int argc, char **argv) {
 						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
+					if (debug_enabled) {
+						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
+					}
 					printDisplay(language_vars["lng_battery_error_30"]);
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				}
@@ -1814,26 +1886,87 @@ int main(int argc, char **argv) {
 				bool agressive_clean = false;
 				bool clean_modules = false;
 				bool keep_files=false;
-				if (!beta_mode) {
-					if (strcmp(firmware_path, "") != 0) {
-						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+				bool hekate_autoboot_enable = false;
+				bool clean_logos = false;
+				bool install_hbmenu_choice = false;
+				if (!autoconfig_enabled) {
+					if (!beta_mode) {
+						if (strcmp(firmware_path, "") != 0) {
+							update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+						}
+					} else {
+						if (strcmp(firmware_path_beta, "") != 0) {
+							update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+						}
 					}
 				} else {
-					if (strcmp(firmware_path_beta, "") != 0) {
-						update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+					if (!beta_mode) {
+						if (strcmp(firmware_path, "") != 0) {
+							if (autoconfig_config.c1.install_firmware == 1) {
+								update_firmware = true;
+							}
+						}
+					} else {
+						if (strcmp(firmware_path_beta, "") != 0) {
+							if (autoconfig_config.c1.install_firmware == 1) {
+								update_firmware = true;
+							}
+						}
 					}
 				}
 				if (update_firmware) {
 					clean_theme = true;
 				} else {
-					clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
+					if (!autoconfig_enabled) {
+						clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
+					} else {
+						if (autoconfig_config.c1.delete_theme == 1) {
+							clean_theme = true;
+						}
+					}
 				}
-				agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
-				clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
-				keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
-					bool hekate_autoboot_enable = ask_question((char*) language_vars["lng_ask_hekate_autoboot"]);;
-				bool clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
-				bool install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
+				if (!autoconfig_enabled) {
+					agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+				} else {
+					if (autoconfig_config.c1.agressive_clean == 1) {
+						agressive_clean = true;
+					}
+				}
+				if (!autoconfig_enabled) {
+					clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
+				} else {
+					if (autoconfig_config.c1.module_clean == 1) {
+						clean_modules = true;
+					}
+				}
+				if (!autoconfig_enabled) {
+					keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
+				} else {
+					if (autoconfig_config.c1.delete_some_files_protection == 1) {
+						keep_files = true;
+					}
+				}
+					if (!autoconfig_enabled) {
+						hekate_autoboot_enable = ask_question((char*) language_vars["lng_ask_hekate_autoboot"]);;
+					} else {
+						if (autoconfig_config.c1.hekate_autoboot_enable == 1) {
+							hekate_autoboot_enable = true;
+						}
+					}
+				if (!autoconfig_enabled) {
+					clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
+				} else {
+					if (autoconfig_config.c1.delete_logos == 1) {
+						clean_logos = true;
+					}
+				}
+				if (!autoconfig_enabled) {
+					install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
+				} else {
+					if (autoconfig_config.c1.hbmenu_install == 1) {
+						install_hbmenu_choice = true;
+					}
+				}
 				/*
 				if (titleid_curently_launched(hbmenu_title_id) && install_hbmenu_choice) {
 					install_hbmenu_choice = ask_question((char *) "Attention: Vous avez choisi d'installer l'icone du Homebrew Menu mais vous avez lance celui-ci, ceci n'est pas possible, veuillez quitter cette version du Homebrew Menu lancee en mode application (non lancee en mode applet).\nPour pouvoir faire ceci vous devez lancer ce homebrew en maintenant \"R\" en lancant un jeu ou lancer ce homebrew via l'album (en mode applet mais ceci n'est pas recommande pour installer le pack car cela diminu grandement les performances).\nVous pourez egalement effectuer l'installation de l'icone du Homebrew Menu via l'option appropriee du menu principal de ce homebrew apres l'installation du pack et le redemarrage de la console, dans ce cas le mode applet poura etre utilise.\n\nSouhaitez-vous continuer l'installation du pack en desactivant l'installation de l'icone du Homebrew Menu?");
@@ -1996,6 +2129,9 @@ int main(int argc, char **argv) {
 									printDisplay("\033[0;37m\n");
 									remove(TEMP_FILE);
 									consoleSelect(&menu_console);
+									if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+										goto exit_homebrew;
+									}
 									break;
 								}
 							}
@@ -2146,7 +2282,14 @@ int main(int argc, char **argv) {
 					if (debug_enabled) {
 						debug_log_write("Annulation de l'installation du pack.\n\n");
 					}
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						appExit();
+						return 0;
+					}
 				}
+			if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+				goto exit_homebrew;
+			}
 				consoleSelect(&menu_console);
 				break;
 			}
@@ -2279,8 +2422,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	// cleanup then exit
-	appExit();
 	if (!beta_mode) {
 		if (exit_mode_param != 0) {
 			__nx_applet_exit_mode = 1;
@@ -2290,5 +2431,11 @@ int main(int argc, char **argv) {
 			__nx_applet_exit_mode = 1;
 		}
 	}
+	exit_homebrew:
+	// cleanup then exit
+	if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+		pause_homebrew();
+	}
+	appExit();
 	return 0;
 }

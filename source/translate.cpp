@@ -25,6 +25,7 @@ const char* translation_vars_list[] =
 	"lng_error_copy_file",
 	"lng_calculate_sha256_of_downloaded_file",
 	"lng_press_b_to_go_back",
+	"lng_press_any_key_to_continue",
 
 	"lng_title",
 	"lng_title_beta",

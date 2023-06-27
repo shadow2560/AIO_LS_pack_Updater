@@ -26,6 +26,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_error_copy_file", (char*) "Erreur de copie de fichier."}, \
 	{"lng_calculate_sha256_of_downloaded_file", (char*) "Verification du sha256 du fichier telecharge..."}, \
 	{"lng_press_b_to_go_back", (char*) "Appuyer sur (B) pour revenir au menu precedent."}, \
+	{"lng_press_any_key_to_continue", (char*) "Appuyer sur une touche pour continuer."}, \
 \
 	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
 	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \

@@ -22,6 +22,12 @@ This function can be used during pack update. It is used to keep some files/fold
 
 This function is not used during agressive clean or modules clean, the agressive clean and modules clean will delete any files/folders configured for it without taking care of this function's settings. In short, agressive clean and modules clean take priority over this function.
 
+## Autoconfig
+
+This function install automaticaly the pack and could be activated if you place the file "autoconfig.ini" in the folder "switch/AIO_LS_pack_Updater". All the configs should be set correctly, if it's not the case the autoconfig will not be enabled; you can find an example of this file in the "config" folder of this repository.
+
+If you choose to use all functions of the app only the questions during pack installation will be configured automaticaly if you choose to install the pack and the app will switch in Beta mode if you choose to enable the param associed, else the installation sumary is displayed and you can choose to install the pack or not (if not the app will exit on Switch's home screen).
+
 ## Translate the project
 
 You can translate the project but for now there are some limitations:

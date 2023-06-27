@@ -52,6 +52,8 @@ extern int hekate_autoboot_lineno;
 extern int hekate_autoboot_config;
 extern int hekate_autoboot_config_lineno;
 
+extern bool autoconfig_enabled;
+
 static int config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
 {
 	// config instance for filling in the values.
@@ -529,4 +531,150 @@ void get_hekate_autoboot_status() {
 			}
 		}
 	}
+}
+
+static int autoconfig_config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
+{
+	// config instance for filling in the values.
+	autoconfig_configuration* pconfig = (autoconfig_configuration*)config;
+
+	// define a macro for checking Sections and keys under the sections.
+	#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+
+	// fill the values in config struct for config 1.
+if(MATCH("autoconfig", "use_all_app_functions")){
+		if (value != NULL) {
+			pconfig->c1.use_all_app_functions = atoll(value);
+		} else {
+			pconfig->c1.use_all_app_functions = -1;
+		}
+	} else if(MATCH("autoconfig", "pack_beta_enable")){
+		if (value != NULL) {
+			pconfig->c1.pack_beta_enable = atoll(value);
+		} else {
+			pconfig->c1.pack_beta_enable = -1;
+		}
+	} else if(MATCH("autoconfig", "install_firmware")){
+		if (value != NULL) {
+			pconfig->c1.install_firmware = atoll(value);
+		} else {
+			pconfig->c1.install_firmware = -1;
+		}
+	} else if(MATCH("autoconfig", "delete_theme")){
+		if (value != NULL) {
+			pconfig->c1.delete_theme = atoll(value);
+		} else {
+			pconfig->c1.delete_theme = -1;
+		}
+			} else if(MATCH("autoconfig", "agressive_clean")){
+		if (value != NULL) {
+			pconfig->c1.agressive_clean = atoll(value);
+		} else {
+			pconfig->c1.agressive_clean = -1;
+		}
+			} else if(MATCH("autoconfig", "module_clean")){
+		if (value != NULL) {
+			pconfig->c1.module_clean = atoll(value);
+		} else {
+			pconfig->c1.module_clean = -1;
+		}
+			} else if(MATCH("autoconfig", "delete_some_files_protection")){
+		if (value != NULL) {
+			pconfig->c1.delete_some_files_protection = atoll(value);
+		} else {
+			pconfig->c1.delete_some_files_protection = -1;
+		}
+			} else if(MATCH("autoconfig", "hekate_autoboot_enable")){
+		if (value != NULL) {
+			pconfig->c1.hekate_autoboot_enable = atoll(value);
+		} else {
+			pconfig->c1.hekate_autoboot_enable = -1;
+		}
+			} else if(MATCH("autoconfig", "delete_logos")){
+		if (value != NULL) {
+			pconfig->c1.delete_logos = atoll(value);
+		} else {
+			pconfig->c1.delete_logos = -1;
+		}
+			} else if(MATCH("autoconfig", "hbmenu_install")){
+		if (value != NULL) {
+			pconfig->c1.hbmenu_install = atoll(value);
+		} else {
+			pconfig->c1.hbmenu_install = -1;
+		}
+	}else{
+		return 0;
+	}
+	return 1;
+}
+
+extern autoconfig_configuration autoconfig_config;
+
+void get_autoconfig() {
+	// config for holding ini file values.
+	autoconfig_config.c1.use_all_app_functions = -1;
+	autoconfig_config.c1.pack_beta_enable = -1;
+	autoconfig_config.c1.install_firmware = -1;
+	autoconfig_config.c1.delete_theme = -1;
+	autoconfig_config.c1.agressive_clean = -1;
+	autoconfig_config.c1.module_clean = -1;
+	autoconfig_config.c1.delete_some_files_protection = -1;
+	autoconfig_config.c1.hekate_autoboot_enable = -1;
+	autoconfig_config.c1.delete_logos = -1;
+	autoconfig_config.c1.hbmenu_install = -1;
+	FILE *test_ini;
+	test_ini = fopen("/switch/AIO_LS_pack_Updater/autoconfig.ini", "r");
+	if (test_ini != NULL) {
+		fclose(test_ini);
+		// parse the .ini file
+		if (ini_parse("/switch/AIO_LS_pack_Updater/autoconfig.ini", autoconfig_config_handler, &autoconfig_config) != 0) {
+			autoconfig_enabled = false;
+			return;
+		}
+	} else {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.use_all_app_functions == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.pack_beta_enable == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.install_firmware == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.delete_theme == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+if (autoconfig_config.c1.agressive_clean == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.module_clean == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.delete_some_files_protection == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.hekate_autoboot_enable == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.delete_logos == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+	if (autoconfig_config.c1.hbmenu_install == -1) {
+		autoconfig_enabled = false;
+		return;
+	}
+		autoconfig_enabled = true;
+		return;
 }
