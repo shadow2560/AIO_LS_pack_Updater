@@ -1186,6 +1186,10 @@ bool verify_update(char* local_version, char* remote_version) {
 	} else {
 		if (i == strlen(local_version) && j == strlen(remote_version)) {
 			return false;
+		} else if (i == strlen(local_version) && j != strlen(remote_version)) {
+			return true;
+		} else if (i != strlen(local_version) && j == strlen(remote_version)) {
+			return false;
 		}
 		goto remake_test;
 	}
