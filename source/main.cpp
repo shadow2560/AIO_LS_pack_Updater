@@ -32,7 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.70.00"
+#define APP_VERSION			 "5.71.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -1728,7 +1728,7 @@ int main(int argc, char **argv) {
 	hekate_autoboot_chosen[0] = -1;
 	hekate_autoboot_chosen[1] = -1;
 	while(appletMainLoop()) {
-		if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
+		if ((!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) && !pack_update_found_install) {
 			padUpdate(&pad);
 			kDown = padGetButtonsDown(&pad);
 			kHeld = padGetButtons(&pad);
@@ -1997,6 +1997,7 @@ int main(int argc, char **argv) {
 						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 							goto exit_homebrew;
 						}
+						pack_update_found_install = false;
 						break;
 					}
 				}
@@ -2009,6 +2010,7 @@ int main(int argc, char **argv) {
 						goto exit_homebrew;
 					}
 					consoleSelect(&menu_console);
+					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
 					if (debug_enabled) {
@@ -2019,6 +2021,7 @@ int main(int argc, char **argv) {
 						goto exit_homebrew;
 					}
 					consoleSelect(&menu_console);
+					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
 					if (debug_enabled) {
@@ -2029,6 +2032,7 @@ int main(int argc, char **argv) {
 						goto exit_homebrew;
 					}
 					consoleSelect(&menu_console);
+					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
 					if (debug_enabled) {
@@ -2039,6 +2043,7 @@ int main(int argc, char **argv) {
 						goto exit_homebrew;
 					}
 					consoleSelect(&menu_console);
+					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
 					if (debug_enabled) {
@@ -2049,6 +2054,7 @@ int main(int argc, char **argv) {
 						goto exit_homebrew;
 					}
 					consoleSelect(&menu_console);
+					pack_update_found_install = false;
 					break;
 				}
 				mkdir(APP_PATH, 0777);
@@ -2145,6 +2151,7 @@ int main(int argc, char **argv) {
 						install_hbmenu_choice = false;
 					} else {
 						printDisplay("Installation du pack annulee.");
+						pack_update_found_install = false;
 						break;
 					}
 				}
@@ -2342,6 +2349,7 @@ int main(int argc, char **argv) {
 									if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 										goto exit_homebrew;
 									}
+									pack_update_found_install = false;
 									break;
 								}
 							}
@@ -2501,6 +2509,7 @@ int main(int argc, char **argv) {
 				goto exit_homebrew;
 			}
 				consoleSelect(&menu_console);
+				pack_update_found_install = false;
 				break;
 			}
 
