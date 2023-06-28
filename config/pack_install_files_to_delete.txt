@@ -1,0 +1,4 @@
+atmosphere/config_templates/system_settings.ini
+atmosphere/config_templates/stratosphere.ini
+atmosphere/config_templates/override_config.ini
+atmosphere/config_templates/exosphere.ini

@@ -32,8 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.60.00"
-int app_version = 56000;
+#define APP_VERSION			 "5.70.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -83,12 +82,12 @@ int install_pack_hekate_autoboot_choice_time_beta = 0;
 int debug_enabled_param = 0;
 int debug_enabled_param_beta = 0;
 
-char pack_version[15];
-char last_pack_version[15];
+char pack_version[30];
+char last_pack_version[30];
 char pack_sha256[65];
 char custom_files_pack_sha256[65];
 char app_sha256[65];
-int last_app_version = 0;
+char last_app_version[30];
 char firmware_version[50];
 char atmosphere_version[50];
 char emummc_value[50];
@@ -313,8 +312,8 @@ void get_version_pack() {
 	if (pack_version_file == NULL) {
 		return;
 	}
-		char * buffer = (char *) malloc( 15 );
-		fgets(buffer, 15, pack_version_file);
+		char * buffer = (char *) malloc( 30 );
+		fgets(buffer, 30, pack_version_file);
 		int i = 0;
 		while (1) {
 			if (buffer[i] == '\n' || buffer[i] == '\0') {
@@ -345,8 +344,8 @@ void get_last_version_pack() {
 			consoleSelect(&menu_console);
 			return;
 		}
-		char * buffer = (char *) malloc( 15 );
-		fgets(buffer, 15, pack_version_file);
+		char * buffer = (char *) malloc( 30 );
+		fgets(buffer, 30, pack_version_file);
 		int i = 0;
 		while (1) {
 			if (buffer[i] == '\n' || buffer[i] == '\0') {
@@ -476,7 +475,7 @@ void get_last_sha256_app() {
 }
 
 void get_last_version_app() {
-	last_app_version = app_version;
+	strcpy(last_app_version, APP_VERSION);
 	FILE *pack_version_file;
 	bool res;
 	consoleSelect(&logs_console);
@@ -492,9 +491,18 @@ void get_last_version_app() {
 			consoleSelect(&menu_console);
 			return;
 		}
-		char * buffer = (char *) malloc( 15 );
-		fgets(buffer, 15, pack_version_file);
-		last_app_version = atoi(buffer);
+		char * buffer = (char *) malloc( 30 );
+		fgets(buffer, 30, pack_version_file);
+		int i = 0;
+		while (1) {
+			if (buffer[i] == '\n' || buffer[i] == '\0') {
+				break;
+			} else {
+				last_app_version[i] = buffer[i];
+			}
+			i++;
+		}
+		last_app_version[i] = '\0';
 		free(buffer);
 		fclose(pack_version_file);
 	}
@@ -1117,9 +1125,75 @@ void debug_write_console_infos() {
 	}
 }
 
+bool verify_update(char* local_version, char* remote_version) {
+	if (strcmp(local_version, remote_version) == 0 || strcmp(remote_version, language_vars["lng_unknown_1"]) == 0 || strcmp(remote_version, "") == 0) {
+		return false;
+	}
+	if ((strcmp(local_version, language_vars["lng_unknown_1"]) == 0 || strcmp(local_version, "") == 0) && (strcmp(remote_version, language_vars["lng_unknown_1"]) != 0 || strcmp(remote_version, "") != 0)) {
+		return true;
+	}
+	char local_test[strlen(local_version)+1];
+	char remote_test[strlen(remote_version)+1];
+	size_t i = 0;
+	size_t j = 0;
+	int k;
+	int l;
+	bool break_local_while;
+	bool break_remote_while;
+	int local_version_test;
+	int remote_version_test;
+	remake_test:
+	strcpy(local_test, "");
+	strcpy(remote_test, "");
+	k = 0;
+	l = 0;
+	break_local_while = false;
+	break_remote_while = false;
+	local_version_test = -1;
+	remote_version_test = -2;
+	while(i < strlen(local_version)) {
+		if (local_version[i] == '0' || local_version[i] == '1' || local_version[i] == '2' || local_version[i] == '3' || local_version[i] == '4' || local_version[i] == '5' || local_version[i] == '6' || local_version[i] == '7' || local_version[i] == '8' || local_version[i] == '9') {
+			local_test[k] = local_version[i];
+			k++;
+		}
+		if (local_version[i] == '.') {
+			break_local_while = true;
+		}
+		i++;
+		if (break_local_while) {
+			break;
+		}
+	}
+		while(j < strlen(remote_version)) {
+	if (remote_version[j] == '0' || remote_version[j] == '1' || remote_version[j] == '2' || remote_version[j] == '3' || remote_version[j] == '4' || remote_version[j] == '5' || remote_version[j] == '6' || remote_version[j] == '7' || remote_version[j] == '8' || remote_version[j] == '9') {
+			remote_test[l] = remote_version[j];
+			l++;
+		}
+		if (remote_version[j] == '.') {
+			break_remote_while = true;
+		}
+		j++;
+		if (break_remote_while) {
+			break;
+		}
+	}
+	local_version_test = atoi(local_test);
+	remote_version_test = atoi(remote_test);
+	if (remote_version_test > local_version_test) {
+		return true;
+	} else if (remote_version_test < local_version_test) {
+		return false;
+	} else {
+		if (i == strlen(local_version) && j == strlen(remote_version)) {
+			return false;
+		}
+		goto remake_test;
+	}
+}
+
 bool auto_update_app(bool update_app) {
-	if (app_version < last_app_version && !update_app) {
-		debug_log_write("Nouvelle version %i de l'app trouvée, la version actuelle de l'app est %i.\n\n", last_app_version, app_version);
+	if (verify_update((char* )APP_VERSION, last_app_version) && !update_app) {
+		debug_log_write("Nouvelle version %s de l'app trouvée, la version actuelle de l'app est %s.\n\n", last_app_version, APP_VERSION);
 		update_app = ask_question((char*) language_vars["lng_ask_update_app"]);
 	}
 	if (update_app) {
@@ -1526,6 +1600,7 @@ int main(int argc, char **argv) {
 
 	strcpy(pack_version, language_vars["lng_unknown_1"]);
 	strcpy(last_pack_version, language_vars["lng_unknown_1"]);
+	strcpy(last_app_version, language_vars["lng_unknown_1"]);
 	strcpy(firmware_version, language_vars["lng_unknown_1"]);
 	strcpy(atmosphere_version, language_vars["lng_unknown_1"]);
 	strcpy(emummc_value, language_vars["lng_unknown_1"]);
@@ -1628,6 +1703,24 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+	bool pack_update_found = verify_update(pack_version, last_pack_version);
+	bool pack_update_found_install = false;
+	if (pack_update_found) {
+		if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
+			printDisplay("\n\n");
+			pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+			logs_console_clear();
+			consoleSelect(&menu_console);
+			if (pack_update_found_install) {
+				cursor = UP_CFW;
+				kDown = HidNpadButton_A;
+			}
+		}
+	}
+
 	// Loop for the menu
 	bool hekate_autoboot_enable_combot_disable = false;
 	bool hekate_autoboot_disable_combot_disable = false;
@@ -1719,20 +1812,28 @@ int main(int argc, char **argv) {
 			{
 			case UP_FW:
 			{
+				force_firmware_install:
 				if (debug_enabled) {
 					debug_log_write("Installation d'un firmware.\n");
 				}
 				consoleSelect(&logs_console);
-				if (app_version < last_app_version) {
+				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
-					debug_log_write("Le homebrew doit être mis à jour.\n");
+					if (debug_enabled) {
+						debug_log_write("Le homebrew doit être mis à jour.\n");
+					}
 					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
 					if (need_update_app) {
 						if (auto_update_app(true)) {
 							return 0;
 						}
 					} else {
-						debug_log_write("Installation annulée.\n\n");
+						if (debug_enabled) {
+							debug_log_write("Installation annulée.\n\n");
+						}
+						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+							goto exit_homebrew;
+						}
 						break;
 					}
 				}
@@ -1742,6 +1843,9 @@ int main(int argc, char **argv) {
 					}
 					printDisplay(language_vars["lng_battery_error_10"]);
 					printDisplay("\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
@@ -1750,6 +1854,9 @@ int main(int argc, char **argv) {
 					}
 					printDisplay(language_vars["lng_battery_error_20"]);
 					printDisplay("\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
@@ -1758,6 +1865,9 @@ int main(int argc, char **argv) {
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
@@ -1766,6 +1876,9 @@ int main(int argc, char **argv) {
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
@@ -1774,19 +1887,70 @@ int main(int argc, char **argv) {
 					}
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						goto exit_homebrew;
+					}
 					consoleSelect(&menu_console);
 					break;
 				}
 				bool update_firmware2 = false;
 				bool agressive_clean2 = false;
 				bool clean_modules_2 = false;
-				agressive_clean2 = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
-				clean_modules_2 = ask_question((char*) language_vars["lng_ask_clean_modules"]);
-				update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+				if (autoconfig_enabled) {
+					if (autoconfig_config.c1.agressive_clean == 1) {
+						agressive_clean2 = true;
+					}
+					if (autoconfig_config.c1.module_clean == 1) {
+						clean_modules_2 = true;
+					}
+					if (autoconfig_config.c1.use_all_app_functions != 1) {
+						update_firmware2 = true;
+					} else {
+						printDisplay(language_vars["lng_install_pack_recap_begin"]);
+						printDisplay("\n\n");
+						if (agressive_clean2) {
+							printDisplay(language_vars["lng_install_pack_recap_agressive_clean"]);
+							printDisplay("\n");
+						} else {
+							printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
+							printDisplay("\n");
+						}
+						if (clean_modules_2) {
+							printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+							printDisplay("\n");
+						} else {
+							printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
+							printDisplay("\n");
+						}
+						printDisplay("\n");
+						update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+					}
+				} else {
+					agressive_clean2 = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+					clean_modules_2 = ask_question((char*) language_vars["lng_ask_clean_modules"]);
+					printDisplay(language_vars["lng_install_pack_recap_begin"]);
+					printDisplay("\n\n");
+					if (agressive_clean2) {
+						printDisplay(language_vars["lng_install_pack_recap_agressive_clean"]);
+						printDisplay("\n");
+					} else {
+						printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
+						printDisplay("\n");
+					}
+					if (clean_modules_2) {
+						printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+						printDisplay("\n");
+					} else {
+						printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
+						printDisplay("\n");
+					}
+					printDisplay("\n");
+					update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+				}
 				if (update_firmware2) {
 					fnc_clean_theme();
 					if (agressive_clean2) {
-						fnc_agressive_clean();
+						fnc_agressive_clean(true);
 					}
 					if (clean_modules_2) {
 						fnc_clean_modules();
@@ -1799,6 +1963,9 @@ int main(int argc, char **argv) {
 					if (debug_enabled) {
 						debug_log_write("Annulation de l'installation du firmware.\n\n");
 					}
+				}
+				if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+					goto exit_homebrew;
 				}
 				consoleSelect(&menu_console);
 				break;
@@ -1813,16 +1980,20 @@ int main(int argc, char **argv) {
 					}
 				}
 				consoleSelect(&logs_console);
-				if (app_version < last_app_version) {
+				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
-					debug_log_write("Le homebrew doit être mis à jour.\n");
+					if (debug_enabled) {
+						debug_log_write("Le homebrew doit être mis à jour.\n");
+					}
 					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
 					if (need_update_app) {
 						if (auto_update_app(true)) {
 							return 0;
 						}
 					} else {
-						debug_log_write("Installation annulée.\n\n");
+						if (debug_enabled) {
+							debug_log_write("Installation annulée.\n\n");
+						}
 						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 							goto exit_homebrew;
 						}
@@ -1980,6 +2151,45 @@ int main(int argc, char **argv) {
 				*/
 				printDisplay(language_vars["lng_install_pack_recap_begin"]);
 				printDisplay("\n\n");
+				if (pack_update_found) {
+					printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
+					printDisplay("\n\n");
+				} else {
+					printDisplay(language_vars["lng_pack_have_no_update"], pack_version, last_pack_version);
+					printDisplay("\n\n");
+					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+						if (agressive_clean) {
+							printDisplay(language_vars["lng_install_pack_recap_agressive_clean"]);
+							printDisplay("\n");
+						} else {
+							printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
+							printDisplay("\n");
+						}
+						if (clean_modules) {
+							printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+							printDisplay("\n");
+						} else {
+							printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
+							printDisplay("\n");
+						}
+						printDisplay("\n");
+						bool autoconfig_ask_firmware_update=ask_question((char*) language_vars["lng_ask_update_firmware_only"]);
+						if (autoconfig_ask_firmware_update) {
+							goto force_firmware_install;
+						} else {
+							printDisplay(language_vars["lng_install_pack_recap_begin"]);
+							printDisplay("\n\n");
+							if (pack_update_found) {
+								printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
+								printDisplay("\n\n");
+							} else {
+								printDisplay(language_vars["lng_pack_have_no_update"], pack_version, last_pack_version);
+								printDisplay("\n\n");
+							}
+						}
+					}
+				}
+				printDisplay("\n");
 				if (update_firmware) {
 					printDisplay(language_vars["lng_install_pack_recap_firmware_install"]);
 					printDisplay("\n");
@@ -2414,6 +2624,23 @@ int main(int argc, char **argv) {
 			refreshScreen(cursor);
 			if (auto_update_app(false)) {
 				return 0;
+			}
+			pack_update_found = verify_update(pack_version, last_pack_version);
+			pack_update_found_install = false;
+			if (pack_update_found) {
+				if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
+					logs_console_clear();
+					consoleSelect(&logs_console);
+					printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
+					printDisplay("\n\n");
+					pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+					logs_console_clear();
+					consoleSelect(&menu_console);
+					if (pack_update_found_install) {
+						cursor = UP_CFW;
+						kDown = HidNpadButton_A;
+					}
+				}
 			}
 
 		// exit...

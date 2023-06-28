@@ -178,15 +178,22 @@ void fnc_clean_theme() {
 	// End full theme deletion
 }
 
-void fnc_agressive_clean() {
+void fnc_agressive_clean(bool fw_install_only) {
 	if (debug_enabled) {
 		debug_log_write("Nettoyage agressif.\n");
 	}
 	printf(language_vars["lng_agressive_clean_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
-	FILE *folders_list_file = fopen("/switch/AIO_LS_pack_Updater/folders_to_delete.txt", "r");
-	FILE *files_list_file = fopen("/switch/AIO_LS_pack_Updater/files_to_delete.txt", "r");
+	FILE *folders_list_file;
+	FILE *files_list_file;
+	if (!fw_install_only) {
+		folders_list_file = fopen("/switch/AIO_LS_pack_Updater/pack_install_folders_to_delete.txt", "r");
+		files_list_file = fopen("/switch/AIO_LS_pack_Updater/pack_install_files_to_delete.txt", "r");
+	} else {
+		folders_list_file = fopen("/switch/AIO_LS_pack_Updater/fw_install_folders_to_delete.txt", "r");
+		files_list_file = fopen("/switch/AIO_LS_pack_Updater/fw_install_files_to_delete.txt", "r");
+	}
 	if (folders_list_file != NULL) {
 		if (debug_enabled) {
 			debug_log_write("Suppression des répertoires  via un fichier personnalisé.\n");
@@ -222,7 +229,11 @@ void fnc_agressive_clean() {
 		if (debug_enabled) {
 			debug_log_write("Nettoyage agressif intégré.\n");
 		}
-		fnc_clean_modules();
+		if (!fw_install_only) {
+			fnc_clean_modules();
+		} else {
+			fnc_clean_modules();
+		}
 	}
 }
 
@@ -303,7 +314,7 @@ void clean_sd(bool clean_theme, bool agressive_clean) {
 		fnc_clean_theme();
 	}
 	if (agressive_clean) {
-		fnc_agressive_clean();
+		fnc_agressive_clean(false);
 	}
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_finish"]);

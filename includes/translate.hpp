@@ -98,9 +98,13 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_battery_error_20", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie."}, \
 	{"lng_battery_error_30", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie."}, \
 \
-	{"lng_ask_update_firmware", (char*) "Souhaitez-vous vraiment mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
+	{"lng_ask_update_firmware", (char*) "Souhaitez-vous mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
+	{"lng_ask_update_firmware_only", (char*) "Souhaitez-vous seulement mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_app", (char*) "Nouvelle version du homebrew trouvee, souhaitez-vous le mettre a jour?"}, \
 	{"lng_ask_app_need_update", (char*) "Nouvelle version du homebrew trouvee, vous devez le mettre a jour avant de pouvoir effectuer cette action.\n\nSouhaitez-vous mettre a jour le homebrew?"}, \
+	{"lng_pack_have_update", (char*) "Nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la dernière version est la version %s."}, \
+	{"lng_pack_have_no_update", (char*) "Aucune nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la dernière version est la version %s."}, \
+	{"lng_ask_pack_have_update", (char*) "Souhaitez-vous mettre a jour le pack?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
 	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_clean_modules", (char*) "Souhaitez-vous faire un nettoyage des modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \

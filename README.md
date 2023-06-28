@@ -10,7 +10,7 @@ This mode could be useful to test the new features of the pack and the app but t
 
 ## Agressive clean function
 
-This function can be used when updating the pack or the firmware, if you come from an other pack. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/folders_to_delete.txt" and the files could be configured with the file "switch/AIO_LS_pack_Updater/files_to_delete.txt", see the "config" folder of the repository, be careful with these files cause they can brake all the SD if they're badly configured. If you use one of these custom files the agressive clean integrated into the homebrew will be disabled.
+This function can be used when updating the pack or the firmware, if you come from an other pack. The folders witch are deleted by this function could be configured with the file "switch/AIO_LS_pack_Updater/pack_install_folders_to_delete.txt" for pack install and "switch/AIO_LS_pack_Updater/fw_install_folders_to_delete.txt" for firmware install and the files could be configured with the file "switch/AIO_LS_pack_Updater/pack_install_files_to_delete.txt" for pack install and "switch/AIO_LS_pack_Updater/pack_install_files_to_delete.txt" for firmware install, see the "config" folder of the repository, be careful with these files cause they can brake all the SD if they're badly configured. If you use one of these custom files the pack or firmware agressive clean (depend on what function you use) integrated into the homebrew will be disabled.
 
 ## Modules clean function
 

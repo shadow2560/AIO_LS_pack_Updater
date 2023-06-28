@@ -98,8 +98,12 @@ const char* translation_vars_list[] =
 	"lng_battery_error_30",
 
 	"lng_ask_update_firmware",
+	"lng_ask_update_firmware_only",
 	"lng_ask_update_app",
 	"lng_ask_app_need_update",
+	"lng_pack_have_update",
+	"lng_pack_have_no_update",
+	"lng_ask_pack_have_update",
 	"lng_ask_clean_theme",
 	"lng_ask_agressive_clean",
 	"lng_ask_clean_modules",
