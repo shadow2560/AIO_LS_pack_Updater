@@ -2001,7 +2001,17 @@ int main(int argc, char **argv) {
 			get_autoconfig();
 				if (autoconfig_enabled) {
 					sleep(5);
-					goto exit_homebrew;
+					if (!beta_mode) {
+						if (exit_mode_param != 0) {
+							__nx_applet_exit_mode = 1;
+						}
+					} else {
+						if (exit_mode_param_beta != 0) {
+							__nx_applet_exit_mode = 1;
+						}
+					}
+					appExit();
+					return 0;
 				}
 			consoleSelect(&menu_console);
 			hekate_autoboot_enable_combot_disable = false;
