@@ -32,7 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.71.00"
+#define APP_VERSION			 "5.80.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -225,6 +225,10 @@ void help_menu() {
 	printf(language_vars["lng_l_zl_menu"]);
 	printf("\n");
 	printf(language_vars["lng_r_zr_menu"]);
+	printf("\n");
+	printf(language_vars["lng_l_zr_menu"]);
+	printf("\n");
+	printf(language_vars["lng_r_zl_menu"]);
 	printf("\n\n");
 	printf(language_vars["lng_plus_menu"]);
 	printf("\n\n");
@@ -623,10 +627,14 @@ void pause_homebrew() {
 	consoleSelect(&logs_console);
 }
 
-bool ask_question(char *question_text) {
+bool ask_question(char *question_text, ...) {
 	bool rc;
 	consoleSelect(&logs_console);
-	printf("%s\n", question_text);
+	va_list v;
+	va_start(v, question_text);
+	vfprintf(stdout, question_text, v);
+	va_end(v);
+	printf("\n");
 	printf("	[A]: ");
 	printf(language_vars["lng_yes"]);
 	printf("		  [B]: ");
@@ -647,6 +655,25 @@ bool ask_question(char *question_text) {
 	logs_console_clear();
 	consoleSelect(&logs_console);
 	return rc;
+}
+
+u64 ask_question_2(char *question_text, ...) {
+	consoleSelect(&logs_console);
+	va_list v;
+	va_start(v, question_text);
+	vfprintf(stdout, question_text, v);
+	va_end(v);
+	printf("\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown!= 0) {
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			return kDown;
+		}
+	}
 }
 
 void display_infos(int cursor) {
@@ -1558,6 +1585,160 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	get_hekate_autoboot_status();
 }
 
+void update_app_autoconfig_params() {
+	printDisplay(language_vars["lng_configuring_app_autoconfig"]);
+	printDisplay("\n");
+	bool full_app_control = false;
+	bool beta_launch = false;
+	bool update_firmware = false;
+	bool clean_theme = false;
+	bool agressive_clean = false;
+	bool clean_modules = false;
+	bool keep_files=false;
+	bool hekate_autoboot_enable = false;
+	bool clean_logos = false;
+	bool install_hbmenu_choice = false;
+	full_app_control = ask_question((char*) language_vars["lng_ask_autoconfig_full_control"]);
+	beta_launch = ask_question((char*) language_vars["lng_ask_autoconfig_beta_launch"]);
+	update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
+	if (update_firmware) {
+		clean_theme = true;
+	} else {
+		clean_theme = ask_question((char*) language_vars["lng_ask_clean_theme"]);
+	}
+	agressive_clean = ask_question((char*) language_vars["lng_ask_agressive_clean"]);
+	clean_modules = ask_question((char*) language_vars["lng_ask_clean_modules"]);
+	keep_files = ask_question((char*) language_vars["lng_ask_keep_files"]);
+	hekate_autoboot_enable = ask_question((char*) language_vars["lng_ask_hekate_autoboot"]);;
+	clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
+	install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
+	printDisplay(language_vars["lng_autoconfig_recap_begin"]);
+	printDisplay("\n\n");
+	if (full_app_control) {
+		printDisplay(language_vars["lng_autoconfig_recap_full_app_control"]);
+	} else {
+		printDisplay(language_vars["lng_autoconfig_recap_not_full_app_control"]);
+	}
+	printDisplay("\n");
+	if (beta_launch) {
+		printDisplay(language_vars["lng_autoconfig_recap_beta_launch"]);
+	} else {
+		printDisplay(language_vars["lng_autoconfig_recap_not_beta_launch"]);
+	}
+	printDisplay("\n");
+	if (update_firmware) {
+		printDisplay(language_vars["lng_install_pack_recap_firmware_install"]);
+		printDisplay("\n");
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_install_firmware"]);
+		printDisplay("\n");
+		if (clean_theme) {
+			printDisplay(language_vars["lng_install_pack_recap_clean_theme"]);
+			printDisplay("\n");
+		} else {
+			printDisplay(language_vars["lng_install_pack_recap_not_clean_theme"]);
+			printDisplay("\n");
+		}
+	}
+	if (agressive_clean) {
+		printDisplay(language_vars["lng_install_pack_recap_agressive_clean"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_agressive_clean"]);
+	}
+	printDisplay("\n");
+	if (clean_modules) {
+		printDisplay(language_vars["lng_install_pack_recap_clean_modules"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_clean_modules"]);
+	}
+	printDisplay("\n");
+	if (keep_files) {
+		printDisplay(language_vars["lng_install_pack_recap_keep_files"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_keep_files"]);
+	}
+	printDisplay("\n");
+	if (hekate_autoboot_enable) {
+		printDisplay(language_vars["lng_install_pack_recap_enable_hekate_autoboot"]);
+	} else  {
+		printDisplay(language_vars["lng_install_pack_recap_not_enable_hekate_autoboot"]);
+	}
+	printDisplay("\n");
+	if (clean_logos) {
+		printDisplay(language_vars["lng_install_pack_recap_clean_logos"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_clean_logos"]);
+	}
+	printDisplay("\n");
+	if (install_hbmenu_choice) {
+		printDisplay(language_vars["lng_install_pack_recap_install_hbmenu"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_install_hbmenu"]);
+	}
+	printDisplay("\n");
+	bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
+	if (validate_choice) {
+		FILE* config = fopen("/switch/AIO_LS_pack_Updater/autoconfig.ini", "w");
+		if (config == NULL) {
+			printDisplay(language_vars["lng_autoconfig_set_error"]);
+			return;
+		}
+		fputs("[autoconfig]\n", config);
+		if (full_app_control) {
+			fputs("use_all_app_functions = 1\n", config);
+		} else {
+			fputs("use_all_app_functions = 0\n", config);
+		}
+		if (beta_launch) {
+			fputs("pack_beta_enable = 1\n", config);
+		} else {
+			fputs("pack_beta_enable = 0\n", config);
+		}
+		if (update_firmware) {
+			fputs("install_firmware = 1\n", config);
+		} else {
+			fputs("install_firmware = 0\n", config);
+		}
+		if (clean_theme) {
+			fputs("delete_theme = 1\n", config);
+		} else {
+			fputs("delete_theme = 0\n", config);
+		}
+		if (agressive_clean) {
+			fputs("agressive_clean = 1\n", config);
+		} else {
+			fputs("agressive_clean = 0\n", config);
+		}
+		if (clean_modules) {
+			fputs("module_clean = 1\n", config);
+		} else {
+			fputs("module_clean = 0\n", config);
+		}
+		if (keep_files) {
+			fputs("delete_some_files_protection = 1\n", config);
+		} else {
+			fputs("delete_some_files_protection = 0\n", config);
+		}
+		if (hekate_autoboot_enable) {
+			fputs("hekate_autoboot_enable = 1\n", config);
+		} else {
+			fputs("hekate_autoboot_enable = 0\n", config);
+		}
+		if (clean_logos) {
+			fputs("delete_logos = 1\n", config);
+		} else {
+			fputs("delete_logos = 0\n", config);
+		}
+		if (install_hbmenu_choice) {
+			fputs("hbmenu_install = 1\n", config);
+		} else {
+			fputs("hbmenu_install = 0\n", config);
+		}
+		fclose(config);
+		printDisplay(language_vars["lng_autoconfig_set_success"]);
+	}
+}
+
 int main(int argc, char **argv) {
 	// init stuff
 	appInit();
@@ -1640,6 +1821,40 @@ int main(int argc, char **argv) {
 
 	//  verify  autoconfig
 	get_autoconfig();
+	if (autoconfig_enabled) {
+		if (autoconfig_config.c1.use_all_app_functions != 1) {
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			time_t start_time;
+			time_t cur_time;
+			double dif = 0;
+			double wait_time = 3;
+			printDisplay(language_vars["lng_ask_disable_autoconfig"], wait_time);
+			time(&start_time);
+			while(dif <= wait_time) {
+				padUpdate(&pad);
+				kDown = padGetButtonsDown(&pad);
+				if (kDown & HidNpadButton_A) {
+					if (debug_enabled) {
+						debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
+					}
+					remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
+					get_autoconfig();
+					printDisplay(language_vars["lng_autoconfig_disabled"]);
+					printDisplay("\n");
+					pause_homebrew();
+					logs_console_clear();
+					kDown = 0;
+					consoleSelect(&menu_console);
+					break;
+				}
+				time(&cur_time);
+				dif = difftime(cur_time, start_time);
+			}
+			consoleSelect(&menu_console);
+			kDown = 0;
+		}
+	}
 	if (autoconfig_enabled) {
 		if (autoconfig_config.c1.use_all_app_functions != 1) {
 			if (debug_enabled) {
@@ -1775,6 +1990,37 @@ int main(int argc, char **argv) {
 			consoleSelect(&menu_console);
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = true;
+		}
+		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZL) {
+			if (debug_enabled) {
+				debug_log_write("Activation de l'auto-configuration du homebrew.\n");
+			}
+			logs_console_clear();
+			consoleSelect(&logs_console);
+			update_app_autoconfig_params();
+			get_autoconfig();
+				if (autoconfig_enabled) {
+					sleep(5);
+					goto exit_homebrew;
+				}
+			consoleSelect(&menu_console);
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
+		}
+		if (autoconfig_enabled) {
+			if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZR) {
+				if (debug_enabled) {
+					debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
+				}
+				logs_console_clear();
+				consoleSelect(&logs_console);
+				remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
+				get_autoconfig();
+				printDisplay(language_vars["lng_autoconfig_disabled"]);
+				consoleSelect(&menu_console);
+				hekate_autoboot_enable_combot_disable = false;
+				hekate_autoboot_disable_combot_disable = false;
+			}
 		}
 
 		// move cursor down...

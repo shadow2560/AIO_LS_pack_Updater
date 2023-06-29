@@ -42,6 +42,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_zl_zr_menu", (char*) "Appuyez sur (ZL+ZR) pour redemarrer la console en utilisant le payload de nettoyage de l'app (a ne faire que si vous savez se que vous faite)"}, \
 	{"lng_l_zl_menu", (char*) "Appuyez sur (L+ZL) pour desactiver l'autoboot sur une configuration de Hekate"}, \
 	{"lng_r_zr_menu", (char*) "Appuyez sur (R+ZR) pour activer l'autoboot sur une configuration de Hekate"}, \
+	{"lng_l_zr_menu", (char*) "Appuyez sur (L+ZR) pour desactiver l'auto-configuration du homebrew ou si la configuration ne donne pas acces aux autres fonctions du homebrew appuyer sur (A) au lancement du homebrew lors de la demande"}, \
+	{"lng_r_zl_menu", (char*) "Appuyez sur (R+ZL) pour configurer et activer l'auto-configuration du homebrew"}, \
 	{"lng_plus_menu", (char*) "Appuyez sur (+) pour quitter l'application"}, \
 	{"lng_update_app_menu", (char*) "= Mise a jour de l'application"}, \
 	{"lng_update_pack_menu", (char*) "= Mise a jour du pack"}, \
@@ -87,6 +89,16 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_hekate_autoboot_enabled_success", (char*) "Autoboot de Hekate actif."}, \
 	{"lng_hekate_autoboot_disabled_success", (char*) "Autoboot de Hekate inactif."}, \
 \
+	{"lng_configuring_app_autoconfig", (char*) "Configuration de l'auto-configuration du homebrew."}, \
+	{"lng_autoconfig_recap_begin", (char*) "Recapitulatif des options choisies pour l'auto-configuration du homebrew :"}, \
+	{"lng_autoconfig_recap_full_app_control", (char*) "Acces aux autres fonctions du homebrew actif."}, \
+	{"lng_autoconfig_recap_not_full_app_control", (char*) "Acces aux autres fonctions du homebrew inactif."}, \
+	{"lng_autoconfig_recap_beta_launch", (char*) "Lancement en mode beta au demarrage du homebrew actif."}, \
+	{"lng_autoconfig_recap_not_not_beta_launch", (char*) "Lancement en mode beta au demarrage du homebrew inactif."}, \
+	{"lng_autoconfig_set_error", (char*) "Erreur durant la configuration de l'auto-configuration du homebrew."}, \
+	{"lng_autoconfig_set_success", (char*) "La configuration de l'auto-configuration du homebrew est active, le homebrew va se fermer dans cinq secondes."}, \
+	{"lng_autoconfig_disabled", (char*) "L'auto-configuration du homebrew est inactive."}, \
+\
 	{"lng_hbmenu_install_begin", (char*) "Installation du forwarder du Homebrew Menu en cours..."}, \
 	{"lng_hbmenu_install_uninstall_begin", (char*) "Ancienne version du forwarder trouvee, desinstallation de celle-ci..."}, \
 	{"lng_hbmenu_install_uninstall_error", (char*) "Erreur durant la desinstallation de l'ancienne version du forwarder, anulation de l'installation."}, \
@@ -98,6 +110,9 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_battery_error_20", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie."}, \
 	{"lng_battery_error_30", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie."}, \
 \
+	{"lng_ask_disable_autoconfig", (char*) "Appuyez sur le bouton [A] pour désactiver l'auto-configuration du homebrew ou attendez %.0f secondes..."}, \
+	{"lng_ask_autoconfig_full_control", (char*) "Souhaitez-vous activer l'acces aux autres fonctions du homebrew lorsque l'auto-configuration sera active (si non il faudra appuyer sur le bouton [A] au lancement du homebrew lors de la demande pour pouvoir desactiver l'auto-configuration du homebrew)?"}, \
+	{"lng_ask_autoconfig_beta_launch", (char*) "Souhaitez-vous activer  le lancement en mode beta au demarrage lorsque l'auto-configuration sera active?"}, \
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_firmware_only", (char*) "Souhaitez-vous seulement mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_app", (char*) "Nouvelle version du homebrew trouvee, souhaitez-vous le mettre a jour?"}, \
