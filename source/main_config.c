@@ -40,6 +40,8 @@ extern char atmo_logo_dir[FS_MAX_PATH];
 extern char atmo_logo_dir_beta[FS_MAX_PATH];
 extern char hekate_nologo_file_path[FS_MAX_PATH];
 extern char hekate_nologo_file_path_beta[FS_MAX_PATH];
+extern int pack_files_in_zip_sha256_verify_before_copy_param;
+extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
 extern int exit_mode_param;
 extern int exit_mode_param_beta;
 extern int install_pack_hekate_autoboot_choice_time;
@@ -159,6 +161,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 		} else {
 			pconfig->s1.pack_custom_files_size = 0;
 		}
+	}else if(MATCH("config", "pack_files_in_zip_sha256_verify_before_copy")){
+		if (value != 0) {
+			pconfig->s1.pack_files_in_zip_sha256_verify_before_copy = atoll(value);
+		} else {
+			pconfig->s1.pack_files_in_zip_sha256_verify_before_copy = 1;
+		}
 	}else if(MATCH("config", "exit_method")){
 		if (value != 0) {
 			pconfig->s1.exit_method = atoll(value);
@@ -202,6 +210,7 @@ void configs_init() {
 	config.s1.hekate_nologo_file_path = "";
 	config.s1.pack_size = 0;
 	config.s1.pack_custom_files_size = 0;
+	config.s1.pack_files_in_zip_sha256_verify_before_copy = 1;
 	config.s1.exit_method = 0;
 	config.s1.hekate_autoboot_choice_time = 0;
 	config.s1.debug_enabled = 0;
@@ -273,6 +282,9 @@ void configs_init() {
 			if (config.s1.pack_custom_files_size != 0) {
 				pack_custom_files_size = config.s1.pack_custom_files_size;
 			}
+			if (config.s1.pack_files_in_zip_sha256_verify_before_copy != 0) {
+				pack_files_in_zip_sha256_verify_before_copy_param = 1;
+			}
 			if (config.s1.exit_method != 0) {
 				exit_mode_param = 1;
 			}
@@ -301,6 +313,7 @@ void configs_init() {
 	config_beta.s1.hekate_nologo_file_path = "";
 	config_beta.s1.pack_size = 0;
 	config_beta.s1.pack_custom_files_size = 0;
+	config_beta.s1.pack_files_in_zip_sha256_verify_before_copy = 1;
 	config_beta.s1.exit_method = 0;
 	config_beta.s1.hekate_autoboot_choice_time = 0;
 	config_beta.s1.debug_enabled = 0;
@@ -371,6 +384,9 @@ void configs_init() {
 			}
 			if (config_beta.s1.pack_custom_files_size != 0) {
 				pack_custom_files_size_beta = config_beta.s1.pack_custom_files_size;
+			}
+			if (config_beta.s1.pack_files_in_zip_sha256_verify_before_copy != 0) {
+				pack_files_in_zip_sha256_verify_before_copy_param_beta = 1;
 			}
 			if (config_beta.s1.exit_method != 0) {
 				exit_mode_param_beta = 1;

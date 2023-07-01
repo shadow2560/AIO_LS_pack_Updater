@@ -20,7 +20,12 @@ size_t WRITEBUFFERSIZE = 0x100000;
 extern translation_map language_vars;
 extern PrintConsole logs_console;
 extern char firmware_path[FS_MAX_PATH];
+extern char firmware_path_beta[FS_MAX_PATH];
 extern char atmo_logo_dir[FS_MAX_PATH];
+extern char atmo_logo_dir_beta[FS_MAX_PATH];
+extern int pack_files_in_zip_sha256_verify_before_copy_param;
+extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
+extern bool beta_mode;
 extern bool debug_enabled;
 
 bool prefix(const char* pre, const char *str){
@@ -309,7 +314,11 @@ void clean_sd(bool clean_theme, bool agressive_clean) {
 	remove("bootloader/bootlogo.bmp");
 	remove("nsp_forwarders/Tinfoil V14.nsp");
 	remove_directory("Firmware 14.1.2");
-	remove_directory(firmware_path);
+	if (!beta_mode) {
+		remove_directory(firmware_path);
+	} else {
+		remove_directory(firmware_path_beta);
+	}
 	if (clean_theme) {
 		fnc_clean_theme();
 	}
@@ -464,20 +473,37 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	DIR *dir;
 	FILE *outfile;
 	void *buf;
+	void* temp_file;
+	char sha256_in_test[65];
+	char sha256_out_test[65];
+	char *c1;
+	char full_path_on_sd[FS_MAX_PATH+2];
 	FsFileSystem *fs_sd = fsdevGetDeviceFileSystem("sdmc");
-char atmo_bootlogo_dir[strlen(atmo_logo_dir)+30] = "";
-if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
-	strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir), "/");
-} else {
-	strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir);
-}
+	char* atmo_bootlogo_dir;
+	if (!beta_mode) {
+		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir) * sizeof(char)) + (31 * sizeof(char)));
+		strcpy(atmo_bootlogo_dir, "");
+		if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
+			strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir), "/");
+		} else {
+			strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir);
+		}
+	} else {
+		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir_beta) * sizeof(char)) + (31 * sizeof(char)));
+		strcpy(atmo_bootlogo_dir, "");
+		if ((atmo_logo_dir_beta[strlen(atmo_logo_dir_beta)-1]) != '/') {
+			strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir_beta), "/");
+		} else {
+			strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir_beta);
+		}
+	}
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 
 		// debug_log_write("%s\n", filename_inzip);
-		char *c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
+		c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
 		strcpy(filename_on_sd, c1);
 		free(c1);
 		/*
@@ -510,7 +536,7 @@ if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
 			}
 			*/
 			FsDirEntryType test_file_or_dir = (FsDirEntryType) -1;
-			char full_path_on_sd[FS_MAX_PATH+2] = "/";
+			strcpy(full_path_on_sd, "/");
 			strcat(full_path_on_sd, filename_on_sd);
 			fsFsGetEntryType(fs_sd, full_path_on_sd, &test_file_or_dir);
 			if (test_file_or_dir == 0 || test_file_or_dir == 1) {
@@ -571,6 +597,35 @@ if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
 				closedir(dir);
 				remove_directory(filename_on_sd);
 			}
+			if ((!beta_mode && pack_files_in_zip_sha256_verify_before_copy_param == 1) || (beta_mode && pack_files_in_zip_sha256_verify_before_copy_param_beta == 1)) {
+				outfile = fopen(filename_on_sd, "rb");
+				if (outfile != NULL) {
+					fclose(outfile);
+					temp_file = malloc(file_info.uncompressed_size + 1);
+					unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
+					strcpy(sha256_in_test, "");
+					strcpy(sha256_out_test, "");
+					get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
+					free(temp_file);
+					get_sha256_file(filename_on_sd, sha256_out_test);
+					// debug_log_write("%s - %s\n", sha256_in_test, sha256_out_test);
+					if (strcmp(sha256_in_test, sha256_out_test) == 0) {
+						if (debug_enabled) {
+							debug_log_write("Le fichier \"%s\" est le même dans le zip et sur la SD, la copie n'est pas nécessaire.\n", filename_on_sd);
+						}
+						printf("\033[0;32m");
+						printf(language_vars["lng_install_pack_same_files"], filename_on_sd);
+						printf("\033[0;37m\n");
+						consoleUpdate(&logs_console);
+						unzCloseCurrentFile(zfile);
+						unzGoToNextFile(zfile);
+						continue;
+					} else {
+						unzCloseCurrentFile(zfile);
+						unzOpenCurrentFile(zfile);
+					}
+				}
+			}
 		}
 
 		if (strcmp(filename_on_sd, "payload.bin") == 0){
@@ -624,6 +679,7 @@ if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
 	}
 
 	unzClose(zfile);
+	free((char*) atmo_bootlogo_dir);
 	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
 	// remove(output);
 	remove("payload.bin");

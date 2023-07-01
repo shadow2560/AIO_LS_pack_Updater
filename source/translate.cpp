@@ -203,6 +203,7 @@ const char* translation_vars_list[] =
 	"lng_install_custom_files_pack_download_error",
 	"lng_install_pack_file_skip",
 	"lng_install_pack_folder_create",
+	"lng_install_pack_same_files",
 	"lng_install_pack_extract_file_protected",
 	"lng_install_pack_extract_file",
 	"lng_install_pack_file_write_error",

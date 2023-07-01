@@ -21,6 +21,7 @@ int GetChargerType();
 s64 get_sd_size_left();
 bool is_emummc();
 void get_sha256_file(const char *filepath, char *ret);
+void get_sha256_data(void* datas, size_t size, char* ret);
 bool module_is_running(u64 module);
 void close_module(u64 module);
 

@@ -32,7 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.80.00"
+#define APP_VERSION			 "5.90.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -75,6 +75,8 @@ char atmo_logo_dir[FS_MAX_PATH] = "logo";
 char atmo_logo_dir_beta[FS_MAX_PATH] = "logo";
 char hekate_nologo_file_path[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
 char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
+int pack_files_in_zip_sha256_verify_before_copy_param = 1;
+int pack_files_in_zip_sha256_verify_before_copy_param_beta = 1;
 int exit_mode_param = 0;
 int exit_mode_param_beta = 0;
 int install_pack_hekate_autoboot_choice_time = 0;

@@ -24,6 +24,7 @@ typedef struct{
 	const char *firmware_path;
 	const char *atmo_logo_dir;
 	const char *hekate_nologo_file_path;
+	int pack_files_in_zip_sha256_verify_before_copy;
 	int exit_method;
 	int hekate_autoboot_choice_time;
 	int debug_enabled;
