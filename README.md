@@ -79,9 +79,13 @@ To build the project you have to download devkitPro, install devkitPro and the m
 ### Improvements that could be made
 
 * Verify the  consoleSelect(), consoleClear() and consoleUpdate() usage, there is probably no need for it sometimes.
+* Improve or add error handling, for example when using malloc() or in the zip function when using Minizip functions.
 * Improve configs files of the app datas storage, could be improved using globals Configuration structures to store the datas and witch be cleaned  when  closing the app  or  switching app mode  (second solution could be better for memory used by the app because only one global Configuration structure could  be  used against two for the first solution witch need to store the config for Normal Mode and an other for the Beta Mode).
 * Improve storage of the datas for emunand config and Hekate's global config values  using a  global structure (one for the emunand and one for Hekate's global configs).
 * Rewrite translation  method without  using  vectors to  have a pur C code for it, using structures could probably be a solution but it's a massive work to do.
+* Reorganize code logic, massive work to do but lots of improvement can be done.
+* Fix bugs, there are probably always some.
+* Fix typo, ameliorate messages and maybe add some messages in translations.
 
 ## Credits 📜 
 

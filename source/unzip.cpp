@@ -598,13 +598,13 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				remove_directory(filename_on_sd);
 			}
 			if ((!beta_mode && pack_files_in_zip_sha256_verify_before_copy_param == 1) || (beta_mode && pack_files_in_zip_sha256_verify_before_copy_param_beta == 1)) {
+				strcpy(sha256_in_test, "");
+				strcpy(sha256_out_test, "");
 				outfile = fopen(filename_on_sd, "rb");
 				if (outfile != NULL) {
 					fclose(outfile);
 					temp_file = malloc(file_info.uncompressed_size + 1);
 					unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
-					strcpy(sha256_in_test, "");
-					strcpy(sha256_out_test, "");
 					get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
 					free(temp_file);
 					get_sha256_file(filename_on_sd, sha256_out_test);
@@ -671,6 +671,30 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 
 		fclose(outfile);
 		free(buf);
+		if ((!beta_mode && pack_files_in_zip_sha256_verify_before_copy_param == 1) || (beta_mode && pack_files_in_zip_sha256_verify_before_copy_param_beta == 1)) {
+			strcpy(sha256_out_test, "");
+			get_sha256_file(filename_on_sd, sha256_out_test);
+			if (strcmp(sha256_in_test, "") == 0) {
+				unzCloseCurrentFile(zfile);
+				unzOpenCurrentFile(zfile);
+				temp_file = malloc(file_info.uncompressed_size + 1);
+				unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
+				get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
+				free(temp_file);
+			}
+			if (strcmp(sha256_in_test, sha256_out_test) != 0) {
+				if (debug_enabled) {
+					debug_log_write("Erreur durant l'ecriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
+				}
+				printf("\033[0;31m");
+				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
+				printf("\033[0;37m\n");
+				consoleUpdate(&logs_console);
+				unzCloseCurrentFile(zfile);
+				unzClose(zfile);
+				return 1;
+			}
+		}
 		unzCloseCurrentFile(zfile);
 		unzGoToNextFile(zfile);
 		if (debug_enabled) {

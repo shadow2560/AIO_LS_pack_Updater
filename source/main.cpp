@@ -32,7 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.90.00"
+#define APP_VERSION			 "5.91.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -1262,9 +1262,12 @@ bool auto_update_app(bool update_app) {
 						debug_log_write("\n");
 						debug_log_write("SHA256 de l'app téléchargée: ");
 						debug_log_write("%s", dl_app_sha256);
-						debug_log_write("\n");
+						debug_log_write("\n\n");
 					}
 					if (strcmp(app_sha256, dl_app_sha256) != 0) {
+						if (debug_enabled) {
+							debug_log_write("Erreur de téléchargement de l'application, installation annulée.\n\n");
+						}
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"]);
 						printDisplay("\033[0;37m\n");
@@ -2600,9 +2603,12 @@ int main(int argc, char **argv) {
 									debug_log_write("\n");
 									debug_log_write("SHA256 du pack téléchargé: ");
 									debug_log_write("%s", dl_pack_sha256);
-									debug_log_write("\n");
+									debug_log_write("\n\n");
 								}
 								if (strcmp(pack_sha256, dl_pack_sha256) != 0) {
+									if (debug_enabled) {
+										debug_log_write("Erreur de téléchargement du pack, installation annulée\n\n.");
+									}
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"]);
 									printDisplay("\033[0;37m\n");

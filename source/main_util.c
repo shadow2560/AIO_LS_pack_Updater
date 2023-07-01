@@ -313,8 +313,8 @@ void get_sha256_data(void* datas, size_t size, char* ret) {
 	// size_t i;
 	// while((i = fread(buf, 1, sizeof(buf), file)) > 0) {
 		// sha256ContextUpdate(&ctx, buf, i);
-		sha256ContextUpdate(&ctx, datas, size);
 	// }
+	sha256ContextUpdate(&ctx, datas, size);
 	sha256ContextGetHash(&ctx, sha256_hash);
 	// free(buf);
 	// fclose(file);
