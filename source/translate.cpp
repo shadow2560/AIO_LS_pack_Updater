@@ -206,6 +206,7 @@ const char* translation_vars_list[] =
 	"lng_install_pack_same_files",
 	"lng_install_pack_extract_file_protected",
 	"lng_install_pack_extract_file",
+	"lng_install_pack_file_write__retrying_error",
 	"lng_install_pack_file_write_error",
 	"lng_installing_pack_custom_files",
 	"lng_install_pack_configuring_hekate_autoboot",

@@ -207,6 +207,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_same_files", (char*) "Fichier \"%s\" identique dans le zip et sur la SD, copie du fichier non necessaire."}, \
 	{"lng_install_pack_extract_file_protected", (char*) "Extraction de: %-5s"}, \
 	{"lng_install_pack_extract_file", (char*) "Extraction de: %s"}, \
+	{"lng_install_pack_file_write__retrying_error", (char*) "Erreur d'ecriture du fichier \"%s\", tentative d'une nouvelle copie..."}, \
 	{"lng_install_pack_file_write_error", (char*) "Erreur d'ecriture du fichier \"%s\", verifiez l'espace libre sur votre SD."}, \
 	{"lng_installing_pack_custom_files", (char*) "Installation de fichiers complementaires au pack..."}, \
 	{"lng_install_pack_configuring_hekate_autoboot", (char*) "Configuration de l'autoboot de Hekate..."}, \

@@ -497,6 +497,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir_beta);
 		}
 	}
+short copy_retry=3;
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
@@ -657,13 +658,24 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				if (debug_enabled) {
 					debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
 				}
+				fclose(outfile);
+				unzCloseCurrentFile(zfile);
+				free(buf);
+				copy_retry--;
+				if (copy_retry > 0) {
+					if (debug_enabled) {
+						debug_log_write("Tentative de réécriture du fichier...\n");
+					}
+					printf("\033[0;31m");
+					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
+					printf("\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					continue;
+				}
 				printf("\033[0;31m");
 				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
-				fclose(outfile);
-				unzCloseCurrentFile(zfile);
-				free(buf);
 				unzClose(zfile);
 				return 1;
 			}
@@ -686,11 +698,22 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				if (debug_enabled) {
 					debug_log_write("Erreur durant l'ecriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
 				}
+				unzCloseCurrentFile(zfile);
+				copy_retry--;
+				if (copy_retry > 0) {
+					if (debug_enabled) {
+						debug_log_write("Tentative de réécriture du fichier...\n");
+					}
+					printf("\033[0;31m");
+					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
+					printf("\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					continue;
+				}
 				printf("\033[0;31m");
 				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
-				unzCloseCurrentFile(zfile);
 				unzClose(zfile);
 				return 1;
 			}
@@ -700,6 +723,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		if (debug_enabled) {
 			debug_log_write("Ecriture du fichier \"%s\" OK.\n", filename_on_sd);
 		}
+		copy_retry = 3;
 	}
 
 	unzClose(zfile);
