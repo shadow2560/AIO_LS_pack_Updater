@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <minizip/unzip.h>
 #include <switch.h>
 
 #include "main_util.h"
@@ -318,6 +319,24 @@ void get_sha256_data(void* datas, size_t size, char* ret) {
 	sha256ContextGetHash(&ctx, sha256_hash);
 	// free(buf);
 	// fclose(file);
+	for(int j = 0; j < 32; j++) {
+		sprintf(buf2, "%02x", sha256_hash[j]);
+		strcat(ret, buf2);
+	}
+	free(buf2);
+}
+
+void get_sha256_data_for_minizip_opened_file(unzFile* zfile, size_t buf_size, char* ret) {
+	char sha256_hash[0x50] = "";
+	char * buf = (char *) malloc(buf_size);
+	char * buf2 = (char *) malloc(3);
+	Sha256Context ctx;
+	sha256ContextCreate(&ctx);
+	for (size_t i = unzReadCurrentFile(*zfile, buf, buf_size); i > 0; i = unzReadCurrentFile(*zfile, buf, buf_size)) {
+		sha256ContextUpdate(&ctx, buf, i);
+	}
+	sha256ContextGetHash(&ctx, sha256_hash);
+	free(buf);
 	for(int j = 0; j < 32; j++) {
 		sprintf(buf2, "%02x", sha256_hash[j]);
 		strcat(ret, buf2);

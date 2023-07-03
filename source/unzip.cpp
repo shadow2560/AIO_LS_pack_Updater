@@ -473,7 +473,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	DIR *dir;
 	FILE *outfile;
 	void *buf;
-	void* temp_file;
+	// void* temp_file;
 	char sha256_in_test[65];
 	char sha256_out_test[65];
 	char *c1;
@@ -497,7 +497,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir_beta);
 		}
 	}
-short copy_retry=3;
+	short copy_retry=3;
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
@@ -604,10 +604,11 @@ short copy_retry=3;
 				outfile = fopen(filename_on_sd, "rb");
 				if (outfile != NULL) {
 					fclose(outfile);
-					temp_file = malloc(file_info.uncompressed_size + 1);
-					unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
-					get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
-					free(temp_file);
+					// temp_file = malloc(file_info.uncompressed_size + 1);
+					// unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
+					// get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
+					// free(temp_file);
+					get_sha256_data_for_minizip_opened_file(&zfile, WRITEBUFFERSIZE, sha256_in_test);
 					get_sha256_file(filename_on_sd, sha256_out_test);
 					// debug_log_write("%s - %s\n", sha256_in_test, sha256_out_test);
 					if (strcmp(sha256_in_test, sha256_out_test) == 0) {
@@ -689,10 +690,11 @@ short copy_retry=3;
 			if (strcmp(sha256_in_test, "") == 0) {
 				unzCloseCurrentFile(zfile);
 				unzOpenCurrentFile(zfile);
-				temp_file = malloc(file_info.uncompressed_size + 1);
-				unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
-				get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
-				free(temp_file);
+				// temp_file = malloc(file_info.uncompressed_size + 1);
+				// unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
+				// get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
+				// free(temp_file);
+				get_sha256_data_for_minizip_opened_file(&zfile, WRITEBUFFERSIZE, sha256_in_test);
 			}
 			if (strcmp(sha256_in_test, sha256_out_test) != 0) {
 				if (debug_enabled) {

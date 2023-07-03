@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+#include <minizip/unzip.h>
+
 void debug_log_start();
 void debug_log_write(const char *text, ...);
 bool custom_cp(char *filein, char *fileout);
@@ -22,6 +24,7 @@ s64 get_sd_size_left();
 bool is_emummc();
 void get_sha256_file(const char *filepath, char *ret);
 void get_sha256_data(void* datas, size_t size, char* ret);
+void get_sha256_data_for_minizip_opened_file(unzFile* zfile, size_t buf_size, char* ret);
 bool module_is_running(u64 module);
 void close_module(u64 module);
 
