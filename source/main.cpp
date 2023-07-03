@@ -32,7 +32,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "5.92.00"
+#define APP_VERSION			 "6.00.00"
 #define CURSOR_LIST_MAX		 5
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -1124,8 +1124,12 @@ void debug_write_config_infos() {
 	debug_log_write("Chemin du logo d'Atmosphere beta: %s\n", atmo_logo_dir_beta);
 	debug_log_write("Chemin de la config sans logo de Hekate: %s\n", hekate_nologo_file_path);
 	debug_log_write("Chemin de la config sans logo de Hekate beta: %s\n", hekate_nologo_file_path_beta);
+	debug_log_write("Vérifications SHA256 durant l'installation du pack: %i\n", pack_files_in_zip_sha256_verify_before_copy_param);
+	debug_log_write("Vérifications SHA256 durant l'installation du pack beta: %i\n", pack_files_in_zip_sha256_verify_before_copy_param_beta);
 	debug_log_write("Méthode de fermeture de l'application: %i\n", exit_mode_param);
 	debug_log_write("Méthode de fermeture de l'application beta: %i\n", exit_mode_param_beta);
+	debug_log_write("Temps du choix automatique du l'autoboot de Hekate: %i\n", install_pack_hekate_autoboot_choice_time);
+	debug_log_write("Temps du choix automatique du l'autoboot de Hekate beta: %i\n", install_pack_hekate_autoboot_choice_time_beta);
 	debug_log_write("Mode debug: %i\n", debug_enabled_param);
 	debug_log_write("Mode debug beta: %i\n\n", debug_enabled_param_beta);
 	}
@@ -1377,8 +1381,8 @@ while ((de = readdir(dr)) != nullptr)
 	std::sort(iniFiles.begin(), iniFiles.end());
 	if (!iniFiles.empty()) {
 		// get boot entries from ini folder files
+		char file[FS_MAX_PATH] = "/bootloader/ini/";
 		for (auto const &iniFile : iniFiles) {
-			char file[FS_MAX_PATH] = "/bootloader/ini/";
 			strcat(file, iniFile.c_str());
 			parseIniFile(file, &iniData,  false);
 		}
