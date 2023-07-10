@@ -51,6 +51,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_update_hbmenu_menu", (char*) "= Installation de l'icone du Homebrew Menu (recommande si vous le l'avez pas)"}, \
 	{"lng_set_90dns_menu", (char*) "= Application de la protection DNS sur tous les reseaux Wifi deja configures"}, \
 	{"lng_protect_console_menu", (char*) "= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"}, \
+	{"lng_install_app_fwd_menu", (char*) "= Installation de l'icone de cet homebrew"}, \
 \
 	{"lng_infos_begin", (char*) "Informations:"}, \
 	{"lng_infos_is_applet", (char*) "Homebrew en mode applet, utilisation non recommandee."}, \
@@ -106,6 +107,10 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_hbmenu_install_success", (char*) "Installation du forwarder du Homebrew Menu effectuee."}, \
 	{"lng_hbmenu_install_error", (char*) "Une erreur s'est produite durant l'installation du forwarder du Homebrew Menu.\nVos sig_patches ne sont peut-etre pas a jour, l'espace restant sur votre stockage est peut-etre insufisant ou vous avez peut-etre de la corruption de donnees sur votre SD ou votre nand/emunand."}, \
 \
+	{"lng_app_fwd_install_begin", (char*) "Installation du forwarder de cet homebrew en cours..."}, \
+	{"lng_app_fwd_install_success", (char*) "Installation du forwarder de cet homebrew effectuee."}, \
+	{"lng_app_fwd_install_error", (char*) "Une erreur s'est produite durant l'installation du forwarder de cet homebrew.\nVos sig_patches ne sont peut-etre pas a jour, l'espace restant sur votre stockage est peut-etre insufisant ou vous avez peut-etre de la corruption de donnees sur votre SD ou votre nand/emunand."}, \
+\
 	{"lng_battery_error_10", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 10%% de batterie."}, \
 	{"lng_battery_error_20", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie."}, \
 	{"lng_battery_error_30", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie."}, \
@@ -127,6 +132,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_hekate_autoboot", (char*) "Souhaitez-vous activer l'autoboot sur une configuration de Hekate (le choix de la configuration lancee sera a faire durant l'installation du pack et sera obligatoire; pour demarrer sous Hekate avec l'autoboot actif il faut maintenir \"vol-\" au lancement de Hekate (avec certaines puces maintenir le bouton juste apres le glitch))? Si non l'autoboot de Hekate sera desactivé."}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
+	{"lng_ask_app_fwd_install", (char*) "Souhaitez-vous installer l'icone du forwarder de cet homebrew?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
 \
 	{"lng_install_firmware_end_error", (char*) "Une erreur s'est produite durant l'installation du firmware."}, \
@@ -200,6 +206,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_install_pack_recap_not_clean_logos", (char*) "Les logos du pack ne seront pas supprimes."}, \
 	{"lng_install_pack_recap_install_hbmenu", (char*) "L'icone du Homebrew Menu sera mis en place."}, \
 	{"lng_install_pack_recap_not_install_hbmenu", (char*) "L'icone du Homebrew Menu ne sera pas mis en place."}, \
+	{"lng_install_pack_recap_install_app_fwd", (char*) "L'icone du forwarder de cet homebrew sera mis en place."}, \
+	{"lng_install_pack_recap_not_install_app_fwd", (char*) "L'icone du forwarder de cet homebrew ne sera pas mis en place."}, \
 	{"lng_install_pack_download_pack_error", (char*) "Une erreure est survenue lors du telechargement du pack."}, \
 	{"lng_install_custom_files_pack_download_error", (char*) "Une erreure est survenue lors du telechargement du fichier zip complementaire au pack."}, \
 	{"lng_install_pack_file_skip", (char*) "Saut de la copie du fichier ou dossier \"%s\" via la protection de fichiers"}, \

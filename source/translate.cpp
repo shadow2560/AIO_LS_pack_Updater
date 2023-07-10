@@ -50,6 +50,7 @@ const char* translation_vars_list[] =
 	"lng_update_hbmenu_menu",
 	"lng_set_90dns_menu",
 	"lng_protect_console_menu",
+	"lng_install_app_fwd_menu",
 
 	"lng_infos_begin",
 	"lng_infos_is_applet",
@@ -105,6 +106,10 @@ const char* translation_vars_list[] =
 	"lng_hbmenu_install_success",
 	"lng_hbmenu_install_error",
 
+"lng_app_fwd_install_begin",
+	"lng_app_fwd_install_success",
+	"lng_app_fwd_install_error",
+
 	"lng_battery_error_10",
 	"lng_battery_error_20",
 	"lng_battery_error_30",
@@ -126,6 +131,7 @@ const char* translation_vars_list[] =
 	"lng_ask_hekate_autoboot",
 	"lng_ask_clean_logos",
 	"lng_ask_hbmenu_install",
+	"lng_ask_app_fwd_install",
 	"lng_ask_validate_choices",
 
 	"lng_install_firmware_end_error",
@@ -199,6 +205,8 @@ const char* translation_vars_list[] =
 	"lng_install_pack_recap_not_clean_logos",
 	"lng_install_pack_recap_install_hbmenu",
 	"lng_install_pack_recap_not_install_hbmenu",
+	"lng_install_pack_recap_install_app_fwd",
+	"lng_install_pack_recap_not_install_app_fwd",
 	"lng_install_pack_download_pack_error",
 	"lng_install_custom_files_pack_download_error",
 	"lng_install_pack_file_skip",

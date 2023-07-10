@@ -77,6 +77,7 @@ typedef struct{
 	short hekate_autoboot_enable;
 	short delete_logos;
 	short hbmenu_install;
+	short app_fwd_install;
 } autoconfig_config_section;
 
 // define a structure for holding all of the config of the ini file.

@@ -26,20 +26,22 @@
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
+const u64 app_title_id = 0x0157ba2eaeab0000;
 
 translation_map language_vars;
 #define ROOT					"/"
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.00.01"
-#define CURSOR_LIST_MAX		 5
+#define APP_VERSION			 "6.10.00"
+#define CURSOR_LIST_MAX		 6
 #define UP_APP		  0
 #define UP_CFW		  1
 #define UP_FW		  2
 #define UP_HBMENU_INSTALL		  3
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
+#define UP_APP_INSTALL		  6
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 bool debug_enabled = true;
 
@@ -993,6 +995,66 @@ bool install_hbmenu() {
 	}
 }
 
+bool install_app_fwd() {
+	if (debug_enabled) {
+		debug_log_write("Installation du forwarder du homebrew.\n");
+	}
+	printDisplay(language_vars["lng_app_fwd_install_begin"]);
+	printDisplay("\n\n");
+	std::vector<std::filesystem::path> nsp_list;
+	std::filesystem::path nsp_path;
+	inst::util::initInstallServices();
+	std::vector<std::pair<u64, u32>> installedTitles;
+	installedTitles = inst::util::listInstalledTitles();
+	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
+		if (installedTitles[i].first == app_title_id) {
+			if (debug_enabled) {
+				debug_log_write("Désinstallation du forwarder du homebrew.\n");
+			}
+			printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
+			printDisplay("\n");
+			if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
+				if (debug_enabled) {
+					debug_log_write("Erreur durant la désinstallation du forwarder du homebrew.\n\n");
+				}
+				printDisplay("\033[0;31m");
+				printDisplay(language_vars["lng_hbmenu_install_uninstall_error"]);
+				printDisplay("\033[0;37m\n\n");
+				inst::util::deinitInstallServices();
+				return false;
+			} else {
+	if (debug_enabled) {
+		debug_log_write("Désinstallation du forwarder du homebrew OK.\n");
+	}
+				printDisplay("\033[0;32m");
+				printDisplay(language_vars["lng_hbmenu_install_uninstall_success"]);
+				printDisplay("\033[0;37m\n\n");
+			}
+			break;
+		}
+	}
+		inst::util::deinitInstallServices();
+	nsp_path = "romfs:/nsp/AIO_LS_pack_Updater_0157ba2eaeab0000.nsp";
+	nsp_list.push_back(nsp_path);
+	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
+		if (debug_enabled) {
+			debug_log_write("Installation du forwarder du homebrew OK.\n\n");
+		}
+		printDisplay("\033[0;32m");
+		printDisplay(language_vars["lng_app_fwd_install_success"]);
+		printDisplay("\033[0;37m\n");
+		return true;
+	} else {
+		if (debug_enabled) {
+			debug_log_write("Erreur d'installation du forwarder du homebrew.\n\n");
+		}
+		printDisplay("\033[0;31m");
+		printDisplay(language_vars["lng_app_fwd_install_error"]);
+		printDisplay("\033[0;37m\n");
+		return false;
+	}
+}
+
 void menu_init() {
 OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[1] = language_vars["lng_update_pack_menu"];
@@ -1000,6 +1062,7 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[3] = language_vars["lng_update_hbmenu_menu"];
 	OPTION_LIST[4] = language_vars["lng_set_90dns_menu"];
 	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
+	OPTION_LIST[6] = language_vars["lng_install_app_fwd_menu"];
 }
 
 void set_emummc_values() {
@@ -1607,6 +1670,7 @@ void update_app_autoconfig_params() {
 	bool hekate_autoboot_enable = false;
 	bool clean_logos = false;
 	bool install_hbmenu_choice = false;
+	bool install_app_fwd_choice = false;
 	full_app_control = ask_question((char*) language_vars["lng_ask_autoconfig_full_control"]);
 	beta_launch = ask_question((char*) language_vars["lng_ask_autoconfig_beta_launch"]);
 	update_firmware = ask_question((char*) language_vars["lng_ask_update_firmware"]);
@@ -1621,6 +1685,7 @@ void update_app_autoconfig_params() {
 	hekate_autoboot_enable = ask_question((char*) language_vars["lng_ask_hekate_autoboot"]);;
 	clean_logos = ask_question((char*) language_vars["lng_ask_clean_logos"]);
 	install_hbmenu_choice = ask_question((char*) language_vars["lng_ask_hbmenu_install"]);
+	install_app_fwd_choice = ask_question((char*) language_vars["lng_ask_app_fwd_install"]);
 	printDisplay(language_vars["lng_autoconfig_recap_begin"]);
 	printDisplay("\n\n");
 	if (full_app_control) {
@@ -1684,6 +1749,11 @@ void update_app_autoconfig_params() {
 	} else {
 		printDisplay(language_vars["lng_install_pack_recap_not_install_hbmenu"]);
 	}
+	if (install_app_fwd_choice) {
+		printDisplay(language_vars["lng_install_pack_recap_install_app_fwd"]);
+	} else {
+		printDisplay(language_vars["lng_install_pack_recap_not_install_app_fwd"]);
+	}
 	printDisplay("\n");
 	bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
 	if (validate_choice) {
@@ -1742,6 +1812,11 @@ void update_app_autoconfig_params() {
 			fputs("hbmenu_install = 1\n", config);
 		} else {
 			fputs("hbmenu_install = 0\n", config);
+		}
+		if (install_app_fwd_choice) {
+			fputs("app_fwd_install = 1\n", config);
+		} else {
+			fputs("app_fwd_install = 0\n", config);
 		}
 		fclose(config);
 		printDisplay(language_vars["lng_autoconfig_set_success"]);
@@ -2335,6 +2410,7 @@ int main(int argc, char **argv) {
 				bool hekate_autoboot_enable = false;
 				bool clean_logos = false;
 				bool install_hbmenu_choice = false;
+				bool install_app_fwd_choice = false;
 				if (!autoconfig_enabled) {
 					if (!beta_mode) {
 						if (strcmp(firmware_path, "") != 0) {
@@ -2411,6 +2487,13 @@ int main(int argc, char **argv) {
 				} else {
 					if (autoconfig_config.c1.hbmenu_install == 1) {
 						install_hbmenu_choice = true;
+					}
+				}
+				if (!autoconfig_enabled) {
+					install_app_fwd_choice = ask_question((char*) language_vars["lng_ask_app_fwd_install"]);
+				} else {
+					if (autoconfig_config.c1.app_fwd_install == 1) {
+						install_app_fwd_choice = true;
 					}
 				}
 				/*
@@ -2518,6 +2601,11 @@ int main(int argc, char **argv) {
 				} else {
 					printDisplay(language_vars["lng_install_pack_recap_not_install_hbmenu"]);
 				}
+				if (install_app_fwd_choice) {
+					printDisplay(language_vars["lng_install_pack_recap_install_app_fwd"]);
+				} else {
+					printDisplay(language_vars["lng_install_pack_recap_not_install_app_fwd"]);
+				}
 				printDisplay("\n");
 				bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
 				if (validate_choice) {
@@ -2559,9 +2647,14 @@ int main(int argc, char **argv) {
 								debug_log_write("Non nettoyage des logos.\n");
 							}
 							if (install_hbmenu_choice) {
-								debug_log_write("Installation du HBMenu.\n\n");
+								debug_log_write("Installation du HBMenu.\n");
 							} else {
-								debug_log_write("Non installation du HBMenu.\n\n");
+								debug_log_write("Non installation du HBMenu.\n");
+							}
+							if (install_app_fwd_choice) {
+								debug_log_write("Installation du forwarder de cet homebrew.\n\n");
+							} else {
+								debug_log_write("Non installation du forwarder de cet homebrew.\n\n");
 							}
 						}
 					bool not_has_enough_space_on_sd;
@@ -2741,6 +2834,9 @@ int main(int argc, char **argv) {
 								if (install_hbmenu_choice) {
 									install_hbmenu();
 								}
+								if (install_hbmenu_choice) {
+									install_app_fwd();
+								}
 								if (update_firmware) {
 									fnc_install_firmware();
 								}
@@ -2872,6 +2968,14 @@ int main(int argc, char **argv) {
 			{
 				consoleSelect(&logs_console);
 				install_hbmenu();
+				consoleSelect(&menu_console);
+				break;
+			}
+
+			case UP_APP_INSTALL:
+			{
+				consoleSelect(&logs_console);
+				install_app_fwd();
 				consoleSelect(&menu_console);
 				break;
 			}
