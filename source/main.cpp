@@ -33,7 +33,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.10.00"
+#define APP_VERSION			 "6.10.01"
 #define CURSOR_LIST_MAX		 6
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -2834,7 +2834,7 @@ int main(int argc, char **argv) {
 								if (install_hbmenu_choice) {
 									install_hbmenu();
 								}
-								if (install_hbmenu_choice) {
+								if (install_app_fwd_choice) {
 									install_app_fwd();
 								}
 								if (update_firmware) {
