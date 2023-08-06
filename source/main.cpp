@@ -33,7 +33,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.10.01"
+#define APP_VERSION			 "6.20.00"
 #define CURSOR_LIST_MAX		 6
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -115,6 +115,7 @@ bool beta_mode = false;
 
 
 PadState pad;
+MemoryStruct_t file_dl_in_memory;
 
 PrintConsole menu_console;
 PrintConsole logs_console;
@@ -341,15 +342,17 @@ void get_last_version_pack() {
 	bool res;
 	consoleSelect(&logs_console);
 	if (!beta_mode) {
-		res = downloadFile(pack_version_url, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_version_url, &file_dl_in_memory, OFF, false);
 	} else {
-		res = downloadFile(pack_version_url_beta, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_version_url_beta, &file_dl_in_memory, OFF, false);
 	}
 	if (res) {
 		logs_console_clear();
-		pack_version_file = fopen(TEMP_FILE, "r");
+		pack_version_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_version_file == NULL) {
 			consoleSelect(&menu_console);
+			free(file_dl_in_memory.memory);
+			file_dl_in_memory.size = 0;
 			return;
 		}
 		char * buffer = (char *) malloc( 30 );
@@ -366,6 +369,8 @@ void get_last_version_pack() {
 		last_pack_version[i] = '\0';
 		free(buffer);
 		fclose(pack_version_file);
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.size = 0;
 	}
 	consoleSelect(&menu_console);
 }
@@ -377,16 +382,18 @@ void get_last_sha256_custom_files_pack() {
 		if (strcmp(pack_custom_files_sha256_url, "") == 0) {
 			return;
 		}
-		res = downloadFile(pack_custom_files_sha256_url, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_custom_files_sha256_url, &file_dl_in_memory, OFF, false);
 	} else {
 		if (strcmp(pack_custom_files_sha256_url_beta, "") == 0) {
 			return;
 		}
-		res = downloadFile(pack_custom_files_sha256_url_beta, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_custom_files_sha256_url_beta, &file_dl_in_memory, OFF, false);
 	}
 	if (res) {
-		pack_sha256_file = fopen(TEMP_FILE, "r");
+		pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_sha256_file == NULL) {
+			free(file_dl_in_memory.memory);
+			file_dl_in_memory.size = 0;
 			return;
 		}
 		char * buffer = (char *) malloc( 65 );
@@ -403,6 +410,8 @@ void get_last_sha256_custom_files_pack() {
 		custom_files_pack_sha256[i] = '\0';
 		free(buffer);
 		fclose(pack_sha256_file);
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.size = 0;
 	}
 }
 
@@ -413,18 +422,20 @@ void get_last_sha256_pack() {
 		if (strcmp(pack_sha256_url, "") == 0) {
 			return;
 		}
-		res = downloadFile(pack_sha256_url, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_sha256_url, &file_dl_in_memory, OFF, false);
 	} else {
 		if (strcmp(pack_sha256_url_beta, "") == 0) {
 			return;
 		}
-		res = downloadFile(pack_sha256_url_beta, TEMP_FILE, OFF, false);
+		res = downloadInMemory(pack_sha256_url_beta, &file_dl_in_memory, OFF, false);
 	}
 	if (res) {
 		logs_console_clear();
 		consoleSelect(&logs_console);
-		pack_sha256_file = fopen(TEMP_FILE, "r");
+		pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_sha256_file == NULL) {
+			free(file_dl_in_memory.memory);
+			file_dl_in_memory.size = 0;
 			return;
 		}
 		char * buffer = (char *) malloc( 65 );
@@ -441,6 +452,8 @@ void get_last_sha256_pack() {
 		pack_sha256[i] = '\0';
 		free(buffer);
 		fclose(pack_sha256_file);
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.size = 0;
 	}
 }
 
@@ -451,18 +464,20 @@ void get_last_sha256_app() {
 		if (strcmp(app_sha256_url, "") == 0) {
 			return;
 		}
-		res = downloadFile(app_sha256_url, TEMP_FILE, OFF, false);
+		res = downloadInMemory(app_sha256_url, &file_dl_in_memory, OFF, false);
 	} else {
 		if (strcmp(app_sha256_url_beta, "") == 0) {
 			return;
 		}
-		res = downloadFile(app_sha256_url_beta, TEMP_FILE, OFF, false);
+		res = downloadInMemory(app_sha256_url_beta, &file_dl_in_memory, OFF, false);
 	}
 	if (res) {
 		logs_console_clear();
 		consoleSelect(&logs_console);
-		app_sha256_file = fopen(TEMP_FILE, "r");
+		app_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (app_sha256_file == NULL) {
+			free(file_dl_in_memory.memory);
+			file_dl_in_memory.size = 0;
 			return;
 		}
 		char * buffer = (char *) malloc( 65 );
@@ -479,6 +494,8 @@ void get_last_sha256_app() {
 		app_sha256[i] = '\0';
 		free(buffer);
 		fclose(app_sha256_file);
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.size = 0;
 	}
 }
 
@@ -488,15 +505,17 @@ void get_last_version_app() {
 	bool res;
 	consoleSelect(&logs_console);
 	if (!beta_mode) {
-		res = downloadFile(app_version_url, TEMP_FILE, OFF, false);
+		res = downloadInMemory(app_version_url, &file_dl_in_memory, OFF, false);
 	} else {
-		res = downloadFile(app_version_url_beta, TEMP_FILE, OFF, false);
+		res = downloadInMemory(app_version_url_beta, &file_dl_in_memory, OFF, false);
 	}
 	if (res) {
 		logs_console_clear();
-		pack_version_file = fopen(TEMP_FILE, "r");
+		pack_version_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_version_file == NULL) {
 			consoleSelect(&menu_console);
+			free(file_dl_in_memory.memory);
+			file_dl_in_memory.size = 0;
 			return;
 		}
 		char * buffer = (char *) malloc( 30 );
@@ -513,6 +532,8 @@ void get_last_version_app() {
 		last_app_version[i] = '\0';
 		free(buffer);
 		fclose(pack_version_file);
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.size = 0;
 	}
 	consoleSelect(&menu_console);
 }

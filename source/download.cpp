@@ -28,18 +28,6 @@ bool dl_speed_displayed = false;
 float dl_speed = 0;
 double dlold;
 
-typedef struct {
-	char *memory;
-	size_t size;
-} MemoryStruct_t;
-
-typedef struct {
-	u_int8_t *data;
-	size_t data_size;
-	u_int64_t offset;
-	FILE *out;
-} ntwrk_struct_t;
-
 static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files, void *userp) {
 	ntwrk_struct_t *data_struct = (ntwrk_struct_t *)userp;
 	size_t realsize = size * num_files;
@@ -52,6 +40,27 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 	memcpy(&data_struct->data[data_struct->offset], contents, realsize);
 	data_struct->offset += realsize;
 	data_struct->data[data_struct->offset] = 0;
+	return realsize;
+}
+
+static size_t WriteMemoryCallback2(void *contents, size_t size, size_t nmemb, void *userp) {
+	size_t realsize = size * nmemb;
+	MemoryStruct_t *mem = (MemoryStruct_t *)userp;
+
+	char *ptr = (char *) realloc(mem->memory, mem->size + realsize + 1);
+	if(!ptr) {
+		/* out of memory! */
+		if (debug_enabled) {
+			debug_log_write("Pas assez de mémoire.\n");
+		}
+		return 0;
+	}
+
+	mem->memory = ptr;
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
 	return realsize;
 }
 
@@ -215,6 +224,117 @@ dl_speed = 0;
 			if (debug_enabled) {
 				debug_log_write("Erreur d'ouverture du fichier temporaire.\n\n");
 			}
+			return false;
+		}
+	} else {
+		if (display_log) {
+			printf("\n\n\033[0;31m");
+			printf(language_vars["lng_dl_curl_init_error"]);
+			printf("\033[0;37m\n\n");
+			consoleUpdate(&logs_console);
+		}
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+		if (debug_enabled) {
+			debug_log_write("Erreur d'initialisation de Curl.\n\n");
+		}
+		return false;
+	}
+
+	curl_easy_cleanup(curl);
+	curl_global_cleanup();
+	if (debug_enabled) {
+		debug_log_write("Erreur inconnue.\n\n");
+	}
+	return false;
+}
+
+bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_log) {
+	if (display_log) {
+		printf("\n\033[0;32m");
+		printf(language_vars["lng_dl_begin"], url);
+		printf("\033[0;37m\n");
+		consoleUpdate(&logs_console);
+	}
+	if (debug_enabled) {
+		debug_log_write("Téléchargement de \"%s\".\n", url);
+	}
+first = true;
+dl_speed_displayed = false;
+dl_speed = 0;
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+	CURL *curl = curl_easy_init();
+	if (curl) {
+		if (display_log) {
+			printf("\n");
+		}
+
+		chunk->memory = (char *) malloc(1);
+		chunk->size = 0;
+
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, API_AGENT);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+		// write calls
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback2);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)chunk);
+
+		if (api == OFF) {
+			if (display_log) {
+				curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+				curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
+			}
+		}
+
+		// execute curl, save result
+		CURLcode res = curl_easy_perform(curl);
+
+		// Verify if something has been downloaded
+		if (chunk->size <= 0) {
+			if (display_log) {
+				printf("\033[0;31m");
+				printf(language_vars["lng_dl_file_write_error"]);
+				printf("\033[0;37m\n");
+				consoleUpdate(&logs_console);
+			}
+			if (debug_enabled) {
+				debug_log_write("Erreur durant l'écriture du fichier ou durant le téléchargement.\n\n");
+			}
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			free(chunk->memory);
+			return false;
+		}
+
+		if (res == CURLE_OK) {
+			if (display_log) {
+				printf("\n\n\033[0;32m");
+				printf(language_vars["lng_dl_success"]);
+				printf("\033[0;37m\n\n");
+				consoleUpdate(&logs_console);
+			}
+			if (debug_enabled) {
+				debug_log_write("Téléchargement OK.\n\n");
+			}
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			return true;
+		} else {
+			if (display_log) {
+				printf("\n\n\033[0;31m");
+				printf(language_vars["lng_dl_dl_error"]);
+				printf("\033[0;37m\n\n");
+				consoleUpdate(&logs_console);
+			}
+			if (debug_enabled) {
+				debug_log_write("Erreur de Téléchargement.\n\n");
+			}
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			free(chunk->memory);
 			return false;
 		}
 	} else {
