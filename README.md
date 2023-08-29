@@ -48,9 +48,9 @@ Here are some Rules to translate correctly the app:
 
 ## How to build 🏗️
 
-To build the project you have to download devkitPro, install devkitPro and the main Switch's libs and follow these commands :
+To build the project you have to download devkitPro, install devkitPro and the main Switch's libs and follow these commands (no need "sudo" for windows):
 
-``sudo pacman -S switch-curl switch-zlib``  
+``sudo pacman -S switch-curl switch-zlib switch-zziplib switch-libzstd switch-mbedtls``  
 ``git clone https://github.com/shadow2560/AIO_LS_pack_Updater.git``  
 ``cd AIO_LS_pack_Updater``  
 ``cd amssu-rcm``
