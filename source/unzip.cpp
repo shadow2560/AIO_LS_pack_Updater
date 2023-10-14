@@ -468,6 +468,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	// debug_log_write("%ld\n\n", strlen(subfolder_in_zip));
 	bool detected_payload_bin = false;
 	char filename_inzip[FS_MAX_PATH] = {0};
+	// char dirname_on_sd[FS_MAX_PATH] = {0};
 	char filename_on_sd[FS_MAX_PATH] = {0};
 	unz_file_info file_info = {0};
 	DIR *dir;
@@ -507,6 +508,30 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
 		strcpy(filename_on_sd, c1);
 		free(c1);
+		/*
+		uLong l = strlen(filename_on_sd)-1;
+		while(1) {
+			if (l < 0) {
+				break;
+			}
+			if (filename_on_sd[l] == '/') {
+				break;
+			}
+			l--;
+		}
+		if (l < 0) {
+			strcpy(dirname_on_sd, "");
+		} else if (filename_on_sd[0] != '/') {
+			c1 = substr(filename_on_sd, 0, l);
+			strcpy(dirname_on_sd, c1);
+			free(c1);
+		} else {
+			c1 = substr(filename_on_sd, 1, l);
+			strcpy(dirname_on_sd, c1);
+			free(c1);
+		}
+		// debug_log_write("%s\n", dirname_on_sd);
+		*/
 		/*
 		int k = 0;
 		for (uLong j = subfolder_in_zip_length; j < strlen(filename_inzip); j++) {
@@ -554,6 +579,14 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				unzGoToNextFile(zfile);
 				continue;
 			}
+		}
+		if (strcmp(filename_on_sd, "") == 0) {
+			if (debug_enabled) {
+				debug_log_write("Problème de copie, ce dossier ou fichier n'a pas de nom et ne doit donc pas être copié.\n");
+			}
+			unzCloseCurrentFile(zfile);
+			unzGoToNextFile(zfile);
+			continue;
 		}
 		// check if the string ends with a /, if so, then its a directory.
 		if ((filename_on_sd[strlen(filename_on_sd) - 1]) == '/') {

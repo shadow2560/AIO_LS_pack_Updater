@@ -33,7 +33,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.20.00"
+#define APP_VERSION			 "6.20.01"
 #define CURSOR_LIST_MAX		 6
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -1253,8 +1253,8 @@ bool verify_update(char* local_version, char* remote_version) {
 	char remote_test[strlen(remote_version)+1];
 	size_t i = 0;
 	size_t j = 0;
-	int k;
-	int l;
+	size_t k;
+	size_t l;
 	bool break_local_while;
 	bool break_remote_while;
 	int local_version_test;
