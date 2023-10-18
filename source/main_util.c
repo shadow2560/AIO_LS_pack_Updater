@@ -278,6 +278,14 @@ bool is_emummc() {
 	}
 }
 
+void smcAmsGetEmunandConfig(EmummcPaths* out_paths) {
+	SecmonArgs args = {};
+	args.X[0] = 0xF0000404; /* smcAmsGetEmunandConfig */
+	args.X[1] = 0; /* EXO_EMUMMC_MMC_NAND*/
+	args.X[2] = (u64)out_paths; /* out path */
+	svcCallSecureMonitor(&args);
+}
+
 void get_sha256_file(const char* filepath, char* ret) {
 	// ret = "";
 	FILE *file = fopen(filepath, "rb");

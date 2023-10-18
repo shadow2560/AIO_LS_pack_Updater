@@ -33,8 +33,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.20.01"
-#define CURSOR_LIST_MAX		 6
+#define APP_VERSION			 "6.20.02"
+#define CURSOR_LIST_MAX		 7
 #define UP_APP		  0
 #define UP_CFW		  1
 #define UP_FW		  2
@@ -42,6 +42,7 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 #define UP_APP_INSTALL		  6
+#define UP_RESET		  7
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 bool debug_enabled = true;
 
@@ -96,6 +97,7 @@ char firmware_version[50];
 char atmosphere_version[50];
 char emummc_value[50];
 char emummc_type[50];
+EmummcPaths emummc_paths{};
 char fusee_gelee_patch[50];
 char console_model[50];
 u64 console_id = 0;
@@ -571,6 +573,14 @@ void get_ams_version() {
 	splExit();
 	if (is_emummc()) {
 		strcpy(emummc_value, "Emunand");
+		smcAmsGetEmunandConfig(&emummc_paths);
+		if (emummc_paths.path[0] != '\0' && emummc_paths.nintendo[0] != '\0') {
+			strcpy(emummc_type, language_vars["lng_files"]);
+		} else if (emummc_paths.path[0] == '\0' && emummc_paths.nintendo[0] != '\0') {
+			strcpy(emummc_type, language_vars["lng_partition"]);
+		} else {
+			strcpy(emummc_type, language_vars["lng_unknown_0"]);
+		}
 	} else {
 		strcpy(emummc_value,"Sysnand");
 	}
@@ -740,8 +750,8 @@ void display_infos(int cursor) {
 	if (!is_emummc()) {
 		printf(language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		// printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
-		printf(language_vars["lng_infos_emunand"], emummc_value);
+		printf(language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		// printf(language_vars["lng_infos_emunand"], emummc_value);
 	}
 	printf("\n");
 	printf(language_vars["lng_infos_console_model"], console_model);
@@ -827,8 +837,8 @@ void record_infos() {
 	if (!is_emummc()) {
 		fprintf(log_infos, language_vars["lng_infos_sysnand"], emummc_value);
 	} else {
-		// fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
-		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value);
+		fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value, emummc_type);
+		// fprintf(log_infos, language_vars["lng_infos_emunand"], emummc_value);
 	}
 	fprintf(log_infos, "\n");
 	fprintf(log_infos, language_vars["lng_infos_console_model"], console_model);
@@ -1084,6 +1094,7 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[4] = language_vars["lng_set_90dns_menu"];
 	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
 	OPTION_LIST[6] = language_vars["lng_install_app_fwd_menu"];
+	OPTION_LIST[7] = language_vars["lng_reset_menu"];
 }
 
 void set_emummc_values() {
@@ -1227,10 +1238,14 @@ void debug_write_console_infos() {
 		debug_log_write("Version du firmware: %s\n", firmware_version);
 		debug_log_write("Version d'Atmosphere: %s\n", atmosphere_version);
 		if (!is_emummc()) {
-		debug_log_write("Console en sysnand.\n");
+			debug_log_write("Console en sysnand.\n");
 		} else {
-			//  debug_log_write("Console en emunand de type %s.\n", emummc_type);
-			debug_log_write("Console en emunand.\n");
+			debug_log_write("Console en emunand de type %s.\n", emummc_type);
+			if (emummc_paths.path[0] != '\0') {
+				debug_log_write("Dossier associé à l'emunand: %s\n", emummc_paths.path);
+			}
+			debug_log_write("Dossier nintendo associé à l'emunand: %s\n", emummc_paths.nintendo);
+			// debug_log_write("Console en emunand.\n");
 		}
 		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
 		debug_log_write("Modèle de la console: %s\n", console_model);
@@ -2997,6 +3012,29 @@ int main(int argc, char **argv) {
 			{
 				consoleSelect(&logs_console);
 				install_app_fwd();
+				consoleSelect(&menu_console);
+				break;
+			}
+
+			case UP_RESET:
+			{
+				consoleSelect(&logs_console);
+				if (ask_question((char*) language_vars["lng_ask_validate_choices_for_reset"])) {
+					if (debug_enabled) {
+						debug_log_write("Réinitialisation du système.\n\n");
+					}
+					if (is_emummc()) {
+						remove_directory(emummc_paths.nintendo);
+					} else {
+						remove_directory("nintendo");
+					}
+					nsResetToFactorySettingsForRefurbishment();
+					printDisplay("\033[0;32m\n");
+					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
+					printDisplay("\033[0;37m\n");
+					sleep(5);
+					simple_reboot();
+				}
 				consoleSelect(&menu_console);
 				break;
 			}

@@ -51,6 +51,7 @@ const char* translation_vars_list[] =
 	"lng_set_90dns_menu",
 	"lng_protect_console_menu",
 	"lng_install_app_fwd_menu",
+	"lng_reset_menu",
 
 	"lng_infos_begin",
 	"lng_infos_is_applet",
@@ -133,6 +134,7 @@ const char* translation_vars_list[] =
 	"lng_ask_hbmenu_install",
 	"lng_ask_app_fwd_install",
 	"lng_ask_validate_choices",
+	"lng_ask_validate_choices_for_reset",
 
 	"lng_install_firmware_end_error",
 	"lng_install_firmware_end_success",

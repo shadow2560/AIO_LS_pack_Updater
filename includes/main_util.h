@@ -8,6 +8,11 @@ extern "C" {
 
 #include <minizip/unzip.h>
 
+typedef struct {
+    char path[0x80];
+    char nintendo[0x80];
+} EmummcPaths;
+
 void debug_log_start();
 void debug_log_write(const char *text, ...);
 bool custom_cp(char *filein, char *fileout);
@@ -22,6 +27,7 @@ u32 get_battery_charge();
 int GetChargerType();
 s64 get_sd_size_left();
 bool is_emummc();
+void smcAmsGetEmunandConfig(EmummcPaths* out_paths);
 void get_sha256_file(const char *filepath, char *ret);
 void get_sha256_data(void* datas, size_t size, char* ret);
 void get_sha256_data_for_minizip_opened_file(unzFile* zfile, size_t buf_size, char* ret);

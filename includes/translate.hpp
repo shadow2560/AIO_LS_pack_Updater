@@ -52,6 +52,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_set_90dns_menu", (char*) "= Application de la protection DNS sur tous les reseaux Wifi deja configures"}, \
 	{"lng_protect_console_menu", (char*) "= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"}, \
 	{"lng_install_app_fwd_menu", (char*) "= Installation de l'icone de cet homebrew"}, \
+	{"lng_reset_menu", (char*) "= Reinitialisation du systeme"}, \
 \
 	{"lng_infos_begin", (char*) "Informations:"}, \
 	{"lng_infos_is_applet", (char*) "Homebrew en mode applet, utilisation non recommandee."}, \
@@ -62,7 +63,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_infos_serial_incognito", (char*) "Numero de serie de la console  indetectable, Incognito est actif."}, \
 	{"lng_infos_serial", (char*) "Numero de serie de la console : %s"}, \
 	{"lng_infos_sysnand", (char*) "Type de systeme : %s"}, \
-	{"lng_infos_emunand", (char*) "Type de systeme : %s"}, \
+	{"lng_infos_emunand", (char*) "Type de systeme : %s via %s"}, \
 	{"lng_infos_console_model", (char*) "Modele de la console : %s"}, \
 	{"lng_infos_fusee_gelee_patch", (char*) "Etat de l'exploit Fusee Gelee : %s"}, \
 	{"lng_infos_actual_firmware_version", (char*) "Version actuelle du firmware : %s"}, \
@@ -134,6 +135,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
 	{"lng_ask_app_fwd_install", (char*) "Souhaitez-vous installer l'icone du forwarder de cet homebrew?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
+	{"lng_ask_validate_choices_for_reset", (char*) "Ceci va reinitialiser le systeme, toutes les donnees liees a celui-ci seront supprimees.\n\nSouhaitez-vous vraiment continuer?"}, \
 \
 	{"lng_install_firmware_end_error", (char*) "Une erreur s'est produite durant l'installation du firmware."}, \
 	{"lng_install_firmware_end_success", (char*) "Mise a jour du firmware effectuee."}, \
