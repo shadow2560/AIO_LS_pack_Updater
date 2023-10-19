@@ -609,7 +609,7 @@ void get_fusee_gelee_exploit() {
 	if (hardware_type == 0) {
 		strcpy(console_model, "Switch Erista Icosa");
 	}
-	if (hardware_type == 0) {
+	if (hardware_type == 1) {
 		strcpy(console_model, "Switch Erista Copper");
 	}
 	if (hardware_type == 2) {
