@@ -370,3 +370,15 @@ void close_module(u64 module) {
 		pmshellExit();
 	}
 }
+
+SetSysFirmwareVersion int_get_fw_version() {
+	setsysInitialize();
+	Result ret = 0;
+	SetSysFirmwareVersion ver;
+	if (R_FAILED(ret = setsysGetFirmwareVersion(&ver))) {
+		setsysExit();
+		return ver;
+	}
+	return ver;
+	setsysExit();
+}

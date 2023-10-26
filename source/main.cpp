@@ -33,7 +33,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.20.02"
+#define APP_VERSION			 "6.20.03"
 #define CURSOR_LIST_MAX		 7
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -1860,6 +1860,7 @@ void update_app_autoconfig_params() {
 }
 
 int main(int argc, char **argv) {
+	Result rc;
 	// init stuff
 	appInit();
 	bool debug_already_started = false;
@@ -3023,12 +3024,31 @@ int main(int argc, char **argv) {
 					if (debug_enabled) {
 						debug_log_write("Réinitialisation du système.\n\n");
 					}
+					nsInitialize();
+					if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
+						if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
+							if (R_FAILED(rc = nsResetToFactorySettings())) {
+								printf(language_vars["lng_db_install_process_reset_to_factory_error"], rc);
+								debug_log_write("Réinitialisation échouée.");
+								nsExit();
+								consoleSelect(&menu_console);
+								break;
+							}
+						} else {
+							printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"], rc);
+							debug_log_write("Réinitialisation d'usine échouée.");
+							nsExit();
+							consoleSelect(&menu_console);
+							break;
+						}
+					}
+								
+					nsExit();
 					if (is_emummc()) {
 						remove_directory(emummc_paths.nintendo);
 					} else {
-						remove_directory("nintendo");
+						remove_directory("Nintendo");
 					}
-					nsResetToFactorySettingsForRefurbishment();
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
