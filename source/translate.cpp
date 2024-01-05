@@ -118,6 +118,7 @@ const char* translation_vars_list[] =
 	"lng_ask_disable_autoconfig",
 	"lng_ask_autoconfig_full_control",
 	"lng_ask_autoconfig_beta_launch",
+	"lng_ask_sd_exfat",
 	"lng_ask_update_firmware",
 	"lng_ask_update_firmware_only",
 	"lng_ask_update_app",

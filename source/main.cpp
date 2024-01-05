@@ -33,7 +33,7 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.20.03"
+#define APP_VERSION			 "6.40.00"
 #define CURSOR_LIST_MAX		 7
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -709,6 +709,83 @@ u64 ask_question_2(char *question_text, ...) {
 			return kDown;
 		}
 	}
+}
+
+bool protected_ask_question(char *question_text, ...) {
+	bool rc;
+	consoleSelect(&logs_console);
+	printf("\x1B[31m");
+	va_list v;
+	va_start(v, question_text);
+	vfprintf(stdout, question_text, v);
+	va_end(v);
+	printf("\x1B[37m");
+	printf("\n");
+	printf("	[L+R+LT+RT+A]: ");
+	printf(language_vars["lng_yes"]);
+	printf("		  [B]: ");
+	printf(language_vars["lng_no"]);
+	printf("\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		u64 kHeld = padGetButtons(&pad);
+		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZL && kHeld & HidNpadButton_ZR && kHeld & HidNpadButton_A) {
+			rc = true;
+			break;
+		} else if (kDown & HidNpadButton_B) {
+			rc = false;
+			break;
+		}
+	}
+	logs_console_clear();
+	consoleSelect(&logs_console);
+	return rc;
+}
+
+bool konami_code_protected_ask_question(char *question_text, ...) {
+	bool rc;
+	HidNpadButton konami_code[] = {HidNpadButton_Up, HidNpadButton_Up, HidNpadButton_Down, HidNpadButton_Down, HidNpadButton_Left, HidNpadButton_Right, HidNpadButton_Left, HidNpadButton_Right, HidNpadButton_B, HidNpadButton_A};
+	int test_code = 0;
+	consoleSelect(&logs_console);
+	printf("\x1B[31m");
+	va_list v;
+	va_start(v, question_text);
+	vfprintf(stdout, question_text, v);
+	va_end(v);
+	printf("\x1B[37m");
+	printf("\n");
+	printf("	[Konami Code]: ");
+	printf(language_vars["lng_yes"]);
+	printf("		  [X]: ");
+	printf(language_vars["lng_no"]);
+	printf("\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_StickLLeft || kDown & HidNpadButton_StickLRight || kDown & HidNpadButton_StickLUp || kDown & HidNpadButton_StickLDown || kDown & HidNpadButton_StickRLeft || kDown & HidNpadButton_StickRRight || kDown & HidNpadButton_StickRUp || kDown & HidNpadButton_StickRDown || kDown == 0) {
+			continue;
+		}
+		if (kDown == konami_code[test_code]) {
+			if (test_code+1 == sizeof (konami_code) / sizeof(HidNpadButton)) {
+				rc = true;
+			} else {
+				test_code++;
+				continue;
+			}
+			break;
+		} else if (kDown & HidNpadButton_X) {
+			rc = false;
+			break;
+		} else {
+			test_code = 0;
+		}
+	}
+	logs_console_clear();
+	consoleSelect(&logs_console);
+	return rc;
 }
 
 void display_infos(int cursor) {
@@ -2439,6 +2516,13 @@ int main(int argc, char **argv) {
 					break;
 				}
 				mkdir(APP_PATH, 0777);
+				bool update_exfat_question = true;
+				update_exfat_question = ask_question((char*) language_vars["lng_ask_sd_exfat"]);
+				if (update_exfat_question) {
+					consoleSelect(&menu_console);
+					pack_update_found_install = false;
+					break;
+				}
 				bool update_firmware = false;
 				bool clean_theme = false;
 				bool agressive_clean = false;
@@ -3020,7 +3104,7 @@ int main(int argc, char **argv) {
 			case UP_RESET:
 			{
 				consoleSelect(&logs_console);
-				if (ask_question((char*) language_vars["lng_ask_validate_choices_for_reset"])) {
+				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_reset"])) {
 					if (debug_enabled) {
 						debug_log_write("Réinitialisation du système.\n\n");
 					}

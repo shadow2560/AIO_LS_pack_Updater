@@ -48,7 +48,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_update_app_menu", (char*) "= Mise a jour de l'application"}, \
 	{"lng_update_pack_menu", (char*) "= Mise a jour du pack"}, \
 	{"lng_update_firmware_menu", (char*) "= Mise a jour du firmware"}, \
-	{"lng_update_hbmenu_menu", (char*) "= Installation de l'icone du Homebrew Menu (recommande si vous le l'avez pas)"}, \
+	{"lng_update_hbmenu_menu", (char*) "= Installation de l'icone du Homebrew Menu (recommandee si vous ne l'avez pas)"}, \
 	{"lng_set_90dns_menu", (char*) "= Application de la protection DNS sur tous les reseaux Wifi deja configures"}, \
 	{"lng_protect_console_menu", (char*) "= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"}, \
 	{"lng_install_app_fwd_menu", (char*) "= Installation de l'icone de cet homebrew"}, \
@@ -119,6 +119,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_disable_autoconfig", (char*) "Appuyez sur le bouton [A] pour désactiver l'auto-configuration du homebrew ou attendez %.0f secondes..."}, \
 	{"lng_ask_autoconfig_full_control", (char*) "Souhaitez-vous activer l'acces aux autres fonctions du homebrew lorsque l'auto-configuration sera active (si non il faudra appuyer sur le bouton [A] au lancement du homebrew lors de la demande pour pouvoir desactiver l'auto-configuration du homebrew)?"}, \
 	{"lng_ask_autoconfig_beta_launch", (char*) "Souhaitez-vous activer  le lancement en mode beta au demarrage lorsque l'auto-configuration sera active?"}, \
+	{"lng_ask_sd_exfat", (char*) "Attention, cette fonction ne doit pas etre utilisee sur une SD en EXFAT, si votre SD est dans ce format veuillez faire une installation du pack manuellement via un PC (regarder sur votre SD, il est possible qu'un dossier de tutoriels contienne les informations appropriees).\n\nLa SD est-elle en EXFAT, si oui l'installation du pack sera annulee?"}, \
 	{"lng_ask_update_firmware", (char*) "Souhaitez-vous mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_firmware_only", (char*) "Souhaitez-vous seulement mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_app", (char*) "Nouvelle version du homebrew trouvee, souhaitez-vous le mettre a jour?"}, \

@@ -9,6 +9,7 @@
 // #include <iostream>
 // #include <fstream>
 
+#include "download.hpp"
 #include "main_util.h"
 #include "unzip.hpp"
 #include "translate.hpp"
@@ -27,6 +28,8 @@ extern int pack_files_in_zip_sha256_verify_before_copy_param;
 extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
 extern bool beta_mode;
 extern bool debug_enabled;
+
+extern MemoryStruct_t file_dl_in_memory;
 
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
@@ -99,6 +102,8 @@ void fnc_clean_modules() {
 	}
 	printf(language_vars["lng_clean_modules_begin"]);
 	printf("\n");
+	remove_directory("/atmosphere/kips");
+	mkdir("/atmosphere/kips", 0777);
 	DIR *contents_dir = opendir("atmosphere/contents");
 	if (contents_dir != NULL) {
 		// auto contents_json = nlohmann::ordered_json::array();
@@ -444,7 +449,9 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 */
 
 int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
-	unzFile zfile = unzOpen(output);
+	
+	unzFile zfile;
+	zfile = unzOpen64(output);
 	unz_global_info gi = {0};
 	unzGetGlobalInfo(zfile, &gi);
 	uLong first_subfolder_passed = 0;
