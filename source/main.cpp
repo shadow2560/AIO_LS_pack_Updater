@@ -157,9 +157,19 @@ void refreshScreen(int cursor) {
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
 		if (cursor == i) {
-			printf("\n\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
+			if (i == 0) {
+				printf("\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
+			} else if (i == CURSOR_LIST_MAX) {
+				printf("\n\x1B[31m%s\x1B[37m", OPTION_LIST[i]);
+			} else {
+				printf("\n\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
+			}
 		} else {
-			printf("%s\n", OPTION_LIST[i]);
+			if (i == CURSOR_LIST_MAX) {
+				printf("%s", OPTION_LIST[i]);
+			} else {
+				printf("%s\n", OPTION_LIST[i]);
+			}
 		}
 	}
 	consoleUpdate(&menu_console);
