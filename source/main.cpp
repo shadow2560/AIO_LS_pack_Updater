@@ -33,8 +33,8 @@ translation_map language_vars;
 #define APP_PATH				"/switch/AIO_LS_pack_Updater/"
 #define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
 
-#define APP_VERSION			 "6.40.01"
-#define CURSOR_LIST_MAX		 7
+#define APP_VERSION			 "6.50.00"
+#define CURSOR_LIST_MAX		 8
 #define UP_APP		  0
 #define UP_CFW		  1
 #define UP_FW		  2
@@ -42,7 +42,8 @@ translation_map language_vars;
 #define UP_90DNS		  4
 #define UP_ATMO_PROTECT_CONFIGS		  5
 #define UP_APP_INSTALL		  6
-#define UP_RESET		  7
+#define UP_PARENTAL_RESET		  7
+#define UP_RESET		  8
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 bool debug_enabled = true;
 
@@ -130,7 +131,8 @@ custom_font->tileHeight=;
 */
 
 void refreshScreen(int cursor) {
-	consoleSelect(&menu_console);	consoleClear();
+	consoleSelect(&menu_console);
+	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
 		printf(language_vars["lng_title"], APP_VERSION);
@@ -155,9 +157,9 @@ void refreshScreen(int cursor) {
 
 	for (int i = 0; i < CURSOR_LIST_MAX + 1; i++) {
 		if (cursor == i) {
-			printf("\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
+			printf("\n\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
 		} else {
-			printf("%s\n\n", OPTION_LIST[i]);
+			printf("%s\n", OPTION_LIST[i]);
 		}
 	}
 	consoleUpdate(&menu_console);
@@ -1171,7 +1173,8 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[4] = language_vars["lng_set_90dns_menu"];
 	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
 	OPTION_LIST[6] = language_vars["lng_install_app_fwd_menu"];
-	OPTION_LIST[7] = language_vars["lng_reset_menu"];
+	OPTION_LIST[7] = language_vars["lng_reset_parental_control_menu"];
+	OPTION_LIST[8] = language_vars["lng_reset_menu"];
 }
 
 void set_emummc_values() {
@@ -3101,6 +3104,43 @@ int main(int argc, char **argv) {
 				break;
 			}
 
+			case UP_PARENTAL_RESET:
+			{
+				consoleSelect(&logs_console);
+				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_parental_reset"])) {
+					if (debug_enabled) {
+						debug_log_write("Réinitialisation du Contrôle parental.\n");
+					}
+					printf(language_vars["lng_reset_parental_begin"]);
+					pctlInitialize();
+					if (R_FAILED(rc = serviceDispatch(pctlGetServiceSession_Service(), 1941))) {
+						if (debug_enabled) {
+							debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental échouée.\n");
+						}
+						printf(language_vars["lng_reset_parental_app_error"], rc);
+					} else {
+						if (debug_enabled) {
+							debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental réussie.\n");
+						}
+						printf(language_vars["lng_reset_parental_app_success"], rc);
+					}
+					if (R_FAILED(rc = serviceDispatch(pctlGetServiceSession_Service(), 1043))) {
+						if (debug_enabled) {
+							debug_log_write("Réinitialisation du contrôle parental échouée.\n\n");
+						}
+						printf(language_vars["lng_reset_parental_error"]);
+					} else {
+						if (debug_enabled) {
+							debug_log_write("Réinitialisation du contrôle parental réussie.\n\n");
+						}
+						printf(language_vars["lng_reset_parental_success"]);
+					}
+					pctlExit();
+				}
+				consoleSelect(&menu_console);
+				break;
+			}
+
 			case UP_RESET:
 			{
 				consoleSelect(&logs_console);
@@ -3113,14 +3153,18 @@ int main(int argc, char **argv) {
 						if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
 							if (R_FAILED(rc = nsResetToFactorySettings())) {
 								printf(language_vars["lng_db_install_process_reset_to_factory_error"], rc);
-								debug_log_write("Réinitialisation échouée.");
+								if (debug_enabled) {
+									debug_log_write("Réinitialisation échouée.\n\n");
+								}
 								nsExit();
 								consoleSelect(&menu_console);
 								break;
 							}
 						} else {
 							printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"], rc);
-							debug_log_write("Réinitialisation d'usine échouée.");
+							if (debug_enabled) {
+								debug_log_write("Réinitialisation d'usine échouée.\n\n");
+							}
 							nsExit();
 							consoleSelect(&menu_console);
 							break;

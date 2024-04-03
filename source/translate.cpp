@@ -51,6 +51,7 @@ const char* translation_vars_list[] =
 	"lng_set_90dns_menu",
 	"lng_protect_console_menu",
 	"lng_install_app_fwd_menu",
+	"lng_reset_parental_control_menu",
 	"lng_reset_menu",
 
 	"lng_infos_begin",
@@ -111,6 +112,12 @@ const char* translation_vars_list[] =
 	"lng_app_fwd_install_success",
 	"lng_app_fwd_install_error",
 
+	"lng_reset_parental_begin",
+	"lng_reset_parental_app_error",
+	"lng_reset_parental_app_success",
+	"lng_reset_parental_error",
+	"lng_reset_parental_success",
+
 	"lng_battery_error_10",
 	"lng_battery_error_20",
 	"lng_battery_error_30",
@@ -135,6 +142,7 @@ const char* translation_vars_list[] =
 	"lng_ask_hbmenu_install",
 	"lng_ask_app_fwd_install",
 	"lng_ask_validate_choices",
+	"lng_ask_validate_choices_for_parental_reset",
 	"lng_ask_validate_choices_for_reset",
 
 	"lng_install_firmware_end_error",
