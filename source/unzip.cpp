@@ -96,6 +96,54 @@ bool file_in_files_to_keep(char *file_to_test) {
 	return false;
 }
 
+bool module_in_modules_to_keep(char *file_to_test) {
+	FILE *files_list_file = fopen("/switch/AIO_LS_pack_Updater/modules_to_keep.txt", "r");
+	if (files_list_file != NULL) {
+		char chaine[FS_MAX_PATH+1] = "";
+		while (fgets(chaine, FS_MAX_PATH+1, files_list_file) != NULL) {
+			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
+				char *c1 = substr(chaine, 0, strlen(chaine)-2);
+				if (strlen(c1) > strlen(file_to_test)) {
+					free(c1);
+					continue;
+				}
+				char *c2 = substr(file_to_test, 0, strlen(c1));
+				// debug_log_write("%s; %s\n", c1, c2);
+				// debug_log_write("%i\n\n", strcmp(c1, c2));
+				if (strcmp(c1, c2) == 0) {
+					free(c2);
+					free(c1);
+					fclose(files_list_file);
+					return true;
+				}
+				free(c2);
+				free(c1);
+			}
+		}
+		fclose(files_list_file);
+		return false;
+	} else {
+		const char* default_files_protect_list[] =
+		{
+			"420000000007E51A",
+			"420000000000000B"
+		};
+		for (size_t i=0; i<sizeof(default_files_protect_list)/sizeof(default_files_protect_list[0]); i++) {
+			if (strlen(default_files_protect_list[i]) > strlen(file_to_test)) {
+				continue;
+			}
+			char *c3 = substr(file_to_test, 0, strlen(default_files_protect_list[i]));
+			if (strcmp(default_files_protect_list[i], c3) == 0) {
+				free(c3);
+				return true;
+			}
+			free(c3);
+		}
+		return false;
+	}
+	return false;
+}
+
 void fnc_clean_modules() {
 	if (debug_enabled) {
 		debug_log_write("Suppression des modules.\n");
@@ -120,6 +168,12 @@ void fnc_clean_modules() {
 			FILE* f=fopen(temp_exefs_path, "r");
 			if (f != NULL) {
 				fclose(f);
+				if (module_in_modules_to_keep(ent->d_name)) {
+					if (debug_enabled) {
+						debug_log_write("Suppression du module \"%s\" non effectué car il est défini dans la liste des modules à ne pas supprimer.\n", ent->d_name);
+					}
+					continue;
+				}
 				module_id = strtoul(ent->d_name, NULL, 16);
 				close_module(module_id);
 				remove_directory(temp_module_path);
@@ -240,9 +294,9 @@ void fnc_agressive_clean(bool fw_install_only) {
 			debug_log_write("Nettoyage agressif intégré.\n");
 		}
 		if (!fw_install_only) {
-			fnc_clean_modules();
+			sleep(1);
 		} else {
-			fnc_clean_modules();
+			sleep(1);
 		}
 	}
 }

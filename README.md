@@ -14,7 +14,7 @@ This function can be used when updating the pack or the firmware, if you come fr
 
 ## Modules clean function
 
-This function can be used when updating the pack or the firmware, if you come from an other pack or if you use modules not included in the pack. This function will delete all Atmosphere's modules in the "atmosphere/contents" folder of the SD and some extra folders if some specific modules are founded. To find the modules, the function look into the folders contained in "atmosphere/contents" and search the file "exefs.nsp" in them, if the file is founded the module is deleted.
+This function can be used when updating the pack or the firmware, if you come from an other pack or if you use modules not included in the pack. This function will delete all Atmosphere's modules in the "atmosphere/contents" folder of the SD and some extra folders if some specific modules are founded. To find the modules, the function look into the folders contained in "atmosphere/contents" and search the file "exefs.nsp" in them, if the file is founded the module is deleted. With the file switch/AIO_LS_pack_Updater/modules_to_keep.txt" (see the "configs" folder of this repository for an example, this file should contain one module ID  by line) you can filter modules that you don't want to delete.
 
 ## Files keeping function
 

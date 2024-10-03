@@ -28,8 +28,8 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_press_b_to_go_back", (char*) "Appuyer sur (B) pour revenir au menu precedent."}, \
 	{"lng_press_any_key_to_continue", (char*) "Appuyer sur une touche pour continuer."}, \
 \
-	{"lng_title", (char*) "AIO_LS_pack_Updater v%s - par Shadow256"}, \
-	{"lng_title_beta", (char*) "AIO_LS_pack_Updater v%s - par Shadow256 - BETA MODE"}, \
+	{"lng_title", (char*) "%s v%s - par %s"}, \
+	{"lng_title_beta", (char*) "%s v%s - par %s - BETA MODE"}, \
 	{"lng_ls_or_rs_menu", (char*) "Appuyez sur (LS) ou (RS) pour afficher les controles du homebrew"}, \
 	{"lng_move_menu", (char*) "Appuyez sur haut ou bas sur les sticks ou la croix pour vous déplacer dans les menus"}, \
 	{"lng_a_menu", (char*) "Appuyez sur (A) pour selectionner une option"}, \

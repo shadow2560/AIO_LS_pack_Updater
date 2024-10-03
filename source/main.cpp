@@ -30,10 +30,10 @@ const u64 app_title_id = 0x0157ba2eaeab0000;
 
 translation_map language_vars;
 #define ROOT					"/"
-#define APP_PATH				"/switch/AIO_LS_pack_Updater/"
-#define APP_OUTPUT			  "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro"
+#define APP_PATH				"/switch/" APP_TITLE "/"
+#define APP_OUTPUT			  "/switch/" APP_TITLE "/" APP_TITLE ".nro"
 
-#define APP_VERSION			 "6.50.00"
+// #define APP_VERSION			 "6.50.00"
 #define CURSOR_LIST_MAX		 8
 #define UP_APP		  0
 #define UP_CFW		  1
@@ -135,10 +135,10 @@ void refreshScreen(int cursor) {
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
-		printf(language_vars["lng_title"], APP_VERSION);
+		printf(language_vars["lng_title"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	} else {
 		printf("\x1B[31m");
-		printf(language_vars["lng_title_beta"], APP_VERSION);
+		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
 	if (debug_enabled) {
 		printf(" - Debug");
@@ -218,10 +218,10 @@ void help_menu() {
 	fullscreen_menu();
 	if (!beta_mode) {
 		printf("\x1B[36m");
-		printf(language_vars["lng_title"], APP_VERSION);
+		printf(language_vars["lng_title"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	} else {
 		printf("\x1B[31m");
-		printf(language_vars["lng_title_beta"], APP_VERSION);
+		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
 	if (debug_enabled) {
 		printf(" - Debug");
@@ -807,10 +807,10 @@ void display_infos(int cursor) {
 	}
 	if (!beta_mode) {
 		printf("\x1B[36m");
-		printf(language_vars["lng_title"], APP_VERSION);
+		printf(language_vars["lng_title"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	} else {
 		printf("\x1B[31m");
-		printf(language_vars["lng_title_beta"], APP_VERSION);
+		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
 	if (debug_enabled) {
 		printf(" - Debug");
@@ -1507,10 +1507,10 @@ void hekate_config_menu_refreshScreen(int hekate_config_choice_cursor, const Ini
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
-		printf(language_vars["lng_title"], APP_VERSION);
+		printf(language_vars["lng_title"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	} else {
 		printf("\x1B[31m");
-		printf(language_vars["lng_title_beta"], APP_VERSION);
+		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
 	if (debug_enabled) {
 		printf(" - Debug");

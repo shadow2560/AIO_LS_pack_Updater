@@ -38,8 +38,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
-APP_AUTHOR  := 	shadow256
-APP_VERSION := 	6.50.00
+APP_AUTHOR  := 	Shadow256
+APP_VERSION := 	6.70.00
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -56,9 +56,12 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall \
+-DAPP_VERSION="\"$(APP_VERSION)\"" \
+-DAPP_TITLE="\"$(APP_TITLE)\"" \
+-DAPP_AUTHOR="\"$(APP_AUTHOR)\""
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++17
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
