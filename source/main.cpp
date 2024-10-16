@@ -301,7 +301,7 @@ int appInit() {
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	romfsInit();	//Init of romfs
 // hiddbgInitialize();
-appletBeginBlockingHomeButton(0);
+// appletBeginBlockingHomeButton(0);
 appletSetAutoSleepDisabled(true);
 // hiddbgDeactivateHomeButton();
 	chdir(ROOT);
@@ -1133,7 +1133,7 @@ bool install_app_fwd() {
 			}
 			printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
 			printDisplay("\n");
-			if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
+			if (R_FAILED(hos::RemoveTitle(hos::Locate(app_title_id)))) {
 				if (debug_enabled) {
 					debug_log_write("Erreur durant la désinstallation du forwarder du homebrew.\n\n");
 				}
