@@ -373,6 +373,7 @@ void clean_sd(bool clean_theme, bool agressive_clean) {
 	remove("bootloader/bootlogo.bmp");
 	remove("nsp_forwarders/Tinfoil V14.nsp");
 	remove_directory("Firmware 14.1.2");
+	// remove("config/sys-patch/config.ini");
 	if (!beta_mode) {
 		remove_directory(firmware_path);
 	} else {
@@ -581,7 +582,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			l--;
 		}
 		if (l < 0) {
-			strcpy(dirname_on_sd, "");
+			memset(dirname_on_sd, '\0', sizeof(dirname_on_sd));
 		} else if (filename_on_sd[0] != '/') {
 			c1 = substr(filename_on_sd, 0, l);
 			strcpy(dirname_on_sd, c1);
@@ -693,8 +694,8 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				remove_directory(filename_on_sd);
 			}
 			if ((!beta_mode && pack_files_in_zip_sha256_verify_before_copy_param == 1) || (beta_mode && pack_files_in_zip_sha256_verify_before_copy_param_beta == 1)) {
-				strcpy(sha256_in_test, "");
-				strcpy(sha256_out_test, "");
+				memset(sha256_in_test, '\0', sizeof(sha256_in_test));
+				memset(sha256_out_test, '\0', sizeof(sha256_out_test));
 				outfile = fopen(filename_on_sd, "rb");
 				if (outfile != NULL) {
 					fclose(outfile);
@@ -779,7 +780,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		fclose(outfile);
 		free(buf);
 		if ((!beta_mode && pack_files_in_zip_sha256_verify_before_copy_param == 1) || (beta_mode && pack_files_in_zip_sha256_verify_before_copy_param_beta == 1)) {
-			strcpy(sha256_out_test, "");
+			memset(sha256_out_test, '\0', sizeof(sha256_out_test));
 			get_sha256_file(filename_on_sd, sha256_out_test);
 			if (strcmp(sha256_in_test, "") == 0) {
 				unzCloseCurrentFile(zfile);
@@ -792,7 +793,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			}
 			if (strcmp(sha256_in_test, sha256_out_test) != 0) {
 				if (debug_enabled) {
-					debug_log_write("Erreur durant l'ecriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
+					debug_log_write("Erreur durant l'écriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
 				}
 				unzCloseCurrentFile(zfile);
 				copy_retry--;

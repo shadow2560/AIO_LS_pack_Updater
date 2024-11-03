@@ -1190,7 +1190,7 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 void set_emummc_values() {
 	int emummc_value = get_emunand_type();
 	if (emummc_value == 0) {
-		strcpy(emummc_type, "");
+		memset(emummc_type, '\0', sizeof(emummc_type));
 	} else if (emummc_value == 1) {
 		strcpy(emummc_type, language_vars["lng_files"]);
 	} else if (emummc_value == 2) {
@@ -1365,8 +1365,8 @@ bool verify_update(char* local_version, char* remote_version) {
 	int local_version_test;
 	int remote_version_test;
 	remake_test:
-	strcpy(local_test, "");
-	strcpy(remote_test, "");
+	memset(local_test, '\0', sizeof(local_test));
+	memset(remote_test, '\0', sizeof(remote_test));
 	k = 0;
 	l = 0;
 	break_local_while = false;
@@ -1386,8 +1386,8 @@ bool verify_update(char* local_version, char* remote_version) {
 			break;
 		}
 	}
-		while(j < strlen(remote_version)) {
-	if (remote_version[j] == '0' || remote_version[j] == '1' || remote_version[j] == '2' || remote_version[j] == '3' || remote_version[j] == '4' || remote_version[j] == '5' || remote_version[j] == '6' || remote_version[j] == '7' || remote_version[j] == '8' || remote_version[j] == '9') {
+	while(j < strlen(remote_version)) {
+		if (remote_version[j] == '0' || remote_version[j] == '1' || remote_version[j] == '2' || remote_version[j] == '3' || remote_version[j] == '4' || remote_version[j] == '5' || remote_version[j] == '6' || remote_version[j] == '7' || remote_version[j] == '8' || remote_version[j] == '9') {
 			remote_test[l] = remote_version[j];
 			l++;
 		}
