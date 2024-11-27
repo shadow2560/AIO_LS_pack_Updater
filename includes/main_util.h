@@ -34,6 +34,7 @@ void get_sha256_data_for_minizip_opened_file(unzFile* zfile, size_t buf_size, ch
 bool module_is_running(u64 module);
 void close_module(u64 module);
 SetSysFirmwareVersion int_get_fw_version();
+bool internet_is_connected();
 
 #ifdef __cplusplus
 }

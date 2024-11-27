@@ -102,7 +102,10 @@ To build the project you have to download devkitPro, install devkitPro and the m
 - Thank [XorTroll](https://github.com/XorTroll) for [Goldleaf](https://github.com/XorTroll/Goldleaf)
 - Thank [ITotalJustice](https://github.com/ITotalJustice) for [Reset-Parental-Controls-NX](https://github.com/ITotalJustice/Reset-Parental-Controls-NX)
 - Thanks The-4n for the [Homebrew Menu forwarders](https://gbatemp.net/threads/homebrew-menu-loader-legal-nsp.518433/) that I have recompiled with the last version of the HB Loader with his tools
-Thanks [nlohmann](https://github.com/nlohmann) for [this json library](https://github.com/nlohmann/json)
+- Thanks [nlohmann](https://github.com/nlohmann) for [this json library](https://github.com/nlohmann/json)
+- Thanks [crc-32](https://github.com/crc-32) for [BrowseNX](https://github.com/crc-32/BrowseNX)
+- Thanks [nedex](https://github.com/nedex) for [QuickNTP](https://github.com/nedex/QuickNTP)
+https://github.com/nedex/QuickNTP
 - Thanks to Dotmhd for his auto-configuration function suggestion and for the forwarder creation.
 - Thanks [shadow2560](https://github.com/shadow2560/) for his [pack](https://github.com/shadow2560/switch_AIO_LS_pack)
 - And thanks to the others that I may have forgotten.

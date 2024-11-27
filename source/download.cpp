@@ -125,9 +125,21 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 	if (debug_enabled) {
 		debug_log_write("Téléchargement de \"%s\".\n", url);
 	}
-first = true;
-dl_speed_displayed = false;
-dl_speed = 0;
+	if (!internet_is_connected()) {
+		if (display_log) {
+			printf("\n\033[0;31m");
+			printf(language_vars["lng_error_no_internet_connection_for_function"]);
+			printf("\033[0;37m\n");
+			consoleUpdate(&logs_console);
+		}
+		if (debug_enabled) {
+			debug_log_write("Erreur: Aucune connexion à internet.\n");
+		}
+		return false;
+	}
+	first = true;
+	dl_speed_displayed = false;
+	dl_speed = 0;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl) {
@@ -259,9 +271,21 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 	if (debug_enabled) {
 		debug_log_write("Téléchargement de \"%s\".\n", url);
 	}
-first = true;
-dl_speed_displayed = false;
-dl_speed = 0;
+	if (!internet_is_connected()) {
+		if (display_log) {
+			printf("\n\033[0;31m");
+			printf(language_vars["lng_error_no_internet_connection_for_function"]);
+			printf("\033[0;37m\n");
+			consoleUpdate(&logs_console);
+		}
+		if (debug_enabled) {
+			debug_log_write("Erreur: Aucune connexion à internet.\n");
+		}
+		return false;
+	}
+	first = true;
+	dl_speed_displayed = false;
+	dl_speed = 0;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURL *curl = curl_easy_init();
 	if (curl) {

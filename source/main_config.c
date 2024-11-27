@@ -10,8 +10,10 @@ extern bool debug_enabled;
 
 extern char CFW_URL[1003];
 extern char pack_sha256_url[1003];
+extern char pack_changelog_url[1003];
 extern char CFW_URL_beta[1003];
 extern char pack_sha256_url_beta[1003];
+extern char pack_changelog_url_beta[1003];
 extern char pack_custom_files_url[1003];
 extern char pack_custom_files_url_beta[1003];
 extern char pack_custom_files_sha256_url[1003];
@@ -76,6 +78,12 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.pack_sha256 = strdup(value);
 		} else {
 			pconfig->s1.pack_sha256 = "";
+		}
+	} else if(MATCH("config", "pack_changelog")){
+		if (value != 0) {
+			pconfig->s1.pack_changelog = strdup(value);
+		} else {
+			pconfig->s1.pack_changelog = "";
 		}
 	} else if(MATCH("config", "pack_custom_files_adress")){
 		if (value != 0) {
@@ -196,6 +204,7 @@ void configs_init() {
 	configuration config;
 	config.s1.dl_pack = "";
 	config.s1.pack_sha256 = "";
+	config.s1.pack_changelog = "";
 	config.s1.pack_custom_files = "";
 	config.s1.pack_custom_files_sha256 = "";
 	config.s1.pack_custom_files_subfolder_in_zip = "";
@@ -227,6 +236,10 @@ void configs_init() {
 			if (strcmp(config.s1.pack_sha256, "") != 0) {
 				strcpy(pack_sha256_url, config.s1.pack_sha256);
 				free((void*)config.s1.pack_sha256);
+			}
+			if (strcmp(config.s1.pack_changelog, "") != 0) {
+				strcpy(pack_changelog_url, config.s1.pack_changelog);
+				free((void*)config.s1.pack_changelog);
 			}
 			if (strcmp(config.s1.pack_custom_files, "") != 0) {
 				strcpy(pack_custom_files_url, config.s1.pack_custom_files);
@@ -299,6 +312,7 @@ void configs_init() {
 	configuration config_beta;
 	config_beta.s1.dl_pack = "";
 	config_beta.s1.pack_sha256 = "";
+	config_beta.s1.pack_changelog = "";
 	config_beta.s1.pack_custom_files = "";
 	config_beta.s1.pack_custom_files_sha256 = "";
 	config_beta.s1.pack_custom_files_subfolder_in_zip = "";
@@ -330,6 +344,10 @@ void configs_init() {
 			if (strcmp(config_beta.s1.pack_sha256, "") != 0) {
 				strcpy(pack_sha256_url_beta, config_beta.s1.pack_sha256);
 				free((void*)config_beta.s1.pack_sha256);
+			}
+			if (strcmp(config_beta.s1.pack_changelog, "") != 0) {
+				strcpy(pack_changelog_url_beta, config_beta.s1.pack_changelog);
+				free((void*)config_beta.s1.pack_changelog);
 			}
 			if (strcmp(config_beta.s1.pack_custom_files, "") != 0) {
 				strcpy(pack_custom_files_url_beta, config_beta.s1.pack_custom_files);

@@ -382,3 +382,15 @@ SetSysFirmwareVersion int_get_fw_version() {
 	return ver;
 	setsysExit();
 }
+
+bool internet_is_connected() {
+	nifmInitialize(NifmServiceType_User);
+	NifmInternetConnectionStatus status;
+	nifmGetInternetConnectionStatus(NULL, NULL, &status);
+	if (status == NifmInternetConnectionStatus_Connected) {
+		nifmExit();
+		return true;
+	}
+	nifmExit();
+	return false;
+}

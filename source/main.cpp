@@ -23,6 +23,8 @@
 #include "firmwares_install/daybreak-cli.hpp"
 #include "translate.hpp"
 #include "main_config.h"
+#include "web_launch.h"
+#include "ntp.hpp"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -49,8 +51,10 @@ bool debug_enabled = true;
 
 char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack.txt";
+char pack_changelog_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/changelog.html";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
 char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
+char pack_changelog_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/blob/main/changelog.md";
 char pack_custom_files_url[1003] = "";
 char pack_custom_files_url_beta[1003] = "";
 char pack_custom_files_sha256_url[1003] = "";
@@ -150,7 +154,7 @@ void refreshScreen(int cursor) {
 		printf(language_vars["lng_minus_menu_beta"]);
 	}
 	printf("\n\n");
-	printf(language_vars["lng_ls_or_rs_menu"]);
+	printf(language_vars["lng_rs_menu"]);
 	printf("\n\n");
 	printf(language_vars["lng_plus_menu"]);
 	printf("\n\n");
@@ -175,8 +179,7 @@ void refreshScreen(int cursor) {
 	consoleUpdate(&menu_console);
 }
 
-void printDisplay(const char *text, ...)
-{
+void printDisplay(const char *text, ...) {
 	va_list v;
 	va_start(v, text);
 	vfprintf(stdout, text, v);
@@ -236,6 +239,8 @@ void help_menu() {
 	printf(language_vars["lng_x_menu"]);
 	printf("\n");
 	printf(language_vars["lng_y_menu"]);
+	printf("\n");
+	printf(language_vars["lng_ls_menu"]);
 	printf("\n");
 	printf(language_vars["lng_l_r_menu"]);
 	printf("\n");
@@ -697,6 +702,65 @@ bool ask_question(char *question_text, ...) {
 		} else if (kDown & HidNpadButton_B) {
 			rc = false;
 			break;
+		}
+	}
+	logs_console_clear();
+	consoleSelect(&logs_console);
+	return rc;
+}
+
+bool ask_question_with_changelog_choice(char *question_text, ...) {
+	bool rc;
+	consoleSelect(&logs_console);
+	va_list v;
+	va_start(v, question_text);
+	vfprintf(stdout, question_text, v);
+	va_end(v);
+	printf("\n");
+	printf("	[A]: ");
+	printf(language_vars["lng_yes"]);
+	printf("		  [B]: ");
+	printf(language_vars["lng_no"]);
+	printf("		  [X]: ");
+	printf(language_vars["lng_display_changelog_choice"]);
+	printf("\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&pad);
+		u64 kDown = padGetButtonsDown(&pad);
+		if (kDown & HidNpadButton_A) {
+			rc = true;
+			break;
+		} else if (kDown & HidNpadButton_B) {
+			rc = false;
+			break;
+		} else if (kDown & HidNpadButton_X) {
+			if (debug_enabled) {
+				debug_log_write("Affichage du changelog.\n");
+			}
+			if (!internet_is_connected()) {
+				if (debug_enabled) {
+					debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n");
+				}
+			}
+			if (!isApplet()) {
+				if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
+					web_launch(pack_changelog_url);
+				} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
+					web_launch(pack_changelog_url_beta);
+				} else {
+				if (debug_enabled) {
+					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
+				}
+				}
+			} else {
+			if (debug_enabled) {
+				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
+			}
+			}
+			if (debug_enabled) {
+				debug_log_write("\n");
+			}
 		}
 	}
 	logs_console_clear();
@@ -1279,8 +1343,10 @@ void debug_write_config_infos() {
 	debug_log_write("Configurations:\n");
 	debug_log_write("URL du pack: %s\n", CFW_URL);
 	debug_log_write("URL du sha256 du pack: %s\n", pack_sha256_url);
+	debug_log_write("URL du changelog du pack: %s\n", pack_changelog_url);
 	debug_log_write("URL du pack beta: %s\n", CFW_URL_beta);
 	debug_log_write("URL du sha256 du pack beta: %s\n", pack_sha256_url_beta);
+	debug_log_write("URL du changelog du pack beta: %s\n", pack_changelog_url_beta);
 	debug_log_write("URL du zip complémentaire au pack: %s\n", pack_custom_files_url);
 	debug_log_write("URL du zip complémentaire au pack beta: %s\n", pack_custom_files_url_beta);
 	debug_log_write("URL du sha256 du zip complémentaire au pack: %s\n", pack_custom_files_url);
@@ -2126,6 +2192,15 @@ int main(int argc, char **argv) {
 	if (debug_enabled) {
 		checkHostnames();
 	}
+
+	if (internet_is_connected()) {
+		if (launch_sync_time()) {
+			debug_log_write("Synchronisation NTP réussite.\n\n");
+		} else {
+			debug_log_write("Synchronisation NTP échouée.\n\n");
+		}
+	}
+
 	// main menu
 	refreshScreen(cursor);
 
@@ -2141,7 +2216,15 @@ int main(int argc, char **argv) {
 			consoleSelect(&logs_console);
 			printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
 			printDisplay("\n\n");
-			pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+			if (!isApplet()) {
+				if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
+					pack_update_found_install=ask_question_with_changelog_choice((char*) language_vars["lng_ask_pack_have_update"]);
+				} else {
+					pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+				}
+			} else {
+				pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+			}
 			logs_console_clear();
 			consoleSelect(&menu_console);
 			if (pack_update_found_install) {
@@ -2266,12 +2349,54 @@ int main(int argc, char **argv) {
 			hekate_autoboot_disable_combot_disable = false;
 		}
 
-		else if (kDown & HidNpadButton_StickL || kDown & HidNpadButton_StickR) {
+		else if (kDown & HidNpadButton_StickR) {
 			logs_console_clear();
 			help_menu();
 			refreshScreen(cursor);
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
+		}
+
+	else if (kDown & HidNpadButton_StickL) {
+			if (debug_enabled) {
+				debug_log_write("Affichage du changelog.\n");
+			}
+			logs_console_clear();
+			consoleSelect(&logs_console);
+				if (!internet_is_connected()) {
+					printf("\n\033[0;31m");
+					printf(language_vars["lng_error_no_internet_connection_for_function"]);
+					printf("\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					consoleSelect(&menu_console);
+					if (debug_enabled) {
+						debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n\n");
+					}
+					break;;
+				}
+			if (!isApplet()) {
+				if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
+					web_launch(pack_changelog_url);
+				} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
+					web_launch(pack_changelog_url_beta);
+				} else {
+				if (debug_enabled) {
+					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
+				}
+				printDisplay(language_vars["lng_error_changelog_display_no_adress"]);
+				}
+			} else {
+			if (debug_enabled) {
+				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
+			}
+			printDisplay(language_vars["lng_error_changelog_display_applet"]);
+			}
+			if (debug_enabled) {
+				debug_log_write("\n");
+			}
+			hekate_autoboot_enable_combot_disable = false;
+			hekate_autoboot_disable_combot_disable = false;
+			consoleSelect(&menu_console);
 		}
 
 		else if (kDown & HidNpadButton_A)
@@ -2451,6 +2576,17 @@ int main(int argc, char **argv) {
 					}
 				}
 				consoleSelect(&logs_console);
+				if (!internet_is_connected()) {
+					printf("\n\033[0;31m");
+					printf(language_vars["lng_error_no_internet_connection_for_function"]);
+					printf("\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					consoleSelect(&menu_console);
+					if (debug_enabled) {
+						debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour le pack.\n\n");
+					}
+					break;
+				}
 				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
 					if (debug_enabled) {
@@ -2741,7 +2877,16 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_install_pack_recap_not_install_app_fwd"]);
 				}
 				printDisplay("\n");
-				bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
+				bool validate_choice = false;
+				if (!isApplet()) {
+					if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
+						validate_choice = ask_question_with_changelog_choice((char*) language_vars["lng_ask_validate_choices"]);
+					} else {
+						validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
+					}
+				} else {
+					validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
+				}
 				if (validate_choice) {
 						if (debug_enabled) {
 							debug_log_write("\nRécapitulatif des paramètres d'installation du pack:.\n");
@@ -3017,6 +3162,18 @@ int main(int argc, char **argv) {
 
 			case UP_APP:
 			{
+				if (!internet_is_connected()) {
+					consoleSelect(&logs_console);
+					printf("\n\033[0;31m");
+					printf(language_vars["lng_error_no_internet_connection_for_function"]);
+					printf("\033[0;37m\n");
+					consoleUpdate(&logs_console);
+					consoleSelect(&menu_console);
+					if (debug_enabled) {
+						debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour l'application.\n\n");
+					}
+					break;;
+				}
 				if (auto_update_app(true)) {
 					return 0;
 				}
@@ -3235,7 +3392,15 @@ int main(int argc, char **argv) {
 					consoleSelect(&logs_console);
 					printDisplay(language_vars["lng_pack_have_update"], pack_version, last_pack_version);
 					printDisplay("\n\n");
-					pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+					if (isApplet()) {
+						if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
+							pack_update_found_install=ask_question_with_changelog_choice((char*) language_vars["lng_ask_pack_have_update"]);
+						} else {
+							pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+						}
+					} else {
+						pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"]);
+					}
 					logs_console_clear();
 					consoleSelect(&menu_console);
 					if (pack_update_found_install) {
