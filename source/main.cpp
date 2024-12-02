@@ -721,7 +721,8 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 	printf(language_vars["lng_yes"]);
 	printf("		  [B]: ");
 	printf(language_vars["lng_no"]);
-	printf("		  [X]: ");
+	printf("\n");
+	printf("		[X]: ");
 	printf(language_vars["lng_display_changelog_choice"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
@@ -742,24 +743,35 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 				if (debug_enabled) {
 					debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n");
 				}
-			}
-			if (!isApplet()) {
-				if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
-					web_launch(pack_changelog_url);
-				} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
-					web_launch(pack_changelog_url_beta);
-				} else {
-				if (debug_enabled) {
-					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
-				}
-				}
 			} else {
-			if (debug_enabled) {
-				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
-			}
-			}
-			if (debug_enabled) {
-				debug_log_write("\n");
+				if (!isApplet()) {
+					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
+						if (launch_sync_time()) {
+							debug_log_write("Synchronisation NTP réussite.\n\n");
+						} else {
+							debug_log_write("Synchronisation NTP échouée.\n\n");
+						}
+						web_launch(pack_changelog_url);
+					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
+						if (launch_sync_time()) {
+							debug_log_write("Synchronisation NTP réussite.\n\n");
+						} else {
+							debug_log_write("Synchronisation NTP échouée.\n\n");
+						}
+						web_launch(pack_changelog_url_beta);
+					} else {
+					if (debug_enabled) {
+						debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
+					}
+					}
+				} else {
+					if (debug_enabled) {
+					debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
+				}
+				}
+				if (debug_enabled) {
+					debug_log_write("\n");
+				}
 			}
 		}
 	}
@@ -2193,14 +2205,6 @@ int main(int argc, char **argv) {
 		checkHostnames();
 	}
 
-	if (internet_is_connected()) {
-		if (launch_sync_time()) {
-			debug_log_write("Synchronisation NTP réussite.\n\n");
-		} else {
-			debug_log_write("Synchronisation NTP échouée.\n\n");
-		}
-	}
-
 	// main menu
 	refreshScreen(cursor);
 
@@ -2372,27 +2376,37 @@ int main(int argc, char **argv) {
 					if (debug_enabled) {
 						debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n\n");
 					}
-					break;;
-				}
-			if (!isApplet()) {
-				if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
-					web_launch(pack_changelog_url);
-				} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
-					web_launch(pack_changelog_url_beta);
+				} else {
+				if (!isApplet()) {
+					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
+						if (launch_sync_time()) {
+							debug_log_write("Synchronisation NTP réussite.\n");
+						} else {
+							debug_log_write("Synchronisation NTP échouée.\n");
+						}
+						web_launch(pack_changelog_url);
+					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
+						if (launch_sync_time()) {
+							debug_log_write("Synchronisation NTP réussite.\n");
+						} else {
+							debug_log_write("Synchronisation NTP échouée.\n");
+						}
+						web_launch(pack_changelog_url_beta);
+					} else {
+					if (debug_enabled) {
+						debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
+					}
+					printDisplay(language_vars["lng_error_changelog_display_no_adress"]);
+					}
 				} else {
 				if (debug_enabled) {
-					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
+					debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
 				}
-				printDisplay(language_vars["lng_error_changelog_display_no_adress"]);
+				printDisplay(language_vars["lng_error_changelog_display_applet"]);
 				}
-			} else {
-			if (debug_enabled) {
-				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
-			}
-			printDisplay(language_vars["lng_error_changelog_display_applet"]);
-			}
-			if (debug_enabled) {
-				debug_log_write("\n");
+				if (debug_enabled) {
+					debug_log_write("\n");
+				}
 			}
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;

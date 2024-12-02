@@ -27,14 +27,14 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_calculate_sha256_of_downloaded_file", (char*) "Verification du sha256 du fichier telecharge..."}, \
 	{"lng_press_b_to_go_back", (char*) "Appuyer sur (B) pour revenir au menu precedent."}, \
 	{"lng_press_any_key_to_continue", (char*) "Appuyer sur une touche pour continuer."}, \
-	{"lng_display_changelog_choice", (char*) "Afficher le changelog"}, \
+	{"lng_display_changelog_choice", (char*) "Afficher le changelog (synchronisera l'heure de la console)"}, \
 	{"lng_error_changelog_display_applet", (char*) "Affichage du changelog impossible car le homebrew  est en mode applet. Pour utiliser cette fonction vous ne devez pas lancer le homebrew via l'album."}, \
 	{"lng_error_changelog_display_no_adress", (char*) "Affichage du changelog impossible car aucune adresse indiquee dans la configuration du homebrew."}, \
 	{"lng_error_no_internet_connection_for_function", (char*) "Aucune connexion à internet, fonction indisponible."}, \
 \
 	{"lng_title", (char*) "%s v%s - par %s"}, \
 	{"lng_title_beta", (char*) "%s v%s - par %s - BETA MODE"}, \
-	{"lng_ls_menu", (char*) "Appuyez sur (LS) pour afficher le changelog du pack"}, \
+	{"lng_ls_menu", (char*) "Appuyez sur (LS) pour afficher le changelog du pack (synchronisera l'heure de la console)"}, \
 	{"lng_rs_menu", (char*) "Appuyez sur (RS) pour afficher les controles du homebrew"}, \
 	{"lng_move_menu", (char*) "Appuyez sur haut ou bas sur les sticks ou la croix pour vous déplacer dans les menus"}, \
 	{"lng_a_menu", (char*) "Appuyez sur (A) pour selectionner une option"}, \
