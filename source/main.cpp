@@ -36,7 +36,7 @@ translation_map language_vars;
 #define APP_OUTPUT			  "/switch/" APP_TITLE "/" APP_TITLE ".nro"
 
 // #define APP_VERSION			 "6.50.00"
-#define CURSOR_LIST_MAX		 8
+#define CURSOR_LIST_MAX		 9
 #define UP_APP		  0
 #define UP_CFW		  1
 #define UP_FW		  2
@@ -45,7 +45,8 @@ translation_map language_vars;
 #define UP_ATMO_PROTECT_CONFIGS		  5
 #define UP_APP_INSTALL		  6
 #define UP_PARENTAL_RESET		  7
-#define UP_RESET		  8
+#define UP_SYNC_TIME		  8
+#define UP_RESET		  9
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
 bool debug_enabled = true;
 
@@ -747,16 +748,24 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 				if (!isApplet()) {
 					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
 						if (launch_sync_time()) {
-							debug_log_write("Synchronisation NTP réussite.\n\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP réussite.\n\n");
+							}
 						} else {
-							debug_log_write("Synchronisation NTP échouée.\n\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP échouée.\n\n");
+							}
 						}
 						web_launch(pack_changelog_url);
 					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
 						if (launch_sync_time()) {
-							debug_log_write("Synchronisation NTP réussite.\n\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP réussite.\n\n");
+							}
 						} else {
-							debug_log_write("Synchronisation NTP échouée.\n\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP échouée.\n\n");
+							}
 						}
 						web_launch(pack_changelog_url_beta);
 					} else {
@@ -1260,7 +1269,8 @@ OPTION_LIST[0] = language_vars["lng_update_app_menu"];
 	OPTION_LIST[5] = language_vars["lng_protect_console_menu"];
 	OPTION_LIST[6] = language_vars["lng_install_app_fwd_menu"];
 	OPTION_LIST[7] = language_vars["lng_reset_parental_control_menu"];
-	OPTION_LIST[8] = language_vars["lng_reset_menu"];
+	OPTION_LIST[8] = language_vars["lng_sync_time_menu"];
+	OPTION_LIST[9] = language_vars["lng_reset_menu"];
 }
 
 void set_emummc_values() {
@@ -2380,16 +2390,24 @@ int main(int argc, char **argv) {
 				if (!isApplet()) {
 					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
 						if (launch_sync_time()) {
-							debug_log_write("Synchronisation NTP réussite.\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP réussite.\n");
+							}
 						} else {
-							debug_log_write("Synchronisation NTP échouée.\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP échouée.\n");
+							}
 						}
 						web_launch(pack_changelog_url);
 					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
 						if (launch_sync_time()) {
-							debug_log_write("Synchronisation NTP réussite.\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP réussite.\n");
+							}
 						} else {
-							debug_log_write("Synchronisation NTP échouée.\n");
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP échouée.\n");
+							}
 						}
 						web_launch(pack_changelog_url_beta);
 					} else {
@@ -3317,6 +3335,38 @@ int main(int argc, char **argv) {
 						printf(language_vars["lng_reset_parental_success"]);
 					}
 					pctlExit();
+				}
+				consoleSelect(&menu_console);
+				break;
+			}
+
+			case UP_SYNC_TIME:
+			{
+				consoleSelect(&logs_console);
+				if (ask_question((char*) language_vars["lng_ask_validate_choices_for_sync_time"])) {
+					if (debug_enabled) {
+						debug_log_write("Synchronisation de l'heure.\n");
+					}
+					if (!internet_is_connected()) {
+						if (debug_enabled) {
+							debug_log_write("Erreur: Aucune connexion à internet pour synchroniser l'heure.\n");
+						}
+						printDisplay(language_vars["lng_error_no_internet_connection_for_function"]);
+					} else {
+						printDisplay(language_vars["lng_sync_time_begin"]);
+						printDisplay("\n");
+						if (launch_sync_time()) {
+							if (debug_enabled) {
+								debug_log_write("Synchronisation NTP réussite.\n\n");
+							}
+							printDisplay(language_vars["lng_sync_time_success"]);
+						} else {
+							if (debug_enabled) {
+							debug_log_write("Synchronisation NTP échouée.\n\n");
+							}
+							printDisplay(language_vars["lng_sync_time_error"]);
+						}
+					}
 				}
 				consoleSelect(&menu_console);
 				break;

@@ -57,6 +57,7 @@ const char* translation_vars_list[] =
 	"lng_protect_console_menu",
 	"lng_install_app_fwd_menu",
 	"lng_reset_parental_control_menu",
+	"lng_sync_time_menu",
 	"lng_reset_menu",
 
 	"lng_infos_begin",
@@ -148,6 +149,7 @@ const char* translation_vars_list[] =
 	"lng_ask_app_fwd_install",
 	"lng_ask_validate_choices",
 	"lng_ask_validate_choices_for_parental_reset",
+	"lng_ask_validate_choices_for_sync_time",
 	"lng_ask_validate_choices_for_reset",
 
 	"lng_install_firmware_end_error",
@@ -261,6 +263,10 @@ const char* translation_vars_list[] =
 
 	"lng_protect_console_begin",
 	"lng_protect_console_error",
+
+"lng_sync_time_begin",
+"lng_sync_time_error",
+"lng_sync_time_success",
 
 	"lng_dl_progress_0",
 	"lng_dl_progress_1",

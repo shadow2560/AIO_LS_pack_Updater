@@ -58,6 +58,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_protect_console_menu", (char*) "= Application de configurations pour  proteger au mieux la console lancee sous Atmosphere (Atmosphere 0.18.1 minimum requis)"}, \
 	{"lng_install_app_fwd_menu", (char*) "= Installation de l'icone de cet homebrew"}, \
 	{"lng_reset_parental_control_menu", (char*) "= Reinitialisation du controle parental"}, \
+	{"lng_sync_time_menu", (char*) "= Synchroniser l'heure de la console avec internet"}, \
 	{"lng_reset_menu", (char*) "= Reinitialisation du systeme"}, \
 \
 	{"lng_infos_begin", (char*) "Informations:"}, \
@@ -149,6 +150,7 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_app_fwd_install", (char*) "Souhaitez-vous installer l'icone du forwarder de cet homebrew?"}, \
 	{"lng_ask_validate_choices", (char*) "Souhaitez-vous vraiment continuer?"}, \
 	{"lng_ask_validate_choices_for_parental_reset", (char*) "Ceci va reinitialiser le controle parental.\n\nSouhaitez-vous vraiment continuer?"}, \
+	{"lng_ask_validate_choices_for_sync_time", (char*) "Souhaitez-vous vraiment synchroniser l'heure de la console via internet?"}, \
 	{"lng_ask_validate_choices_for_reset", (char*) "Ceci va reinitialiser le systeme, toutes les donnees liees a celui-ci seront supprimees.\n\nSouhaitez-vous vraiment continuer?"}, \
 \
 	{"lng_install_firmware_end_error", (char*) "Une erreur s'est produite durant l'installation du firmware."}, \
@@ -262,6 +264,10 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 \
 	{"lng_protect_console_begin", (char*) "Application des configurations de protection..."}, \
 	{"lng_protect_console_error", (char*) "Une erreur s'est produite durant l'application des parametres pour proteger la console, verifiez l'espace restant sur votre SD."}, \
+\
+	{"lng_sync_time_begin", (char*) "Synchronisation de l'heure..."}, \
+	{"lng_sync_time_error", (char*) "Une erreur s'est produite durant la synchronisation de l'heure avec internet."}, \
+	{"lng_sync_time_success", (char*) "Synchronisation de l'heure effectuee."}, \
 \
 	{"lng_dl_progress_0", (char*) "* Telechargement: %.2fMO a %.2f MO/s *"}, \
 	{"lng_dl_progress_1", (char*) "* Telechargement: %.2fMO *"}, \
