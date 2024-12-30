@@ -83,6 +83,7 @@ void rebootAms_rcm()
 	romfsExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
+	appletUnlockExit();
 	if (R_FAILED(appletRequestToReboot())) {
 		spsmShutdown(true);
 	}
