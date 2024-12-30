@@ -35,25 +35,19 @@ void debug_log_write(const char *text, ...) {
 
 bool custom_cp(char *filein, char *fileout) {
 	FILE *exein, *exeout;
-	if (debug_enabled) {
-		debug_log_write("Copie du fichier \"%s\" vers la destination \"%s\"\n", filein, fileout);
-	}
+	debug_log_write("Copie du fichier \"%s\" vers la destination \"%s\"\n", filein, fileout);
 	exein = fopen(filein, "rb");
 	if (exein == NULL) {
 		/* handle error */
 		perror("file open for reading");
-		if (debug_enabled) {
-			debug_log_write("Erreur d'ouverture du fichier source.\n");
-		}
+		debug_log_write("Erreur d'ouverture du fichier source.\n");
 		return false;
 	}
 	exeout = fopen(fileout, "wb");
 	if (exeout == NULL) {
 		/* handle error */
 		perror("file open for writing");
-		if (debug_enabled) {
-			debug_log_write("Erreur d'ouverture du fichier cible.\n");
-		}
+		debug_log_write("Erreur d'ouverture du fichier cible.\n");
 		return false;
 	}
 	size_t n, m;
@@ -66,128 +60,111 @@ bool custom_cp(char *filein, char *fileout) {
 	while ((n > 0) && (n == m));
 	if (m) {
 		perror("copy");
-		if (debug_enabled) {
-			debug_log_write("Erreur de copie.\n");
-		}
+		debug_log_write("Erreur de copie.\n");
 		return false;
 	}
 	if (fclose(exeout)) {
 		perror("close output file");
-		if (debug_enabled) {
-			debug_log_write("Erreur de fermeture du fichier source.\n");
-		}
+		debug_log_write("Erreur de fermeture du fichier source.\n");
 		return false;
 	}
 	if (fclose(exein)) {
 		perror("close input file");
-		if (debug_enabled) {
-			debug_log_write("Erreur de fermeture du fichier cible.\n");
-		}
+		debug_log_write("Erreur de fermeture du fichier cible.\n");
 		return false;
 	}
 	return true;
 }
 
 bool copy_directory_recursive(const char *source, const char *destination, bool include_source) {
-    if (debug_enabled) {
-        debug_log_write("Début de la copie récursive du répertoire \"%s\" vers \"%s\" (include_source: %d).\n",
-                        source, destination, include_source);
-    }
+	debug_log_write("Début de la copie récursive du répertoire \"%s\" vers \"%s\" (include_source: %d).\n", source, destination, include_source);
 
-    struct stat statbuf;
-    if (stat(source, &statbuf) != 0) {
-        perror("stat source directory");
-        if (debug_enabled) {
-            debug_log_write("Erreur d'accès au répertoire source.\n");
-        }
-        return false;
-    }
+	struct stat statbuf;
+	if (stat(source, &statbuf) != 0) {
+		perror("stat source directory");
+		debug_log_write("Erreur d'accès au répertoire source.\n");
+		return false;
+	}
 
-    if (!S_ISDIR(statbuf.st_mode)) {
-        fprintf(stderr, "Source is not a directory: %s\n", source);
-        return false;
-    }
+	if (!S_ISDIR(statbuf.st_mode)) {
+		fprintf(stderr, "Source is not a directory: %s\n", source);
+		return false;
+	}
 
-    // Buffer pour le chemin racine
-    char destination_root[FS_MAX_PATH];
-    if (include_source) {
-        const char *source_basename = strrchr(source, '/');
-        if (!source_basename) source_basename = source;
-        else source_basename++;
+	// Buffer pour le chemin racine
+	char destination_root[FS_MAX_PATH];
+	if (include_source) {
+		const char *source_basename = strrchr(source, '/');
+		if (!source_basename) source_basename = source;
+		else source_basename++;
 
-        if (snprintf(destination_root, FS_MAX_PATH, "%s/%s", destination, source_basename) >= FS_MAX_PATH) {
-            fprintf(stderr, "Chemin destination trop long.\n");
-            return false;
-        }
+		if (snprintf(destination_root, FS_MAX_PATH, "%s/%s", destination, source_basename) >= FS_MAX_PATH) {
+			fprintf(stderr, "Chemin destination trop long.\n");
+			return false;
+		}
 
-        mkdir(destination_root, statbuf.st_mode);
-    } else {
-        strncpy(destination_root, destination, FS_MAX_PATH - 1);
-        destination_root[FS_MAX_PATH - 1] = '\0'; // Toujours null-terminer
-    }
+		mkdir(destination_root, statbuf.st_mode);
+	} else {
+		strncpy(destination_root, destination, FS_MAX_PATH - 1);
+		destination_root[FS_MAX_PATH - 1] = '\0'; // Toujours null-terminer
+	}
 
-    // Parcourir le contenu du répertoire source
-    DIR *dir = opendir(source);
-    if (!dir) {
-        perror("opendir source");
-        if (debug_enabled) {
-            debug_log_write("Erreur d'ouverture du répertoire source.\n");
-        }
-        return false;
-    }
+	// Parcourir le contenu du répertoire source
+	DIR *dir = opendir(source);
+	if (!dir) {
+		perror("opendir source");
+		debug_log_write("Erreur d'ouverture du répertoire source.\n");
+		return false;
+	}
 
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        // Ignorer les entrées spéciales "." et ".."
-        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
-            continue;
-        }
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL) {
+		// Ignorer les entrées spéciales "." et ".."
+		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+			continue;
+		}
 
-        char source_path[FS_MAX_PATH];
-        char destination_path[FS_MAX_PATH];
+		char source_path[FS_MAX_PATH];
+		char destination_path[FS_MAX_PATH];
 
-        // Construire les chemins source et destination
-        if (snprintf(source_path, FS_MAX_PATH, "%s/%s", source, entry->d_name) >= FS_MAX_PATH ||
-            snprintf(destination_path, FS_MAX_PATH, "%s/%s", destination_root, entry->d_name) >= FS_MAX_PATH) {
-            fprintf(stderr, "Chemin trop long pour %s ou %s.\n", source, entry->d_name);
-            closedir(dir);
-            return false;
-        }
+		// Construire les chemins source et destination
+		if (snprintf(source_path, FS_MAX_PATH, "%s/%s", source, entry->d_name) >= FS_MAX_PATH ||
+			snprintf(destination_path, FS_MAX_PATH, "%s/%s", destination_root, entry->d_name) >= FS_MAX_PATH) {
+			fprintf(stderr, "Chemin trop long pour %s ou %s.\n", source, entry->d_name);
+			closedir(dir);
+			return false;
+		}
 
-        // Vérifier si l'entrée est un répertoire ou un fichier
-        if (stat(source_path, &statbuf) == 0) {
-            if (S_ISDIR(statbuf.st_mode)) {
-                // Créer le sous-dossier dans la destination
-                mkdir(destination_path, statbuf.st_mode);
+		// Vérifier si l'entrée est un répertoire ou un fichier
+		if (stat(source_path, &statbuf) == 0) {
+			if (S_ISDIR(statbuf.st_mode)) {
+				// Créer le sous-dossier dans la destination
+				mkdir(destination_path, statbuf.st_mode);
 
-                // Appel récursif pour copier le contenu du sous-dossier
-                if (!copy_directory_recursive(source_path, destination_path, true)) {
-                    closedir(dir);
-                    return false;
-                }
-            } else if (S_ISREG(statbuf.st_mode)) {
-                // Copier le fichier
-                if (!custom_cp(source_path, destination_path)) {
-                    closedir(dir);
-                    return false;
-                }
-            }
-        } else {
-            perror("stat entry");
-            if (debug_enabled) {
-                debug_log_write("Erreur lors de l'analyse d'une entrée du répertoire source.\n");
-            }
-        }
-    }
+				// Appel récursif pour copier le contenu du sous-dossier
+				if (!copy_directory_recursive(source_path, destination_path, true)) {
+					closedir(dir);
+					return false;
+				}
+			} else if (S_ISREG(statbuf.st_mode)) {
+				// Copier le fichier
+				if (!custom_cp(source_path, destination_path)) {
+					closedir(dir);
+					return false;
+				}
+			}
+		} else {
+			perror("stat entry");
+			debug_log_write("Erreur lors de l'analyse d'une entrée du répertoire source.\n");
+		}
+	}
 
-    closedir(dir);
-    return true;
+	closedir(dir);
+	return true;
 }
 
 int remove_directory(const char *path) {
-	if (debug_enabled) {
-		debug_log_write("Suppression du dossier \"%s\".\n", path);
-	}
+	debug_log_write("Suppression du dossier \"%s\".\n", path);
    DIR *d = opendir(path);
    size_t path_len = strlen(path);
    int r = -1;
@@ -292,9 +269,9 @@ u64 get_app_titleid() {
 }
 
 u64 GetCurrentApplicationId() {
-    u64 app_id = 0;
-    svcGetInfo(&app_id, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
-    return app_id;
+	u64 app_id = 0;
+	svcGetInfo(&app_id, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
+	return app_id;
 }
 
 bool titleid_curently_launched(u64 titleid) {
@@ -365,9 +342,7 @@ bool is_emummc() {
 	u64 is_emummc;
 	splInitialize();
 	if (R_FAILED(rc = splGetConfig((SplConfigItem)(ExosphereEmummcType), &is_emummc))) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de détection du status de l'emummc.\n");
-		}
+		debug_log_write("Erreur de détection du status de l'emummc.\n");
 	}
 	splExit();
 	if (!is_emummc) {
