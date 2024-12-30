@@ -145,7 +145,7 @@ void refreshScreen(int cursor) {
 		printf("\x1B[31m");
 		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
-	if (debug_enabled) {
+	if (!debug_enabled) {
 		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
@@ -227,7 +227,7 @@ void help_menu() {
 		printf("\x1B[31m");
 		printf(language_vars["lng_title_beta"], APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
-	if (debug_enabled) {
+	if (!debug_enabled) {
 		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
@@ -272,6 +272,7 @@ void help_menu() {
 }
 
 int appInit() {
+	appletLockExit();
 	// menu_console = consoleGetDefault();
 	consoleInit(&menu_console);
 	if (isApplet()) {
@@ -323,16 +324,16 @@ void logs_console_clear() {
 }
 
 void appExit() {
-	if (debug_enabled) {
-		debug_log_write("Fermeture de l'application.\n\n-----------------------------\n\n");
-	}
-	appletEndBlockingHomeButton();
+	debug_log_write("Fermeture de l'application.\n\n-----------------------------\n\n");
+	
+	// appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
 	// hiddbgExit();
 	socketExit();
 	romfsExit();
 	consoleExit(&logs_console);
 	consoleExit(&menu_console);
+	appletUnlockExit();
 }
 
 void get_version_pack() {
@@ -737,50 +738,32 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 			rc = false;
 			break;
 		} else if (kDown & HidNpadButton_X) {
-			if (debug_enabled) {
-				debug_log_write("Affichage du changelog.\n");
-			}
+			debug_log_write("Affichage du changelog.\n");
 			if (!internet_is_connected()) {
-				if (debug_enabled) {
-					debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n");
-				}
+				debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n");
 			} else {
 				if (!isApplet()) {
 					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
 						if (launch_sync_time()) {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP réussite.\n\n");
-							}
+							debug_log_write("Synchronisation NTP réussite.\n\n");
 						} else {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP échouée.\n\n");
-							}
+							debug_log_write("Synchronisation NTP échouée.\n\n");
 						}
 						web_launch(pack_changelog_url);
 					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
 						if (launch_sync_time()) {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP réussite.\n\n");
-							}
+							debug_log_write("Synchronisation NTP réussite.\n\n");
 						} else {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP échouée.\n\n");
-							}
+							debug_log_write("Synchronisation NTP échouée.\n\n");
 						}
 						web_launch(pack_changelog_url_beta);
 					} else {
-					if (debug_enabled) {
-						debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
-					}
+					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
 					}
 				} else {
-					if (debug_enabled) {
-					debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
+				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
 				}
-				}
-				if (debug_enabled) {
-					debug_log_write("\n");
-				}
+				debug_log_write("\n");
 			}
 		}
 	}
@@ -887,9 +870,7 @@ bool konami_code_protected_ask_question(char *question_text, ...) {
 
 void display_infos(int cursor) {
 	fullscreen_menu();
-	if (debug_enabled) {
-		debug_log_write("Affichage des informations.\n");
-	}
+	debug_log_write("Affichage des informations.\n");
 	if (!beta_mode) {
 		printf("\x1B[36m");
 		printf(language_vars["lng_title"], APP_TITLE, APP_VERSION, APP_AUTHOR);
@@ -976,9 +957,7 @@ void display_infos(int cursor) {
 }
 
 void record_infos() {
-	if (debug_enabled) {
-		debug_log_write("Ecriture des informations dans le fichier d'informations.\n");
-	}
+	debug_log_write("Ecriture des informations dans le fichier d'informations.\n");
 	consoleSelect(&logs_console);
 	FILE *log_infos;
 	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
@@ -1103,22 +1082,16 @@ void aply_reboot() {
 
 void switch_app_mode() {
 	if (!beta_mode) {
-		if (debug_enabled) {
-			debug_log_write("Switch de l'application en mode Beta.\n");
-		}
+		debug_log_write("Switch de l'application en mode Beta.\n");
 		beta_mode = true;
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Switch de l'application en mode normal.\n");
-		}
+		debug_log_write("Switch de l'application en mode normal.\n");
 		beta_mode = false;
 	}
 }
 
 bool install_hbmenu() {
-	if (debug_enabled) {
-		debug_log_write("Installation du HBMenu.\n");
-	}
+	debug_log_write("Installation du HBMenu.\n");
 	printDisplay(language_vars["lng_hbmenu_install_begin"]);
 	printDisplay("\n\n");
 	std::vector<std::filesystem::path> nsp_list;
@@ -1129,24 +1102,18 @@ bool install_hbmenu() {
 	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
 		if (installedTitles[i].first == hbmenu_title_id) {
 			// if (!titleid_curently_launched(hbmenu_title_id)) {
-				if (debug_enabled) {
-					debug_log_write("Désinstallation du HBMenu.\n");
-				}
+				debug_log_write("Désinstallation du HBMenu.\n");
 				printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
 				printDisplay("\n");
 				if (R_FAILED(hos::RemoveTitle(hos::Locate(hbmenu_title_id)))) {
-					if (debug_enabled) {
-						debug_log_write("Erreur durant la désinstallation du HBMenu.\n\n");
-					}
+					debug_log_write("Erreur durant la désinstallation du HBMenu.\n\n");
 					printDisplay("\033[0;31m");
 					printDisplay(language_vars["lng_hbmenu_install_uninstall_error"]);
 					printDisplay("\033[0;37m\n\n");
 					inst::util::deinitInstallServices();
 					return false;
 				} else {
-		if (debug_enabled) {
-			debug_log_write("Désinstallation du HBMenu OK.\n");
-		}
+		debug_log_write("Désinstallation du HBMenu OK.\n");
 					printDisplay("\033[0;32m");
 					printDisplay(language_vars["lng_hbmenu_install_uninstall_success"]);
 					printDisplay("\033[0;37m\n\n");
@@ -1177,22 +1144,16 @@ bool install_hbmenu() {
 		}
 		free(c1);
 	}
-	if (debug_enabled) {
-		debug_log_write("NSP du HBMenu choisi: %s\n", nsp_path.filename().c_str());
-	}
+	debug_log_write("NSP du HBMenu choisi: %s\n", nsp_path.filename().c_str());
 	nsp_list.push_back(nsp_path);
 	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
-		if (debug_enabled) {
-			debug_log_write("Installation du HBMenu OK.\n\n");
-		}
+		debug_log_write("Installation du HBMenu OK.\n\n");
 		printDisplay("\033[0;32m");
 		printDisplay(language_vars["lng_hbmenu_install_success"]);
 		printDisplay("\033[0;37m\n");
 		return true;
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Erreur d'installation du HBMenu.\n\n");
-		}
+		debug_log_write("Erreur d'installation du HBMenu.\n\n");
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_hbmenu_install_error"]);
 		printDisplay("\033[0;37m\n");
@@ -1201,9 +1162,7 @@ bool install_hbmenu() {
 }
 
 bool install_app_fwd() {
-	if (debug_enabled) {
-		debug_log_write("Installation du forwarder du homebrew.\n");
-	}
+	debug_log_write("Installation du forwarder du homebrew.\n");
 	printDisplay(language_vars["lng_app_fwd_install_begin"]);
 	printDisplay("\n\n");
 	std::vector<std::filesystem::path> nsp_list;
@@ -1213,24 +1172,18 @@ bool install_app_fwd() {
 	installedTitles = inst::util::listInstalledTitles();
 	for (long unsigned int i = 0; i < installedTitles.size(); i++) {
 		if (installedTitles[i].first == app_title_id) {
-			if (debug_enabled) {
-				debug_log_write("Désinstallation du forwarder du homebrew.\n");
-			}
+			debug_log_write("Désinstallation du forwarder du homebrew.\n");
 			printDisplay(language_vars["lng_hbmenu_install_uninstall_begin"]);
 			printDisplay("\n");
 			if (R_FAILED(hos::RemoveTitle(hos::Locate(app_title_id)))) {
-				if (debug_enabled) {
-					debug_log_write("Erreur durant la désinstallation du forwarder du homebrew.\n\n");
-				}
+				debug_log_write("Erreur durant la désinstallation du forwarder du homebrew.\n\n");
 				printDisplay("\033[0;31m");
 				printDisplay(language_vars["lng_hbmenu_install_uninstall_error"]);
 				printDisplay("\033[0;37m\n\n");
 				inst::util::deinitInstallServices();
 				return false;
 			} else {
-	if (debug_enabled) {
-		debug_log_write("Désinstallation du forwarder du homebrew OK.\n");
-	}
+	debug_log_write("Désinstallation du forwarder du homebrew OK.\n");
 				printDisplay("\033[0;32m");
 				printDisplay(language_vars["lng_hbmenu_install_uninstall_success"]);
 				printDisplay("\033[0;37m\n\n");
@@ -1242,17 +1195,13 @@ bool install_app_fwd() {
 	nsp_path = "romfs:/nsp/AIO_LS_pack_Updater_0157ba2eaeab0000.nsp";
 	nsp_list.push_back(nsp_path);
 	if (nspInstStuff::installNspFromFile(nsp_list, 1)) {
-		if (debug_enabled) {
-			debug_log_write("Installation du forwarder du homebrew OK.\n\n");
-		}
+		debug_log_write("Installation du forwarder du homebrew OK.\n\n");
 		printDisplay("\033[0;32m");
 		printDisplay(language_vars["lng_app_fwd_install_success"]);
 		printDisplay("\033[0;37m\n");
 		return true;
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Erreur d'installation du forwarder du homebrew.\n\n");
-		}
+		debug_log_write("Erreur d'installation du forwarder du homebrew.\n\n");
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_app_fwd_install_error"]);
 		printDisplay("\033[0;37m\n");
@@ -1285,9 +1234,7 @@ void set_emummc_values() {
 }
 
 bool fnc_install_firmware() {
-	if (debug_enabled) {
-		debug_log_write("Début de l'installation du firmware.\n");
-	}
+	debug_log_write("Début de l'installation du firmware.\n");
 	DIR *dir;
 	if (!beta_mode) {
 		dir = opendir(firmware_path);
@@ -1313,17 +1260,13 @@ bool fnc_install_firmware() {
 		*/
 		if (!beta_mode) {
 			if (daybreak_main(firmware_path, 2, 1, 2)) {
-				if (debug_enabled) {
-					debug_log_write("Installation du firmware OK.\n\n");
-				}
+				debug_log_write("Installation du firmware OK.\n\n");
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"]);
 				printDisplay("\033[0;37m\n");
 				return true;
 			} else {
-				if (debug_enabled) {
-					debug_log_write("Erreur d'installation du firmware.\n\n");
-				}
+				debug_log_write("Erreur d'installation du firmware.\n\n");
 				printDisplay("\033[0;31m\n");
 				printDisplay(language_vars["lng_install_firmware_end_error"]);
 				printDisplay("\033[0;37m\n");
@@ -1331,17 +1274,13 @@ bool fnc_install_firmware() {
 			}
 		} else {
 			if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
-				if (debug_enabled) {
-					debug_log_write("Installation du firmware OK.\n\n");
-				}
+				debug_log_write("Installation du firmware OK.\n\n");
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"]);
 				printDisplay("\033[0;37m\n");
 				return true;
 			} else {
-				if (debug_enabled) {
-					debug_log_write("Erreur d'installation du firmware.\n\n");
-				}
+				debug_log_write("Erreur d'installation du firmware.\n\n");
 				printDisplay("\033[0;31m\n");
 				printDisplay(language_vars["lng_install_firmware_end_error"]);
 				printDisplay("\033[0;37m\n");
@@ -1349,9 +1288,7 @@ bool fnc_install_firmware() {
 			}
 		}
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Erreur, répertoire du firmware \"%s\" non trouvé.\n\n", firmware_path);
-		}
+		debug_log_write("Erreur, répertoire du firmware \"%s\" non trouvé.\n\n", firmware_path);
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_install_firmware_error_folder_not_found"]);
 		printDisplay("\033[0;37m\n");
@@ -1361,7 +1298,6 @@ bool fnc_install_firmware() {
 }
 
 void debug_write_config_infos() {
-	if (debug_enabled) {
 	debug_log_write("Configurations:\n");
 	debug_log_write("URL du pack: %s\n", CFW_URL);
 	debug_log_write("URL du sha256 du pack: %s\n", pack_sha256_url);
@@ -1405,34 +1341,31 @@ void debug_write_config_infos() {
 	debug_log_write("Temps du choix automatique du l'autoboot de Hekate beta: %i\n", install_pack_hekate_autoboot_choice_time_beta);
 	debug_log_write("Mode debug: %i\n", debug_enabled_param);
 	debug_log_write("Mode debug beta: %i\n\n", debug_enabled_param_beta);
-	}
 }
 
 void debug_write_console_infos() {
-	if (debug_enabled) {
-		debug_log_write("Informations sur la console:\n");
-		debug_log_write("Version du pack: %s\n", pack_version);
-		debug_log_write("Dernière version du pack: %s\n", last_pack_version);
-		debug_log_write("Version du firmware: %s\n", firmware_version);
-		debug_log_write("Version d'Atmosphere: %s\n", atmosphere_version);
-		if (!is_emummc()) {
-			debug_log_write("Console en sysnand.\n");
-		} else {
-			debug_log_write("Console en emunand de type %s.\n", emummc_type);
-			if (emummc_paths.path[0] != '\0') {
-				debug_log_write("Dossier associé à l'emunand: %s\n", emummc_paths.path);
-			}
-			debug_log_write("Dossier nintendo associé à l'emunand: %s\n", emummc_paths.nintendo);
-			// debug_log_write("Console en emunand.\n");
+	debug_log_write("Informations sur la console:\n");
+	debug_log_write("Version du pack: %s\n", pack_version);
+	debug_log_write("Dernière version du pack: %s\n", last_pack_version);
+	debug_log_write("Version du firmware: %s\n", firmware_version);
+	debug_log_write("Version d'Atmosphere: %s\n", atmosphere_version);
+	if (!is_emummc()) {
+		debug_log_write("Console en sysnand.\n");
+	} else {
+		debug_log_write("Console en emunand de type %s.\n", emummc_type);
+		if (emummc_paths.path[0] != '\0') {
+			debug_log_write("Dossier associé à l'emunand: %s\n", emummc_paths.path);
 		}
-		debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
-		debug_log_write("Modèle de la console: %s\n", console_model);
-		debug_log_write("Paramètre autoboot de Hekate: %i\n", hekate_autoboot);
-		debug_log_write("Ligne du paramètre autoboot de Hekate dans le fichier de config: %i\n", hekate_autoboot_lineno);
-				debug_log_write("Paramètre autoboot_list de Hekate: %i\n", hekate_autoboot_config);
-		debug_log_write("Ligne du paramètre autoboot_list de Hekate dans le fichier de config: %i\n", hekate_autoboot_config_lineno);
-		debug_log_write("\n");
+		debug_log_write("Dossier nintendo associé à l'emunand: %s\n", emummc_paths.nintendo);
+		// debug_log_write("Console en emunand.\n");
 	}
+	debug_log_write("Etat de l'exploit Fusee Gelee: %s\n", fusee_gelee_patch);
+	debug_log_write("Modèle de la console: %s\n", console_model);
+	debug_log_write("Paramètre autoboot de Hekate: %i\n", hekate_autoboot);
+	debug_log_write("Ligne du paramètre autoboot de Hekate dans le fichier de config: %i\n", hekate_autoboot_lineno);
+			debug_log_write("Paramètre autoboot_list de Hekate: %i\n", hekate_autoboot_config);
+	debug_log_write("Ligne du paramètre autoboot_list de Hekate dans le fichier de config: %i\n", hekate_autoboot_config_lineno);
+	debug_log_write("\n");
 }
 
 bool verify_update(char* local_version, char* remote_version) {
@@ -1511,15 +1444,11 @@ bool auto_update_app(bool update_app) {
 		update_app = ask_question((char*) language_vars["lng_ask_update_app"]);
 	}
 	if (update_app) {
-		if (debug_enabled) {
-			debug_log_write("Mise à jour de l'application.\n");
-		}
+		debug_log_write("Mise à jour de l'application.\n");
 		consoleSelect(&logs_console);
 		mkdir(APP_PATH, 0777);
 		if (get_sd_size_left() <= 10000000) {
-			if (debug_enabled) {
-				debug_log_write("Pas assez d'espace sur la SD.\n\n");
-				}
+			debug_log_write("Pas assez d'espace sur la SD.\n\n");
 			printDisplay("\033[0;31m");
 			printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 			printDisplay("\033[0;37m\n");
@@ -1537,18 +1466,14 @@ bool auto_update_app(bool update_app) {
 					printDisplay("\n");
 					char dl_app_sha256[65] = "";
 					get_sha256_file(TEMP_FILE, dl_app_sha256);
-					if (debug_enabled) {
-						debug_log_write("SHA256 de l'app à télécharger: ");
-						debug_log_write("%s", app_sha256);
-						debug_log_write("\n");
-						debug_log_write("SHA256 de l'app téléchargée: ");
-						debug_log_write("%s", dl_app_sha256);
-						debug_log_write("\n\n");
-					}
+					debug_log_write("SHA256 de l'app à télécharger: ");
+					debug_log_write("%s", app_sha256);
+					debug_log_write("\n");
+					debug_log_write("SHA256 de l'app téléchargée: ");
+					debug_log_write("%s", dl_app_sha256);
+					debug_log_write("\n\n");
 					if (strcmp(app_sha256, dl_app_sha256) != 0) {
-						if (debug_enabled) {
-							debug_log_write("Erreur de téléchargement de l'application, installation annulée.\n\n");
-						}
+						debug_log_write("Erreur de téléchargement de l'application, installation annulée.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"]);
 						printDisplay("\033[0;37m\n");
@@ -1557,16 +1482,12 @@ bool auto_update_app(bool update_app) {
 					}
 				}
 				if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-					if (debug_enabled) {
-						debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-					}
+					debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
 					printDisplay("\033[0;31m");;
 					printDisplay(language_vars["lng_error_copy_file"]);
 					printDisplay("\033[0;37m");;
 				} else {
-					if (debug_enabled) {
-						debug_log_write("Mise à jour de l'application OK.\n\n");
-					}
+					debug_log_write("Mise à jour de l'application OK.\n\n");
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
@@ -1576,9 +1497,7 @@ bool auto_update_app(bool update_app) {
 					return true;
 				}
 			} else {
-				if (debug_enabled) {
-					debug_log_write("Erreur de téléchargement de l'application.\n\n");
-				}
+				debug_log_write("Erreur de téléchargement de l'application.\n\n");
 				printDisplay("\033[0;31m");
 				printDisplay(language_vars["lng_install_app_download_app_error"]);
 				printDisplay("\033[0;37m\n");
@@ -1759,9 +1678,7 @@ while ((de = readdir(dr)) != nullptr)
 void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	consoleSelect(&logs_console);
 	if (hekate_autoboot_lineno == -1  ||  hekate_autoboot_config_lineno == -1) {
-		if (debug_enabled) {
-			debug_log_write("Paramètre autoboot de Hekate inexistant.\n\n");
-		}
+		debug_log_write("Paramètre autoboot de Hekate inexistant.\n\n");
 		printDisplay(language_vars["lng_no_hekate_autoboot_config_set_error"]);
 		return;
 	}
@@ -1778,9 +1695,7 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 			autoboot_config_index  = bootentry;
 		}
 		if (autoboot_config_index[0] < 0) {
-			if (debug_enabled) {
-				debug_log_write("Configuration de l'autoboot de Hekate interrompu par l'utilisateur.\n\n");
-			}
+			debug_log_write("Configuration de l'autoboot de Hekate interrompu par l'utilisateur.\n\n");
 			printDisplay(language_vars["lng_hekate_autoboot_config_canceled"]);
 			return;
 		} else {
@@ -1792,33 +1707,25 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	}
 	/*
 	if (hekate_autoboot == 0 && enable) {
-		if (debug_enabled) {
-			debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
-		}
+		debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
 		printDisplay(language_vars["lng_hekate_param_already_set"]);
 		return;
 	}
 	*/
 	if (hekate_autoboot != 0 && !enable) {
-		if (debug_enabled) {
-			debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
-		}
+		debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
 		printDisplay(language_vars["lng_hekate_param_already_set"]);
 		return;
 	}
 	FILE* hekate_in=fopen("/bootloader/hekate_ipl.ini", "r");
 	if (hekate_in == NULL) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de lecture du fichier de config de Hekate.\n\n");
-		}
+		debug_log_write("Erreur de lecture du fichier de config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_error_config_file_read"]);
 		return;
 	}
 	FILE* hekate_out=fopen("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", "w");
 	if (hekate_out == NULL) {
-		if (debug_enabled) {
-			debug_log_write("Erreur d'écriture du fichier temporaire de la config de Hekate.\n\n");
-		}
+		debug_log_write("Erreur d'écriture du fichier temporaire de la config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_error_temp_file_write"]);
 		return;
 	}
@@ -1849,23 +1756,17 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	fclose(hekate_in);
 	fclose(hekate_out);
 	if (!custom_cp((char*) "/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", (char*) "/bootloader/hekate_ipl.ini")) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de copie de la nouvelle config de Hekate.\n\n");
-		}
+		debug_log_write("Erreur de copie de la nouvelle config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_replace_config_error"]);
 		return;
 	} else {
 		remove("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini");
 	}
 	if (enable) {
-		if (debug_enabled) {
-			debug_log_write("Paramètre autoboot de Hekate activé.\n\n");
-		}
+		debug_log_write("Paramètre autoboot de Hekate activé.\n\n");
 		printDisplay(language_vars["lng_hekate_autoboot_enabled_success"]);
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Paramètre autoboot de Hekate désactivé.\n\n");
-		}
+		debug_log_write("Paramètre autoboot de Hekate désactivé.\n\n");
 		printDisplay(language_vars["lng_hekate_autoboot_disabled_success"]);
 	}
 	get_hekate_autoboot_status();
@@ -2042,12 +1943,12 @@ int main(int argc, char **argv) {
 	// init stuff
 	appInit();
 	bool debug_already_started = false;
-	if (argc == 1 && debug_enabled) {
+	if (argc == 1) {
 		debug_log_start();
 		debug_already_started = true;
 	}
 	configs_init();
-	if (argc == 1 && debug_enabled && !debug_already_started) {
+	if (argc == 1 && !debug_already_started) {
 		debug_log_start();
 		debug_already_started = true;
 	}
@@ -2062,15 +1963,11 @@ int main(int argc, char **argv) {
 	if (strcmp(arg0_substring, "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
 		free(arg0_substring);
 		if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-			if (debug_enabled) {
-				debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-				appExit();
-				return 0;
-			}
+			debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+			appExit();
+			return 0;
 		} else {
-			if (debug_enabled) {
-				debug_log_write("Reconfiguration de l'application OK.\n\n");
-			}
+			debug_log_write("Reconfiguration de l'application OK.\n\n");
 			char temp_app_nro_path[2000] = "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"";
 			strcat(strcat(strcat(temp_app_nro_path, " \""), argv[0]), "\"");
 			appExit();
@@ -2099,21 +1996,17 @@ int main(int argc, char **argv) {
 	// set the cursor position to 0
 	short cursor = 0;
 
-	if (debug_enabled) {
-		debug_log_write("Version du homebrew: %s\n", APP_VERSION);
-	}
+	debug_log_write("Version du homebrew: %s\n", APP_VERSION);
 	if (isApplet()) {
-		if (debug_enabled) {
-			debug_log_write("Homebrew en mode applet.\n");
-		}
+		debug_log_write("Homebrew en mode applet.\n");
 		// Display background of the menu console in blue
 		// printf("\x1B[44m");
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Homebrew hors mode applet.\n\n");
-		}
+		debug_log_write("Homebrew hors mode applet.\n\n");
 	}
-	debug_write_config_infos();
+	if (!debug_enabled) {
+		debug_write_config_infos();
+	}
 
 	u64 kDown = 0;
 	u64 kHeld = 0;
@@ -2134,9 +2027,7 @@ int main(int argc, char **argv) {
 				padUpdate(&pad);
 				kDown = padGetButtonsDown(&pad);
 				if (kDown & HidNpadButton_A) {
-					if (debug_enabled) {
-						debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
-					}
+					debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
 					remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
 					get_autoconfig();
 					printDisplay(language_vars["lng_autoconfig_disabled"]);
@@ -2156,24 +2047,18 @@ int main(int argc, char **argv) {
 	}
 	if (autoconfig_enabled) {
 		if (autoconfig_config.c1.use_all_app_functions != 1) {
-			if (debug_enabled) {
-				debug_log_write("Homebrew en mode Autoconfig uniquement.\n");
-			}
+			debug_log_write("Homebrew en mode Autoconfig uniquement.\n");
 			cursor = UP_CFW;
 			kDown = HidNpadButton_A;
 			__nx_applet_exit_mode = 1;
 		} else {
-			if (debug_enabled) {
-				debug_log_write("Homebrew en mode Autoconfig avec accès aux autres fonctions du homebrew.\n");
-			}
+			debug_log_write("Homebrew en mode Autoconfig avec accès aux autres fonctions du homebrew.\n");
 		}
 		if (autoconfig_config.c1.pack_beta_enable == 1) {
 			switch_app_mode();
 		}
 	} else {
-		if (debug_enabled) {
-			debug_log_write("Autoconfig du homebrew désactivée.\n");
-	}
+		debug_log_write("Autoconfig du homebrew désactivée.\n");
 	}
 
 	get_version_pack();
@@ -2186,27 +2071,23 @@ int main(int argc, char **argv) {
 	get_serial_number();
 	set_emummc_values();
 	get_hekate_autoboot_status();
-	debug_write_console_infos();
+	if (!debug_enabled) {
+		debug_write_console_infos();
+	}
 	remove(TEMP_FILE);
 
 	// set auto-update of the console off if it's not already done (FW 2.0.0+)
 	if (firmware_version[0] == '1' && firmware_version[1] == '.') {
-		if (debug_enabled) {
-			debug_log_write("Firmware inférieur au firmware 2.0.0 détecté, impossible de vérifier ou de désactiver la mise à jour automatique.\n\n");
-		}
+		debug_log_write("Firmware inférieur au firmware 2.0.0 détecté, impossible de vérifier ou de désactiver la mise à jour automatique.\n\n");
 	} else {
 		setsysInitialize();
 		bool res;
 		setsysGetAutoUpdateEnableFlag(&res);
 		if (!res) {
-			if (debug_enabled) {
-				debug_log_write("désactivation de la mise à jour automatique de la console déjà effectuée.\n\n");
-			}
+			debug_log_write("désactivation de la mise à jour automatique de la console déjà effectuée.\n\n");
 		} else {
 			setsysSetAutoUpdateEnableFlag(false);
-			if (debug_enabled) {
-				debug_log_write("désactivation de la mise à jour automatique de la console effectuée.\n\n");
-			}
+			debug_log_write("désactivation de la mise à jour automatique de la console effectuée.\n\n");
 		}
 		setsysExit();
 	}
@@ -2262,21 +2143,15 @@ int main(int argc, char **argv) {
 		}
 
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R) {
-			if (debug_enabled) {
-				debug_log_write("Appel du redémarrage de la console.");
-			}
+			debug_log_write("Appel du redémarrage de la console.");
 			simple_reboot();
 		}
 		if (kHeld & HidNpadButton_ZL && kHeld & HidNpadButton_ZR) {
-			if (debug_enabled) {
-				debug_log_write("Appel du redémarrage avec payload de nettoyage de la console.");
-			}
+			debug_log_write("Appel du redémarrage avec payload de nettoyage de la console.");
 			aply_reboot();
 		}
 		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZR && !hekate_autoboot_enable_combot_disable) {
-			if (debug_enabled) {
-				debug_log_write("Activation de l'auto-boot de Hekate.\n");
-			}
+			debug_log_write("Activation de l'auto-boot de Hekate.\n");
 			logs_console_clear();
 			consoleSelect(&logs_console);
 			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"]);
@@ -2287,9 +2162,7 @@ int main(int argc, char **argv) {
 			hekate_autoboot_disable_combot_disable = false;
 		}
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZL && !hekate_autoboot_disable_combot_disable) {
-			if (debug_enabled) {
-				debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
-			}
+			debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
 			logs_console_clear();
 			consoleSelect(&logs_console);
 			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"]);
@@ -2300,9 +2173,7 @@ int main(int argc, char **argv) {
 			hekate_autoboot_disable_combot_disable = true;
 		}
 		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZL) {
-			if (debug_enabled) {
-				debug_log_write("Activation de l'auto-configuration du homebrew.\n");
-			}
+			debug_log_write("Activation de l'auto-configuration du homebrew.\n");
 			logs_console_clear();
 			consoleSelect(&logs_console);
 			update_app_autoconfig_params();
@@ -2327,9 +2198,7 @@ int main(int argc, char **argv) {
 		}
 		if (autoconfig_enabled) {
 			if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZR) {
-				if (debug_enabled) {
-					debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
-				}
+				debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
 				logs_console_clear();
 				consoleSelect(&logs_console);
 				remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
@@ -2372,9 +2241,7 @@ int main(int argc, char **argv) {
 		}
 
 	else if (kDown & HidNpadButton_StickL) {
-			if (debug_enabled) {
-				debug_log_write("Affichage du changelog.\n");
-			}
+			debug_log_write("Affichage du changelog.\n");
 			logs_console_clear();
 			consoleSelect(&logs_console);
 				if (!internet_is_connected()) {
@@ -2383,48 +2250,32 @@ int main(int argc, char **argv) {
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					consoleSelect(&menu_console);
-					if (debug_enabled) {
-						debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n\n");
-					}
+					debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n\n");
 				} else {
 				if (!isApplet()) {
 					if (!beta_mode && strcmp(pack_changelog_url, "") != 0) {
 						if (launch_sync_time()) {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP réussite.\n");
-							}
+							debug_log_write("Synchronisation NTP réussite.\n");
 						} else {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP échouée.\n");
-							}
+							debug_log_write("Synchronisation NTP échouée.\n");
 						}
 						web_launch(pack_changelog_url);
 					} else if (beta_mode && strcmp(pack_changelog_url_beta, "") != 0) {
 						if (launch_sync_time()) {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP réussite.\n");
-							}
+							debug_log_write("Synchronisation NTP réussite.\n");
 						} else {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP échouée.\n");
-							}
+							debug_log_write("Synchronisation NTP échouée.\n");
 						}
 						web_launch(pack_changelog_url_beta);
 					} else {
-					if (debug_enabled) {
-						debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
-					}
+					debug_log_write("Affichage du changelog impossible car aucune adresse indiquée dans la configuration du homebrew.\n");
 					printDisplay(language_vars["lng_error_changelog_display_no_adress"]);
 					}
 				} else {
-				if (debug_enabled) {
-					debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
-				}
+				debug_log_write("Affichage du changelog impossible car homebrew lancé en mode applet.\n");
 				printDisplay(language_vars["lng_error_changelog_display_applet"]);
 				}
-				if (debug_enabled) {
-					debug_log_write("\n");
-				}
+				debug_log_write("\n");
 			}
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
@@ -2441,24 +2292,18 @@ int main(int argc, char **argv) {
 			case UP_FW:
 			{
 				force_firmware_install:
-				if (debug_enabled) {
-					debug_log_write("Installation d'un firmware.\n");
-				}
+				debug_log_write("Installation d'un firmware.\n");
 				consoleSelect(&logs_console);
 				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
-					if (debug_enabled) {
-						debug_log_write("Le homebrew doit être mis à jour.\n");
-					}
+					debug_log_write("Le homebrew doit être mis à jour.\n");
 					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
 					if (need_update_app) {
 						if (auto_update_app(true)) {
 							return 0;
 						}
 					} else {
-						if (debug_enabled) {
-							debug_log_write("Installation annulée.\n\n");
-						}
+						debug_log_write("Installation annulée.\n\n");
 						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 							goto exit_homebrew;
 						}
@@ -2466,9 +2311,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_10"]);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
@@ -2477,9 +2320,7 @@ int main(int argc, char **argv) {
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_20"]);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
@@ -2488,9 +2329,7 @@ int main(int argc, char **argv) {
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
@@ -2499,9 +2338,7 @@ int main(int argc, char **argv) {
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
@@ -2510,9 +2347,7 @@ int main(int argc, char **argv) {
 					consoleSelect(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
@@ -2588,9 +2423,7 @@ int main(int argc, char **argv) {
 						simple_reboot();
 					}
 				} else {
-					if (debug_enabled) {
-						debug_log_write("Annulation de l'installation du firmware.\n\n");
-					}
+					debug_log_write("Annulation de l'installation du firmware.\n\n");
 				}
 				if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 					goto exit_homebrew;
@@ -2600,12 +2433,10 @@ int main(int argc, char **argv) {
 			}
 			case UP_CFW:
 			{
-				if (debug_enabled) {
-					if (!autoconfig_enabled) {
-						debug_log_write("Installation du pack.\n");
-					} else {
-						debug_log_write("Installation du pack avec les parammètres de configurations automatiques.\n");
-					}
+				if (!autoconfig_enabled) {
+					debug_log_write("Installation du pack.\n");
+				} else {
+					debug_log_write("Installation du pack avec les parammètres de configurations automatiques.\n");
 				}
 				consoleSelect(&logs_console);
 				if (!internet_is_connected()) {
@@ -2614,25 +2445,19 @@ int main(int argc, char **argv) {
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					consoleSelect(&menu_console);
-					if (debug_enabled) {
-						debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour le pack.\n\n");
-					}
+					debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour le pack.\n\n");
 					break;
 				}
 				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
-					if (debug_enabled) {
-						debug_log_write("Le homebrew doit être mis à jour.\n");
-					}
+					debug_log_write("Le homebrew doit être mis à jour.\n");
 					need_update_app = ask_question((char*) language_vars["lng_ask_app_need_update"]);
 					if (need_update_app) {
 						if (auto_update_app(true)) {
 							return 0;
 						}
 					} else {
-						if (debug_enabled) {
-							debug_log_write("Installation annulée.\n\n");
-						}
+						debug_log_write("Installation annulée.\n\n");
 						if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 							goto exit_homebrew;
 						}
@@ -2641,9 +2466,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_20"]);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
@@ -2652,9 +2475,7 @@ int main(int argc, char **argv) {
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
@@ -2663,9 +2484,7 @@ int main(int argc, char **argv) {
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
@@ -2674,9 +2493,7 @@ int main(int argc, char **argv) {
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
@@ -2685,9 +2502,7 @@ int main(int argc, char **argv) {
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
-					if (debug_enabled) {
-						debug_log_write("Erreur, batterie pas assez chargée.\n\n");
-					}
+					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"]);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
@@ -2920,53 +2735,51 @@ int main(int argc, char **argv) {
 					validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"]);
 				}
 				if (validate_choice) {
-						if (debug_enabled) {
-							debug_log_write("\nRécapitulatif des paramètres d'installation du pack:.\n");
-							if (update_firmware) {
-								debug_log_write("Installation du firmware.\n");
+					debug_log_write("\nRécapitulatif des paramètres d'installation du pack:.\n");
+						if (update_firmware) {
+							debug_log_write("Installation du firmware.\n");
+						} else {
+							debug_log_write("Non installation du firmware.\n");
+							if (clean_theme) {
+								debug_log_write("Nettoyage du thème.\n");
 							} else {
-								debug_log_write("Non installation du firmware.\n");
-								if (clean_theme) {
-									debug_log_write("Nettoyage du thème.\n");
-								} else {
-									debug_log_write("Non nettoyage du thème.\n");
-								}
+								debug_log_write("Non nettoyage du thème.\n");
 							}
-							if (agressive_clean) {
-								debug_log_write("Nettoyage agressif.\n");
-							} else {
-								debug_log_write("Non nettoyage agressif.\n");
-							}
-							if (clean_modules) {
-								debug_log_write("Nettoyage des modules.\n");
-							} else {
-								debug_log_write("Non nettoyage des modules.\n");
-							}
-							if (keep_files) {
-								debug_log_write("Fichiers non écrasés.\n");
-							} else {
-								debug_log_write("Fichiers écrasés.\n");
-							}
-							if (hekate_autoboot_enable) {
-								debug_log_write("Autoboot  de Hekate à activer.\n");
-							} else {
-								debug_log_write("Autoboot  de Hekate à désactiver.\n");
-							}
-							if (clean_logos) {
-								debug_log_write("Nettoyage des logos.\n");
-							} else {
-								debug_log_write("Non nettoyage des logos.\n");
-							}
-							if (install_hbmenu_choice) {
-								debug_log_write("Installation du HBMenu.\n");
-							} else {
-								debug_log_write("Non installation du HBMenu.\n");
-							}
-							if (install_app_fwd_choice) {
-								debug_log_write("Installation du forwarder de cet homebrew.\n\n");
-							} else {
-								debug_log_write("Non installation du forwarder de cet homebrew.\n\n");
-							}
+						}
+						if (agressive_clean) {
+							debug_log_write("Nettoyage agressif.\n");
+						} else {
+							debug_log_write("Non nettoyage agressif.\n");
+						}
+						if (clean_modules) {
+							debug_log_write("Nettoyage des modules.\n");
+						} else {
+							debug_log_write("Non nettoyage des modules.\n");
+						}
+						if (keep_files) {
+							debug_log_write("Fichiers non écrasés.\n");
+						} else {
+							debug_log_write("Fichiers écrasés.\n");
+						}
+						if (hekate_autoboot_enable) {
+							debug_log_write("Autoboot  de Hekate à activer.\n");
+						} else {
+							debug_log_write("Autoboot  de Hekate à désactiver.\n");
+						}
+						if (clean_logos) {
+							debug_log_write("Nettoyage des logos.\n");
+						} else {
+							debug_log_write("Non nettoyage des logos.\n");
+						}
+						if (install_hbmenu_choice) {
+							debug_log_write("Installation du HBMenu.\n");
+						} else {
+							debug_log_write("Non installation du HBMenu.\n");
+						}
+						if (install_app_fwd_choice) {
+							debug_log_write("Installation du forwarder de cet homebrew.\n\n");
+						} else {
+							debug_log_write("Non installation du forwarder de cet homebrew.\n\n");
 						}
 					bool not_has_enough_space_on_sd;
 					if (!beta_mode) {
@@ -2983,9 +2796,7 @@ int main(int argc, char **argv) {
 						}
 					}
 					if (not_has_enough_space_on_sd) {
-						if (debug_enabled) {
-							debug_log_write("Pas assez d'espace sur la SD.\n\n");
-						}
+						debug_log_write("Pas assez d'espace sur la SD.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 						printDisplay("\033[0;37m\n");
@@ -3005,18 +2816,14 @@ int main(int argc, char **argv) {
 								printDisplay("\n");
 								char dl_pack_sha256[65] = "";
 								get_sha256_file(TEMP_FILE, dl_pack_sha256);
-								if (debug_enabled) {
-									debug_log_write("SHA256 du pack à télécharger: ");
-									debug_log_write("%s", pack_sha256);
-									debug_log_write("\n");
-									debug_log_write("SHA256 du pack téléchargé: ");
-									debug_log_write("%s", dl_pack_sha256);
-									debug_log_write("\n\n");
-								}
+								debug_log_write("SHA256 du pack à télécharger: ");
+								debug_log_write("%s", pack_sha256);
+								debug_log_write("\n");
+								debug_log_write("SHA256 du pack téléchargé: ");
+								debug_log_write("%s", dl_pack_sha256);
+								debug_log_write("\n\n");
 								if (strcmp(pack_sha256, dl_pack_sha256) != 0) {
-									if (debug_enabled) {
-										debug_log_write("Erreur de téléchargement du pack, installation annulée\n\n.");
-									}
+									debug_log_write("Erreur de téléchargement du pack, installation annulée\n\n.");
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"]);
 									printDisplay("\033[0;37m\n");
@@ -3063,14 +2870,12 @@ int main(int argc, char **argv) {
 												printDisplay("\n");
 												char dl_custom_files_pack_sha256[65] = "";
 												get_sha256_file(TEMP_FILE, dl_custom_files_pack_sha256);
-												if (debug_enabled) {
-													debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
-													debug_log_write("%s", custom_files_pack_sha256);
-													debug_log_write("\n");
-													debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
-													debug_log_write("%s", dl_custom_files_pack_sha256);
-													debug_log_write("\n");
-												}
+												debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
+												debug_log_write("%s", custom_files_pack_sha256);
+												debug_log_write("\n");
+												debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
+												debug_log_write("%s", dl_custom_files_pack_sha256);
+												debug_log_write("\n");
 												if (strcmp(custom_files_pack_sha256, dl_custom_files_pack_sha256) != 0) {
 													printDisplay("\033[0;31m");
 													printDisplay(language_vars["lng_install_custom_files_pack_download_error"]);
@@ -3114,18 +2919,14 @@ int main(int argc, char **argv) {
 									hiddbgInitialize();
 									hiddbgDeactivateHomeButton();
 									hiddbgExit();
-									if (debug_enabled) {
-										debug_log_write("Activation de l'auto-boot de Hekate.\n");
-									}
+									debug_log_write("Activation de l'auto-boot de Hekate.\n");
 									int* temp_hekate_autoboot_chosen;
 									while(1) {
 										temp_hekate_autoboot_chosen = hekate_config_choice_menu(true);
 										refreshScreen(cursor);
 										consoleSelect(&logs_console);
 										if (temp_hekate_autoboot_chosen[0] == -2) {
-											if (debug_enabled) {
-												debug_log_write("Aucune configuration de Hekate trouvée, désactivation de l'autoboot de Hekate forcée.");
-											}
+											debug_log_write("Aucune configuration de Hekate trouvée, désactivation de l'autoboot de Hekate forcée.");
 											update_hekate_autoboot_param(false, hekate_autoboot_chosen);
 											break;
 										} else if (temp_hekate_autoboot_chosen[0] > -1) {
@@ -3137,9 +2938,7 @@ int main(int argc, char **argv) {
 										
 									}
 								} else  {
-									if (debug_enabled) {
-										debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
-									}
+									debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
 									update_hekate_autoboot_param(false, hekate_autoboot_chosen);
 								}
 								if (install_hbmenu_choice) {
@@ -3151,24 +2950,18 @@ int main(int argc, char **argv) {
 								if (update_firmware) {
 									fnc_install_firmware();
 								}
-								if (debug_enabled) {
-									debug_log_write("Installation du pack OK.\n\n");
-								}
+								debug_log_write("Installation du pack OK.\n\n");
 								printDisplay("\033[0;32m\n");
 								printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 								printDisplay("\033[0;37m\n");
 								sleep(5);
 								aply_reboot();
 							} else {
-								if (debug_enabled) {
-									debug_log_write("Erreur durant la décompression du pack.\n\n");
-								}
+								debug_log_write("Erreur durant la décompression du pack.\n\n");
 								remove(TEMP_FILE);
 							}
 						} else {
-							if (debug_enabled) {
-								debug_log_write("Erreur de téléchargement du pack.\n\n");
-							}
+							debug_log_write("Erreur de téléchargement du pack.\n\n");
 							printDisplay("\033[0;31m");
 							printDisplay(language_vars["lng_install_pack_download_pack_error"]);
 							printDisplay("\033[0;37m\n");
@@ -3176,9 +2969,7 @@ int main(int argc, char **argv) {
 						}
 					}
 				} else {
-					if (debug_enabled) {
-						debug_log_write("Annulation de l'installation du pack.\n\n");
-					}
+					debug_log_write("Annulation de l'installation du pack.\n\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						appExit();
 						return 0;
@@ -3201,9 +2992,7 @@ int main(int argc, char **argv) {
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					consoleSelect(&menu_console);
-					if (debug_enabled) {
-						debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour l'application.\n\n");
-					}
+					debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour l'application.\n\n");
 					break;;
 				}
 				if (auto_update_app(true)) {
@@ -3214,23 +3003,17 @@ int main(int argc, char **argv) {
 
 			case UP_90DNS:
 			{
-				if (debug_enabled) {
-					debug_log_write("Mise en place de 90DNS.\n");
-				}
+				debug_log_write("Mise en place de 90DNS.\n");
 				consoleSelect(&logs_console);
 				if (set_90dns()) {
-						if (debug_enabled) {
-							debug_log_write("Application de 90DNS OK.\n\n");
-						}
+						debug_log_write("Application de 90DNS OK.\n\n");
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 					printDisplay("\033[0;37m\n");
 					sleep(5);
 					simple_reboot();
 				} else {
-						if (debug_enabled) {
-							debug_log_write("Erreur durant l'application de 90DNS.\n\n");
-						}
+						debug_log_write("Erreur durant l'application de 90DNS.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_dns_end_install_error"]);
 						printDisplay("\033[0;37m\n");
@@ -3241,16 +3024,12 @@ int main(int argc, char **argv) {
 
 			case UP_ATMO_PROTECT_CONFIGS:
 			{
-				if (debug_enabled) {
-					debug_log_write("Mise en place des protections d'Atmosphere.\n");
-				}
+				debug_log_write("Mise en place des protections d'Atmosphere.\n");
 				consoleSelect(&logs_console);
 				printDisplay(language_vars["lng_protect_console_begin"]);
 				printDisplay("\n");
 				if (get_sd_size_left() <= 100000) {
-					if (debug_enabled) {
-						debug_log_write("Pas assez d'espace sur la SD.\n\n");
-					}
+					debug_log_write("Pas assez d'espace sur la SD.\n\n");
 					printDisplay("\033[0;31m");
 					printDisplay(language_vars["lng_error_not_enough_space_on_sd"]);
 					printDisplay("\033[0;37m\n");
@@ -3266,18 +3045,14 @@ int main(int argc, char **argv) {
 					if (!custom_cp((char*) "romfs:/config_files/hekate_ipl.ini", (char*) "/bootloader/hekate_ipl.ini")) test_cp = false;
 					if (!set_90dns()) test_cp = false;
 					if (test_cp) {
-						if (debug_enabled) {
-							debug_log_write("Application des protections OK.\n\n");
-						}
+						debug_log_write("Application des protections OK.\n\n");
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
 						printDisplay("\033[0;37m\n");
 						sleep(5);
 						simple_reboot();
 					} else {
-						if (debug_enabled) {
-							debug_log_write("Erreur durant l'application des protections.\n\n");
-						}
+						debug_log_write("Erreur durant l'application des protections.\n\n");
 						printDisplay("\033[0;31m\n");
 						printDisplay(language_vars["lng_protect_console_error"]);
 						printDisplay("\033[0;37m\n");
@@ -3307,31 +3082,21 @@ int main(int argc, char **argv) {
 			{
 				consoleSelect(&logs_console);
 				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_parental_reset"])) {
-					if (debug_enabled) {
-						debug_log_write("Réinitialisation du Contrôle parental.\n");
-					}
+					debug_log_write("Réinitialisation du Contrôle parental.\n");
 					printf(language_vars["lng_reset_parental_begin"]);
 					pctlInitialize();
 					if (R_FAILED(rc = serviceDispatch(pctlGetServiceSession_Service(), 1941))) {
-						if (debug_enabled) {
-							debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental échouée.\n");
-						}
+						debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental échouée.\n");
 						printf(language_vars["lng_reset_parental_app_error"], rc);
 					} else {
-						if (debug_enabled) {
-							debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental réussie.\n");
-						}
+						debug_log_write("Réinitialisation de l'association avec l'application du contrôle parental réussie.\n");
 						printf(language_vars["lng_reset_parental_app_success"], rc);
 					}
 					if (R_FAILED(rc = serviceDispatch(pctlGetServiceSession_Service(), 1043))) {
-						if (debug_enabled) {
-							debug_log_write("Réinitialisation du contrôle parental échouée.\n\n");
-						}
+						debug_log_write("Réinitialisation du contrôle parental échouée.\n\n");
 						printf(language_vars["lng_reset_parental_error"]);
 					} else {
-						if (debug_enabled) {
-							debug_log_write("Réinitialisation du contrôle parental réussie.\n\n");
-						}
+						debug_log_write("Réinitialisation du contrôle parental réussie.\n\n");
 						printf(language_vars["lng_reset_parental_success"]);
 					}
 					pctlExit();
@@ -3344,26 +3109,18 @@ int main(int argc, char **argv) {
 			{
 				consoleSelect(&logs_console);
 				if (ask_question((char*) language_vars["lng_ask_validate_choices_for_sync_time"])) {
-					if (debug_enabled) {
-						debug_log_write("Synchronisation de l'heure.\n");
-					}
+					debug_log_write("Synchronisation de l'heure.\n");
 					if (!internet_is_connected()) {
-						if (debug_enabled) {
-							debug_log_write("Erreur: Aucune connexion à internet pour synchroniser l'heure.\n");
-						}
+						debug_log_write("Erreur: Aucune connexion à internet pour synchroniser l'heure.\n");
 						printDisplay(language_vars["lng_error_no_internet_connection_for_function"]);
 					} else {
 						printDisplay(language_vars["lng_sync_time_begin"]);
 						printDisplay("\n");
 						if (launch_sync_time()) {
-							if (debug_enabled) {
-								debug_log_write("Synchronisation NTP réussite.\n\n");
-							}
+							debug_log_write("Synchronisation NTP réussite.\n\n");
 							printDisplay(language_vars["lng_sync_time_success"]);
 						} else {
-							if (debug_enabled) {
 							debug_log_write("Synchronisation NTP échouée.\n\n");
-							}
 							printDisplay(language_vars["lng_sync_time_error"]);
 						}
 					}
@@ -3376,26 +3133,20 @@ int main(int argc, char **argv) {
 			{
 				consoleSelect(&logs_console);
 				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_reset"])) {
-					if (debug_enabled) {
-						debug_log_write("Réinitialisation du système.\n\n");
-					}
+					debug_log_write("Réinitialisation du système.\n\n");
 					nsInitialize();
 					if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
 						if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
 							if (R_FAILED(rc = nsResetToFactorySettings())) {
 								printf(language_vars["lng_db_install_process_reset_to_factory_error"], rc);
-								if (debug_enabled) {
-									debug_log_write("Réinitialisation échouée.\n\n");
-								}
+								debug_log_write("Réinitialisation échouée.\n\n");
 								nsExit();
 								consoleSelect(&menu_console);
 								break;
 							}
 						} else {
 							printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"], rc);
-							if (debug_enabled) {
-								debug_log_write("Réinitialisation d'usine échouée.\n\n");
-							}
+							debug_log_write("Réinitialisation d'usine échouée.\n\n");
 							nsExit();
 							consoleSelect(&menu_console);
 							break;
@@ -3439,9 +3190,7 @@ int main(int argc, char **argv) {
 			switch_app_mode();
 			get_last_version_pack();
 			get_last_version_app();
-			if (debug_enabled) {
-				debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
-			}
+			debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor);

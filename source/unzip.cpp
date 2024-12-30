@@ -27,7 +27,6 @@ extern char atmo_logo_dir_beta[FS_MAX_PATH];
 extern int pack_files_in_zip_sha256_verify_before_copy_param;
 extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
 extern bool beta_mode;
-extern bool debug_enabled;
 
 extern MemoryStruct_t file_dl_in_memory;
 
@@ -145,9 +144,7 @@ bool module_in_modules_to_keep(char *file_to_test) {
 }
 
 void fnc_clean_modules() {
-	if (debug_enabled) {
-		debug_log_write("Suppression des modules.\n");
-	}
+	debug_log_write("Suppression des modules.\n");
 	printf(language_vars["lng_clean_modules_begin"]);
 	printf("\n");
 	remove_directory("/atmosphere/kips");
@@ -169,9 +166,7 @@ void fnc_clean_modules() {
 			if (f != NULL) {
 				fclose(f);
 				if (module_in_modules_to_keep(ent->d_name)) {
-					if (debug_enabled) {
-						debug_log_write("Suppression du module \"%s\" non effectué car il est défini dans la liste des modules à ne pas supprimer.\n", ent->d_name);
-					}
+					debug_log_write("Suppression du module \"%s\" non effectué car il est défini dans la liste des modules à ne pas supprimer.\n", ent->d_name);
 					continue;
 				}
 				module_id = strtoul(ent->d_name, NULL, 16);
@@ -203,9 +198,7 @@ void fnc_clean_modules() {
 }
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
-	if (debug_enabled) {
-		debug_log_write("Suppression des logos.\n");
-	}
+	debug_log_write("Suppression des logos.\n");
 	printf(language_vars["lng_clean_logos_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
@@ -227,9 +220,7 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 }
 
 void fnc_clean_theme() {
-	if (debug_enabled) {
-		debug_log_write("Suppression du thème.\n");
-	}
+	debug_log_write("Suppression du thème.\n");
 	// Full theme deletion, helped  with code from nx-theme-installer
 	printf(language_vars["lng_clean_theme_begin"]);
 	printf("\n");
@@ -243,9 +234,7 @@ void fnc_clean_theme() {
 }
 
 void fnc_agressive_clean(bool fw_install_only) {
-	if (debug_enabled) {
-		debug_log_write("Nettoyage agressif.\n");
-	}
+	debug_log_write("Nettoyage agressif.\n");
 	printf(language_vars["lng_agressive_clean_begin"]);
 	printf("\n");
 	consoleUpdate(&logs_console);
@@ -259,9 +248,7 @@ void fnc_agressive_clean(bool fw_install_only) {
 		files_list_file = fopen("/switch/AIO_LS_pack_Updater/fw_install_files_to_delete.txt", "r");
 	}
 	if (folders_list_file != NULL) {
-		if (debug_enabled) {
-			debug_log_write("Suppression des répertoires  via un fichier personnalisé.\n");
-		}
+		debug_log_write("Suppression des répertoires  via un fichier personnalisé.\n");
 		char chaine[FS_MAX_PATH+1] = "";
 		while (fgets(chaine, FS_MAX_PATH+1, folders_list_file) != NULL) {
 			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
@@ -273,26 +260,20 @@ void fnc_agressive_clean(bool fw_install_only) {
 		fclose(folders_list_file);
 	}
 	if (files_list_file != NULL) {
-		if (debug_enabled) {
-			debug_log_write("Suppression des fichiers  via un fichier personnalisé.\n");
-		}
+		debug_log_write("Suppression des fichiers  via un fichier personnalisé.\n");
 		char chaine[FS_MAX_PATH+1] = "";
 		while (fgets(chaine, FS_MAX_PATH+1, files_list_file) != NULL) {
 			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
 				char *c1 = substr(chaine, 0, strlen(chaine)-2);
 				remove(c1);
-				if (debug_enabled) {
-					debug_log_write("Suppression du fichier  \"%s\".\n", c1);
-				}
+				debug_log_write("Suppression du fichier  \"%s\".\n", c1);
 				free(c1);
 			}
 		}
 		fclose(files_list_file);
 	}
 	if (folders_list_file == NULL && files_list_file == NULL) {
-		if (debug_enabled) {
-			debug_log_write("Nettoyage agressif intégré.\n");
-		}
+		debug_log_write("Nettoyage agressif intégré.\n");
 		if (!fw_install_only) {
 			sleep(1);
 		} else {
@@ -302,9 +283,7 @@ void fnc_agressive_clean(bool fw_install_only) {
 }
 
 void clean_sd(bool clean_theme, bool agressive_clean) {
-	if (debug_enabled) {
-		debug_log_write("Nettoyage de la SD.\n");
-	}
+	debug_log_write("Nettoyage de la SD.\n");
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_begin"]);
 	printf("\033[0;37m\n");
@@ -504,7 +483,6 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 */
 
 int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
-	
 	unzFile zfile;
 	zfile = unzOpen64(output);
 	unz_global_info gi = {0};
@@ -631,9 +609,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				test_if_file_exist = true;
 			}
 			if (file_in_files_to_keep(filename_on_sd) && test_if_file_exist) {
-				if (debug_enabled) {
-					debug_log_write("fichier ou dossier \"%s\" non copié car il est défini comme devant être conservé.\n", filename_on_sd);
-				}
+				debug_log_write("fichier ou dossier \"%s\" non copié car il est défini comme devant être conservé.\n", filename_on_sd);
 				printf("\033[0;35m");
 				printf(language_vars["lng_install_pack_file_skip"], filename_on_sd);
 				printf("\033[0;37m\n");
@@ -643,9 +619,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			}
 		}
 		if (strcmp(filename_on_sd, "") == 0) {
-			if (debug_enabled) {
-				debug_log_write("Problème de copie, ce dossier ou fichier n'a pas de nom et ne doit donc pas être copié.\n");
-			}
+			debug_log_write("Problème de copie, ce dossier ou fichier n'a pas de nom et ne doit donc pas être copié.\n");
 			unzCloseCurrentFile(zfile);
 			unzGoToNextFile(zfile);
 			continue;
@@ -662,9 +636,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 					printf("\033[0;37m\n");
 					remove_directory(filename_on_sd);
 					mkdir(filename_on_sd, 0777);
-					if (debug_enabled) {
-						debug_log_write("remplacement  du répertoire du bootlogo d'Atmmosphere \"%s\".\n", filename_on_sd);
-					}
+					debug_log_write("remplacement  du répertoire du bootlogo d'Atmmosphere \"%s\".\n", filename_on_sd);
 					unzCloseCurrentFile(zfile);
 					unzGoToNextFile(zfile);
 					continue;
@@ -679,9 +651,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
 				printf("\033[0;37m\n");
 				mkdir(filename_on_sd, 0777);
-				if (debug_enabled) {
-					debug_log_write("Création du répertoire \"%s\".\n", filename_on_sd);
-				}
+				debug_log_write("Création du répertoire \"%s\".\n", filename_on_sd);
 				consoleUpdate(&logs_console);
 			}
 			unzCloseCurrentFile(zfile);
@@ -707,9 +677,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 					get_sha256_file(filename_on_sd, sha256_out_test);
 					// debug_log_write("%s - %s\n", sha256_in_test, sha256_out_test);
 					if (strcmp(sha256_in_test, sha256_out_test) == 0) {
-						if (debug_enabled) {
-							debug_log_write("Le fichier \"%s\" est le même dans le zip et sur la SD, la copie n'est pas nécessaire.\n", filename_on_sd);
-						}
+						debug_log_write("Le fichier \"%s\" est le même dans le zip et sur la SD, la copie n'est pas nécessaire.\n", filename_on_sd);
 						printf("\033[0;32m");
 						printf(language_vars["lng_install_pack_same_files"], filename_on_sd);
 						printf("\033[0;37m\n");
@@ -751,17 +719,13 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		buf = malloc(WRITEBUFFERSIZE);
 		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
 			if (j != fwrite(buf, 1, j, outfile)) {
-				if (debug_enabled) {
-					debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
-				}
+				debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
 				fclose(outfile);
 				unzCloseCurrentFile(zfile);
 				free(buf);
 				copy_retry--;
 				if (copy_retry > 0) {
-					if (debug_enabled) {
-						debug_log_write("Tentative de réécriture du fichier...\n");
-					}
+					debug_log_write("Tentative de réécriture du fichier...\n");
 					printf("\033[0;31m");
 					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
 					printf("\033[0;37m\n");
@@ -792,15 +756,11 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				get_sha256_data_for_minizip_opened_file(&zfile, WRITEBUFFERSIZE, sha256_in_test);
 			}
 			if (strcmp(sha256_in_test, sha256_out_test) != 0) {
-				if (debug_enabled) {
-					debug_log_write("Erreur durant l'écriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
-				}
+				debug_log_write("Erreur durant l'écriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);
 				unzCloseCurrentFile(zfile);
 				copy_retry--;
 				if (copy_retry > 0) {
-					if (debug_enabled) {
-						debug_log_write("Tentative de réécriture du fichier...\n");
-					}
+					debug_log_write("Tentative de réécriture du fichier...\n");
 					printf("\033[0;31m");
 					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
 					printf("\033[0;37m\n");
@@ -817,9 +777,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		}
 		unzCloseCurrentFile(zfile);
 		unzGoToNextFile(zfile);
-		if (debug_enabled) {
-			debug_log_write("Ecriture du fichier \"%s\" OK.\n", filename_on_sd);
-		}
+		debug_log_write("Ecriture du fichier \"%s\" OK.\n", filename_on_sd);
 		copy_retry = 3;
 	}
 

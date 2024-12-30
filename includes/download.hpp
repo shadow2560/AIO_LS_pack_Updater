@@ -23,5 +23,5 @@ typedef struct {
 //
 bool downloadFile(const char *url, const char *output, int api, bool display_log);
 bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_log);
-
+bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, bool display_log);
 #endif

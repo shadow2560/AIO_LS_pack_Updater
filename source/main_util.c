@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <switch.h>
 
@@ -14,6 +15,7 @@
 extern bool debug_enabled;
 
 void debug_log_start() {
+	if (!debug_enabled) return;
 	remove("/switch/AIO_LS_pack_Updater/debug.log");
 	FILE *debug_log_file;
 	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "w");
@@ -21,6 +23,7 @@ void debug_log_start() {
 }
 
 void debug_log_write(const char *text, ...) {
+	if (!debug_enabled) return;
 	FILE *debug_log_file;
 	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "a");
 	va_list v;
@@ -83,6 +86,102 @@ bool custom_cp(char *filein, char *fileout) {
 		return false;
 	}
 	return true;
+}
+
+bool copy_directory_recursive(const char *source, const char *destination, bool include_source) {
+    if (debug_enabled) {
+        debug_log_write("Début de la copie récursive du répertoire \"%s\" vers \"%s\" (include_source: %d).\n",
+                        source, destination, include_source);
+    }
+
+    struct stat statbuf;
+    if (stat(source, &statbuf) != 0) {
+        perror("stat source directory");
+        if (debug_enabled) {
+            debug_log_write("Erreur d'accès au répertoire source.\n");
+        }
+        return false;
+    }
+
+    if (!S_ISDIR(statbuf.st_mode)) {
+        fprintf(stderr, "Source is not a directory: %s\n", source);
+        return false;
+    }
+
+    // Buffer pour le chemin racine
+    char destination_root[FS_MAX_PATH];
+    if (include_source) {
+        const char *source_basename = strrchr(source, '/');
+        if (!source_basename) source_basename = source;
+        else source_basename++;
+
+        if (snprintf(destination_root, FS_MAX_PATH, "%s/%s", destination, source_basename) >= FS_MAX_PATH) {
+            fprintf(stderr, "Chemin destination trop long.\n");
+            return false;
+        }
+
+        mkdir(destination_root, statbuf.st_mode);
+    } else {
+        strncpy(destination_root, destination, FS_MAX_PATH - 1);
+        destination_root[FS_MAX_PATH - 1] = '\0'; // Toujours null-terminer
+    }
+
+    // Parcourir le contenu du répertoire source
+    DIR *dir = opendir(source);
+    if (!dir) {
+        perror("opendir source");
+        if (debug_enabled) {
+            debug_log_write("Erreur d'ouverture du répertoire source.\n");
+        }
+        return false;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        // Ignorer les entrées spéciales "." et ".."
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+            continue;
+        }
+
+        char source_path[FS_MAX_PATH];
+        char destination_path[FS_MAX_PATH];
+
+        // Construire les chemins source et destination
+        if (snprintf(source_path, FS_MAX_PATH, "%s/%s", source, entry->d_name) >= FS_MAX_PATH ||
+            snprintf(destination_path, FS_MAX_PATH, "%s/%s", destination_root, entry->d_name) >= FS_MAX_PATH) {
+            fprintf(stderr, "Chemin trop long pour %s ou %s.\n", source, entry->d_name);
+            closedir(dir);
+            return false;
+        }
+
+        // Vérifier si l'entrée est un répertoire ou un fichier
+        if (stat(source_path, &statbuf) == 0) {
+            if (S_ISDIR(statbuf.st_mode)) {
+                // Créer le sous-dossier dans la destination
+                mkdir(destination_path, statbuf.st_mode);
+
+                // Appel récursif pour copier le contenu du sous-dossier
+                if (!copy_directory_recursive(source_path, destination_path, true)) {
+                    closedir(dir);
+                    return false;
+                }
+            } else if (S_ISREG(statbuf.st_mode)) {
+                // Copier le fichier
+                if (!custom_cp(source_path, destination_path)) {
+                    closedir(dir);
+                    return false;
+                }
+            }
+        } else {
+            perror("stat entry");
+            if (debug_enabled) {
+                debug_log_write("Erreur lors de l'analyse d'une entrée du répertoire source.\n");
+            }
+        }
+    }
+
+    closedir(dir);
+    return true;
 }
 
 int remove_directory(const char *path) {

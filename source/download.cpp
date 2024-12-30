@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+#include <dirent.h>
 #include <curl/curl.h>
 #include <switch.h>
 
@@ -18,7 +19,6 @@
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
-extern bool debug_enabled;
 
 time_t prevtime;
 time_t currtime;
@@ -50,9 +50,7 @@ static size_t WriteMemoryCallback2(void *contents, size_t size, size_t nmemb, vo
 	char *ptr = (char *) realloc(mem->memory, mem->size + realsize + 1);
 	if(!ptr) {
 		/* out of memory! */
-		if (debug_enabled) {
-			debug_log_write("Pas assez de mémoire.\n");
-		}
+		debug_log_write("Pas assez de mémoire.\n");
 		return 0;
 	}
 
@@ -122,9 +120,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
-	if (debug_enabled) {
-		debug_log_write("Téléchargement de \"%s\".\n", url);
-	}
+	debug_log_write("Téléchargement de \"%s\".\n", url);
 	if (!internet_is_connected()) {
 		if (display_log) {
 			printf("\n\033[0;31m");
@@ -132,9 +128,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
-		if (debug_enabled) {
-			debug_log_write("Erreur: Aucune connexion à internet.\n");
-		}
+		debug_log_write("Erreur: Aucune connexion à internet.\n");
 		return false;
 	}
 	first = true;
@@ -183,9 +177,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 						printf(language_vars["lng_dl_file_write_error"]);
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
-						if (debug_enabled) {
-							debug_log_write("Erreur durant l'écriture du fichier.\n\n");
-						}
+						debug_log_write("Erreur durant l'écriture du fichier.\n\n");
 					}
 					curl_easy_cleanup(curl);
 					curl_global_cleanup();
@@ -208,9 +200,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
-				if (debug_enabled) {
-					debug_log_write("Téléchargement OK.\n\n");
-				}
+				debug_log_write("Téléchargement OK.\n\n");
 				return true;
 			} else {
 				if (display_log) {
@@ -219,9 +209,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
-				if (debug_enabled) {
-					debug_log_write("Erreur de Téléchargement.\n\n");
-				}
+				debug_log_write("Erreur de Téléchargement.\n\n");
 				return false;
 			}
 		} else {
@@ -233,9 +221,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 				consoleUpdate(&logs_console);
 			}
 			curl_global_cleanup();
-			if (debug_enabled) {
-				debug_log_write("Erreur d'ouverture du fichier temporaire.\n\n");
-			}
+			debug_log_write("Erreur d'ouverture du fichier temporaire.\n\n");
 			return false;
 		}
 	} else {
@@ -247,17 +233,13 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 		}
 		curl_easy_cleanup(curl);
 		curl_global_cleanup();
-		if (debug_enabled) {
-			debug_log_write("Erreur d'initialisation de Curl.\n\n");
-		}
+		debug_log_write("Erreur d'initialisation de Curl.\n\n");
 		return false;
 	}
 
 	curl_easy_cleanup(curl);
 	curl_global_cleanup();
-	if (debug_enabled) {
-		debug_log_write("Erreur inconnue.\n\n");
-	}
+	debug_log_write("Erreur inconnue.\n\n");
 	return false;
 }
 
@@ -268,9 +250,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
-	if (debug_enabled) {
-		debug_log_write("Téléchargement de \"%s\".\n", url);
-	}
+	debug_log_write("Téléchargement de \"%s\".\n", url);
 	if (!internet_is_connected()) {
 		if (display_log) {
 			printf("\n\033[0;31m");
@@ -278,9 +258,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
-		if (debug_enabled) {
-			debug_log_write("Erreur: Aucune connexion à internet.\n");
-		}
+		debug_log_write("Erreur: Aucune connexion à internet.\n");
 		return false;
 	}
 	first = true;
@@ -324,9 +302,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 			}
-			if (debug_enabled) {
-				debug_log_write("Erreur durant l'écriture du fichier ou durant le téléchargement.\n\n");
-			}
+			debug_log_write("Erreur durant l'écriture du fichier ou durant le téléchargement.\n\n");
 			curl_easy_cleanup(curl);
 			curl_global_cleanup();
 			free(chunk->memory);
@@ -340,9 +316,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
-			if (debug_enabled) {
-				debug_log_write("Téléchargement OK.\n\n");
-			}
+			debug_log_write("Téléchargement OK.\n\n");
 			curl_easy_cleanup(curl);
 			curl_global_cleanup();
 			return true;
@@ -353,9 +327,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
-			if (debug_enabled) {
-				debug_log_write("Erreur de Téléchargement.\n\n");
-			}
+			debug_log_write("Erreur de Téléchargement.\n\n");
 			curl_easy_cleanup(curl);
 			curl_global_cleanup();
 			free(chunk->memory);
@@ -370,16 +342,75 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 		}
 		curl_easy_cleanup(curl);
 		curl_global_cleanup();
-		if (debug_enabled) {
-			debug_log_write("Erreur d'initialisation de Curl.\n\n");
-		}
+		debug_log_write("Erreur d'initialisation de Curl.\n\n");
 		return false;
 	}
 
 	curl_easy_cleanup(curl);
 	curl_global_cleanup();
-	if (debug_enabled) {
-		debug_log_write("Erreur inconnue.\n\n");
-	}
+	debug_log_write("Erreur inconnue.\n\n");
 	return false;
+}
+
+bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, bool display_log) {
+	if (display_log) {
+		printf("\n\033[0;32m");
+		printf(language_vars["lng_dl_directory_begin"], remote_url);
+		printf("\033[0;37m\n");
+		consoleUpdate(&logs_console);
+	}
+
+	CURL *curl = curl_easy_init();
+	if (!curl) {
+		debug_log_write("Erreur d'initialisation de Curl pour le dossier.\n");
+		return false;
+	}
+
+	char *file_list = (char*) calloc(1, 1);
+	if (!file_list) {
+		fprintf(stderr, "Échec de l'allocation mémoire.\n");
+		curl_easy_cleanup(curl);
+		return false;
+	}
+
+	curl_easy_setopt(curl, CURLOPT_URL, remote_url);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, API_AGENT);
+	curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback2);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&file_list);
+
+	CURLcode res = curl_easy_perform(curl);
+	if (res != CURLE_OK) {
+		if (display_log) {
+			printf("\033[0;31mErreur lors de la récupération du dossier %s.\033[0;37m\n", remote_url);
+		}
+		curl_easy_cleanup(curl);
+		free(file_list);
+		return false;
+	}
+
+	// Création du répertoire local
+	mkdir(local_path, 0777);
+
+	// Parcours des fichiers et sous-dossiers
+	char *line = strtok(file_list, "\n");
+	while (line) {
+		char remote_item_url[1024];
+		snprintf(remote_item_url, sizeof(remote_item_url), "%s/%s", remote_url, line);
+
+		char local_item_path[1024];
+		snprintf(local_item_path, sizeof(local_item_path), "%s/%s", local_path, line);
+
+		if (line[strlen(line) - 1] == '/') {
+			downloadDirectoryRecursive(remote_item_url, local_item_path, display_log);
+		} else {
+			downloadFile(remote_item_url, local_item_path, OFF, display_log);
+		}
+
+		line = strtok(NULL, "\n");
+	}
+
+	free(file_list);
+	curl_easy_cleanup(curl);
+	return true;
 }

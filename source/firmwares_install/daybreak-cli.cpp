@@ -30,9 +30,8 @@
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
-extern bool debug_enabled;
 
-const char app_version[] = "2.1.0";
+const char app_version[] = "2.1.1";
 
 PadState daybreak_pad;
 
@@ -418,9 +417,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	padInitializeDefault(&daybreak_pad);
 	if (!DaybreakInitializeMenu()) {
-		if (debug_enabled) {
-			debug_log_write("Erreur durant l'initialisation de Daybreak.\n");
-		}
+		debug_log_write("Erreur durant l'initialisation de Daybreak.\n");
 		printf(language_vars["lng_db_init_failed_error"]);
 		printf("\n");
 		custom_pause();
@@ -431,9 +428,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	u64 has_rcm_bug_patch;
 	u64 is_emummc;
 	if (R_FAILED(rc = splGetConfig(SplConfigItem_HardwareType, &hardware_type))) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de détection du type de hardware.\n");
-		}
+		debug_log_write("Erreur de détection du type de hardware.\n");
 		printf(language_vars["lng_db_get_hardware_type_error"], rc);
 		printf("\n");
 		custom_pause();
@@ -441,18 +436,14 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereHasRcmBugPatch), &has_rcm_bug_patch))) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de détermination du bug RCM.\n");
-		}
+		debug_log_write("Erreur de détermination du bug RCM.\n");
 		printf(language_vars["lng_db_get_rcm_bug_patch_error"], rc);
 		printf("\n");
 		custom_pause();
 		return false;
 	}
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
-		if (debug_enabled) {
-			debug_log_write("Erreur de détection du status de l'emummc.\n");
-		}
+		debug_log_write("Erreur de détection du status de l'emummc.\n");
 		printf(language_vars["lng_db_get_emummc_status_error"], rc);
 		printf("\n");
 		custom_pause();
@@ -480,9 +471,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
-		if (debug_enabled) {
-			debug_log_write("Erreur durant la validation de la mise à jour.\n");
-		}
+		debug_log_write("Erreur durant la validation de la mise à jour.\n");
 		printf(language_vars["lng_db_update_validation_failed_error"]);
 		printf("\n");
 		custom_pause();
@@ -515,9 +504,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	/* Warn the user if they're updating with exFAT supposed to be supported but not present/corrupted. */
 	if (g_use_exfat == true && m_update_info.exfat_supported && R_FAILED(m_validation_info.exfat_result)) {
-				if (debug_enabled) {
-			debug_log_write("Erreur, EXFAT forcé mais non supporté.\n");
-		}
+		debug_log_write("Erreur, EXFAT forcé mais non supporté.\n");
 		printf(language_vars["lng_db_exfat_forced_but_not_supported_error"]);
 		printf("\n");
 		custom_pause();
@@ -539,9 +526,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 			force_update_not_supported = false;
 		}
 		if (!force_update_not_supported) {
-			if (debug_enabled) {
-				debug_log_write("Erreur, firmware non supporté et installation non forcée.\n");
-			}
+			debug_log_write("Erreur, firmware non supporté et installation non forcée.\n");
 			printf(language_vars["lng_db_firmware_not_supported_and_force_install_disabled"]);
 			printf("\n");
 			custom_pause();
@@ -572,9 +557,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Prevent the home button from being pressed during installation. */
 	hiddbgDeactivateHomeButton();
 	m_install_state = InstallState::NeedsDraw;
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	/* We have drawn now, allow setup to occur. */
 	if (m_install_state == InstallState::NeedsDraw) {
 		printf(language_vars["lng_db_install_update_begin"]);
@@ -582,22 +565,16 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		consoleUpdate(&logs_console);
 		m_install_state = InstallState::NeedsSetup;
 	}
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	/* Transition to the next update state. */
 	if (m_install_state != InstallState::NeedsDraw && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
 	}
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	if (m_install_state != InstallState::NeedsSetup && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
 	}
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	if (m_install_state != InstallState::NeedsPrepare && m_install_state != InstallState::AwaitingReboot) {
 		while (1) {
 			if (m_install_state == InstallState::NeedsApply || m_install_state == InstallState::AwaitingReboot) {
@@ -608,15 +585,11 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 			// consoleUpdate(&logs_console);
 		}
 	}
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	if (m_install_state != InstallState::AwaitingPrepare && m_install_state != InstallState::AwaitingReboot) {
 		TransitionUpdateState();
 	}
-	if (debug_enabled) {
-		debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	}
+	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	DaybreakAppExit();
 	return true;
 }

@@ -16,6 +16,7 @@ typedef struct {
 void debug_log_start();
 void debug_log_write(const char *text, ...);
 bool custom_cp(char *filein, char *fileout);
+bool copy_directory_recursive(const char *source, const char *destination, bool include_source);
 int remove_directory(const char *path);
 char * substr(char *s, int x, int y);
 u32 ParseHexInteger(const char *s);

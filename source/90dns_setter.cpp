@@ -11,7 +11,6 @@
 
 extern translation_map language_vars;
 extern PrintConsole logs_console;
-extern bool debug_enabled;
 
 const char *regions[] = {
     "Japan",

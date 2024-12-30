@@ -7,8 +7,6 @@
 #include "main_util.h"
 #include "ini.h"
 
-extern bool debug_enabled;
-
 const char* translation_vars_list[] =
 {
 	"lng_yes",
@@ -333,16 +331,12 @@ translation_map set_translation_strings() {
 			if (test_ini != NULL) {
 				fclose(test_ini);
 			} else {
-				if (debug_enabled) {
-					debug_log_write("Langage par défaut utilisé.\n");
-				}
+				debug_log_write("Langage par défaut utilisé.\n");
 				return language_temp;
 			}
 		}
 	}
-	if (debug_enabled) {
-		debug_log_write("Fichier de langage: %s\n", file_path);
-	}
+	debug_log_write("Fichier de langage: %s\n", file_path);
 	int i = 0;
 	// parse the .ini file
 	if (ini_parse(file_path, translation_handler, &config) == 0) {
