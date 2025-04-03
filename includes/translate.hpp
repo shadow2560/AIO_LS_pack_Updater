@@ -30,13 +30,13 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_display_changelog_choice", (char*) "Afficher le changelog (synchronisera l'heure de la console)"}, \
 	{"lng_error_changelog_display_applet", (char*) "Affichage du changelog impossible car le homebrew  est en mode applet. Pour utiliser cette fonction vous ne devez pas lancer le homebrew via l'album."}, \
 	{"lng_error_changelog_display_no_adress", (char*) "Affichage du changelog impossible car aucune adresse indiquee dans la configuration du homebrew."}, \
-	{"lng_error_no_internet_connection_for_function", (char*) "Aucune connexion à internet, fonction indisponible."}, \
+	{"lng_error_no_internet_connection_for_function", (char*) "Aucune connexion a internet, fonction indisponible."}, \
 \
 	{"lng_title", (char*) "%s v%s - par %s"}, \
 	{"lng_title_beta", (char*) "%s v%s - par %s - BETA MODE"}, \
 	{"lng_ls_menu", (char*) "Appuyez sur (LS) pour afficher le changelog du pack (synchronisera l'heure de la console)"}, \
 	{"lng_rs_menu", (char*) "Appuyez sur (RS) pour afficher les controles du homebrew"}, \
-	{"lng_move_menu", (char*) "Appuyez sur haut ou bas sur les sticks ou la croix pour vous déplacer dans les menus"}, \
+	{"lng_move_menu", (char*) "Appuyez sur haut ou bas sur les sticks ou la croix pour vous deplacer dans les menus"}, \
 	{"lng_a_menu", (char*) "Appuyez sur (A) pour selectionner une option"}, \
 	{"lng_x_menu", (char*) "Appuyez sur (X) pour afficher diverses informations"}, \
 	{"lng_y_menu", (char*) "Appuyez sur (Y) pour enregistrer diverses informations dans un fichier"}, \
@@ -120,16 +120,16 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_app_fwd_install_error", (char*) "Une erreur s'est produite durant l'installation du forwarder de cet homebrew.\nVos sig_patches ne sont peut-etre pas a jour, l'espace restant sur votre stockage est peut-etre insufisant ou vous avez peut-etre de la corruption de donnees sur votre SD ou votre nand/emunand."}, \
 \
 	{"lng_reset_parental_begin", (char*) "Reinitialisation du controle parental en cours..."}, \
-	{"lng_reset_parental_app_error", (char*) "Reinitialisation de l'association avec l'application du controle parental échouée. %d"}, \
-	{"lng_reset_parental_app_success", (char*) "Reinitialisation de l'association avec l'application du controle parental réussie."}, \
-	{"lng_reset_parental_error", (char*) "Reinitialisation du controle parental échouée. %d"}, \
-	{"lng_reset_parental_success", (char*) "Reinitialisation de l'association avec l'application du controle parental réussie."}, \
+	{"lng_reset_parental_app_error", (char*) "Reinitialisation de l'association avec l'application du controle parental echouee. %d"}, \
+	{"lng_reset_parental_app_success", (char*) "Reinitialisation de l'association avec l'application du controle parental reussie."}, \
+	{"lng_reset_parental_error", (char*) "Reinitialisation du controle parental echouee. %d"}, \
+	{"lng_reset_parental_success", (char*) "Reinitialisation de l'association avec l'application du controle parental reussie."}, \
 \
 	{"lng_battery_error_10", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 10%% de batterie."}, \
 	{"lng_battery_error_20", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 20%% de batterie."}, \
 	{"lng_battery_error_30", (char*) "Impossible d'effectuer cette action dans les conditions actuelles, vous devez attendre d'etre au-dessus de 30%% de batterie."}, \
 \
-	{"lng_ask_disable_autoconfig", (char*) "Appuyez sur le bouton [A] pour désactiver l'auto-configuration du homebrew ou attendez %.0f secondes..."}, \
+	{"lng_ask_disable_autoconfig", (char*) "Appuyez sur le bouton [A] pour desactiver l'auto-configuration du homebrew ou attendez %.0f secondes..."}, \
 	{"lng_ask_autoconfig_full_control", (char*) "Souhaitez-vous activer l'acces aux autres fonctions du homebrew lorsque l'auto-configuration sera active (si non il faudra appuyer sur le bouton [A] au lancement du homebrew lors de la demande pour pouvoir desactiver l'auto-configuration du homebrew)?"}, \
 	{"lng_ask_autoconfig_beta_launch", (char*) "Souhaitez-vous activer  le lancement en mode beta au demarrage lorsque l'auto-configuration sera active?"}, \
 	{"lng_ask_sd_exfat", (char*) "Attention, cette fonction ne doit pas etre utilisee sur une SD en EXFAT, si votre SD est dans ce format veuillez faire une installation du pack manuellement via un PC (regarder sur votre SD, il est possible qu'un dossier de tutoriels contienne les informations appropriees).\n\nLa SD est-elle en EXFAT, si oui l'installation du pack sera annulee?"}, \
@@ -137,14 +137,14 @@ typedef std::map<const char*, char*, translation_map_comparator> translation_map
 	{"lng_ask_update_firmware_only", (char*) "Souhaitez-vous seulement mettre a jour le firmware (si oui les fichiers du theme seront aussi nettoyes)?"}, \
 	{"lng_ask_update_app", (char*) "Nouvelle version du homebrew trouvee, souhaitez-vous le mettre a jour?"}, \
 	{"lng_ask_app_need_update", (char*) "Nouvelle version du homebrew trouvee, vous devez le mettre a jour avant de pouvoir effectuer cette action.\n\nSouhaitez-vous mettre a jour le homebrew?"}, \
-	{"lng_pack_have_update", (char*) "Nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la dernière version est la version %s."}, \
-	{"lng_pack_have_no_update", (char*) "Aucune nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la dernière version est la version %s."}, \
+	{"lng_pack_have_update", (char*) "Nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la derniere version est la version %s."}, \
+	{"lng_pack_have_no_update", (char*) "Aucune nouvelle version du pack trouvee, la version du pack sur la console est la version %s et la derniere version est la version %s."}, \
 	{"lng_ask_pack_have_update", (char*) "Souhaitez-vous mettre a jour le pack?"}, \
 	{"lng_ask_clean_theme", (char*) "Souhaitez-vous nettoyer les fichiers du theme, utile si mise a jour du firmware par la suite?"}, \
 	{"lng_ask_agressive_clean", (char*) "Souhaitez-vous faire un nettoyage agressif, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_clean_modules", (char*) "Souhaitez-vous faire un nettoyage des modules, utile si mise a jour du firmware ou si vous venez d'un autre pack?"}, \
 	{"lng_ask_keep_files", (char*) "Souhaitez-vous activer la conservation de certains fichiers (non recommande en general)?"}, \
-	{"lng_ask_hekate_autoboot", (char*) "Souhaitez-vous activer l'autoboot sur une configuration de Hekate (le choix de la configuration lancee sera a faire durant l'installation du pack et sera obligatoire; pour demarrer sous Hekate avec l'autoboot actif il faut maintenir \"vol-\" au lancement de Hekate (avec certaines puces maintenir le bouton juste apres le glitch))? Si non l'autoboot de Hekate sera desactivé."}, \
+	{"lng_ask_hekate_autoboot", (char*) "Souhaitez-vous activer l'autoboot sur une configuration de Hekate (le choix de la configuration lancee sera a faire durant l'installation du pack et sera obligatoire; pour demarrer sous Hekate avec l'autoboot actif il faut maintenir \"vol-\" au lancement de Hekate (avec certaines puces maintenir le bouton juste apres le glitch))? Si non l'autoboot de Hekate sera desactive."}, \
 	{"lng_ask_clean_logos", (char*) "Souhaitez-vous retirer les logos?"}, \
 	{"lng_ask_hbmenu_install", (char*) "Souhaitez-vous installer l'icone du Homebrew Menu permettant de lancer les homebrews en profitant de toute la RAM de la console (vivement recommande si vous ne l'avez pas)?"}, \
 	{"lng_ask_app_fwd_install", (char*) "Souhaitez-vous installer l'icone du forwarder de cet homebrew?"}, \

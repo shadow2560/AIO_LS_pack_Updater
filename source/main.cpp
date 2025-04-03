@@ -1055,12 +1055,12 @@ void force_reboot() {
 		rename("/payload.bin", "/payload.bin.temp");
 		custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
 	}
-	spsmInitialize();
+	appExit();
 	if (R_FAILED(appletRequestToReboot())) {
+		spsmInitialize();
 		spsmShutdown(true);
 	}
 	spsmExit();
-	appExit();
 }
 
 void simple_reboot() {
@@ -2419,6 +2419,10 @@ int main(int argc, char **argv) {
 						fnc_clean_modules();
 					}
 					if (fnc_install_firmware()) {
+						debug_log_write("Installation du firmware OK.\n\n");
+						printDisplay("\033[0;32m\n");
+						printDisplay(language_vars["lng_success_reboot_in_five_seconds"]);
+						printDisplay("\033[0;37m\n");
 						sleep(5);
 						simple_reboot();
 					}

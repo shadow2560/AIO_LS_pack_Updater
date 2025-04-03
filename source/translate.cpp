@@ -342,16 +342,23 @@ translation_map set_translation_strings() {
 	if (ini_parse(file_path, translation_handler, &config) == 0) {
 		if (strcmp(config[translation_vars_list[i]], "") != 0) {
 			language_temp.erase(translation_vars_list[i]);
-			/*
+/*
 			int j=0;
 			while (config[translation_vars_list[i]][j] != '\0') {
 				j++;
 			}
 			language_temp[translation_vars_list[i]] = new char[j+1];
-			*/
+*/
+			if (language_temp[translation_vars_list[i]] != nullptr) {
+			delete[] language_temp[translation_vars_list[i]];
+			language_temp[translation_vars_list[i]] = nullptr;
+			}
 			language_temp[translation_vars_list[i]] = new char[strlen(config[translation_vars_list[i]])+1];
 			strcpy(language_temp[translation_vars_list[i]], config[translation_vars_list[i]]);
-			free((char*)config[translation_vars_list[i]]);
+			if (config[translation_vars_list[i]] != nullptr) {
+				free((char*)config[translation_vars_list[i]]);
+				config[translation_vars_list[i]] = nullptr;
+			}
 		}
 		i++;
 	}
