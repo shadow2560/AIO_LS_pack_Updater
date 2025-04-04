@@ -71,7 +71,7 @@ AsyncResult m_prepare_result;
 float m_progress_percent = 0.0f;
 
 void custom_pause() {
-	printf(language_vars["lng_db_pause"]);
+	printf(language_vars["lng_db_pause"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
@@ -133,7 +133,7 @@ bool DaybreakInitializeMenu() {
 	/* Attempt to get the exosphere version. */
 	u64 version;
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereApiVersionConfigItem), &version))) {
-		printf(language_vars["lng_db_atmosphere_not_found_error"], rc);
+		printf(language_vars["lng_db_atmosphere_not_found_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
@@ -146,7 +146,7 @@ bool DaybreakInitializeMenu() {
 	/* Validate the exosphere version. */
 	const bool ams_supports_sysupdate_api = EncodeVersion(version_major, version_minor, version_micro) >= EncodeVersion(0, 14, 0);
 	if (!ams_supports_sysupdate_api) {
-		printf(language_vars["lng_db_atmosphere_outdated_error"], rc);
+		printf(language_vars["lng_db_atmosphere_outdated_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
@@ -154,7 +154,7 @@ bool DaybreakInitializeMenu() {
 
 	/* Ensure DayBreak is ran as a NRO. */
 	if (envIsNso()) {
-		printf(language_vars["lng_db_nso_launch_error"], rc);
+		printf(language_vars["lng_db_nso_launch_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
@@ -178,26 +178,26 @@ Result GetUpdateInformation() {
 	/* Attempt to get the update information. */
 	if (R_FAILED(rc = amssuGetUpdateInformation(&m_update_info, g_update_path))) {
 		if (rc == 0x1a405) {
-			printf(language_vars["lng_db_update_not_found_error"], rc);
+			printf(language_vars["lng_db_update_not_found_error"].c_str(), rc);
 			printf("\n");
 		} else {
-			printf(language_vars["lng_db_get_update_infos_error"], rc);
+			printf(language_vars["lng_db_get_update_infos_error"].c_str(), rc);
 			printf("\n");
 		}
 		custom_pause();
 		return rc;
 	}
 	/* Print update information. */
-	printf(language_vars["lng_db_update_infos_fw_version"], (m_update_info.version >> 26) & 0x1f, (m_update_info.version >> 20) & 0x1f, (m_update_info.version >> 16) & 0xf);
+	printf(language_vars["lng_db_update_infos_fw_version"].c_str(), (m_update_info.version >> 26) & 0x1f, (m_update_info.version >> 20) & 0x1f, (m_update_info.version >> 16) & 0xf);
 	printf("\n");
 	if (m_update_info.exfat_supported) {
-		printf(language_vars["lng_db_update_infos_exfat_support"]);
+		printf(language_vars["lng_db_update_infos_exfat_support"].c_str());
 		printf("\n");
 	} else {
-		printf(language_vars["lng_db_update_infos_exfat_no_support"]);
+		printf(language_vars["lng_db_update_infos_exfat_no_support"].c_str());
 		printf("\n");
 	}
-	printf(language_vars["lng_db_update_infos_fw_version_variations"], m_update_info.num_firmware_variations);
+	printf(language_vars["lng_db_update_infos_fw_version_variations"].c_str(), m_update_info.num_firmware_variations);
 	printf("\n");
 	consoleUpdate(&logs_console);
 	/* Mark as having obtained update info. */
@@ -210,7 +210,7 @@ void ValidateUpdate() {
 
 	/* Validate the update. */
 	if (R_FAILED(rc = amssuValidateUpdate(&m_validation_info, g_update_path))) {
-		printf(language_vars["lng_db_update_validation_error"], rc);
+		printf(language_vars["lng_db_update_validation_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return;
@@ -218,14 +218,14 @@ void ValidateUpdate() {
 
 	/* Check the result. */
 	if (R_SUCCEEDED(m_validation_info.result)) {
-		printf(language_vars["lng_db_update_validation_success"]);
+		printf(language_vars["lng_db_update_validation_success"].c_str());
 		printf("\n");
 
 		if (R_FAILED(m_validation_info.exfat_result)) {
 		   const u32 version = m_validation_info.invalid_key.version;
-			printf(language_vars["lng_db_update_validation_exfat_error"], m_validation_info.exfat_result);
+			printf(language_vars["lng_db_update_validation_exfat_error"].c_str(), m_validation_info.exfat_result);
 			printf("\n");
-			printf(language_vars["lng_db_update_validation_missing_content"], m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+			printf(language_vars["lng_db_update_validation_missing_content"].c_str(), m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
 			printf("\n");
 
 			/* Log the missing content id. */
@@ -238,9 +238,9 @@ void ValidateUpdate() {
 	} else {
 		/* Log the missing content info. */
 		const u32 version = m_validation_info.invalid_key.version;
-		printf(language_vars["lng_db_update_validation_content_error"], m_validation_info.result);
+		printf(language_vars["lng_db_update_validation_content_error"].c_str(), m_validation_info.result);
 		printf("\n");
-		printf(language_vars["lng_db_update_validation_missing_content"], m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
+		printf(language_vars["lng_db_update_validation_missing_content"].c_str(), m_validation_info.invalid_key.id, (version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf);
 		printf("\n");
 
 		/* Log the missing content id. */
@@ -264,39 +264,39 @@ Result TransitionUpdateState() {
 	if (m_install_state == InstallState::NeedsSetup) {
 		/* Setup the update. */
 		if (R_FAILED(rc = amssuSetupUpdate(nullptr, UpdateTaskBufferSize, g_update_path, g_use_exfat))) {
-			printf(language_vars["lng_db_install_process_setup_error"], rc);
+			printf(language_vars["lng_db_install_process_setup_error"].c_str(), rc);
 			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
 
 		/* Log setup completion. */
-		printf(language_vars["lng_db_install_process_setup_success"]);
+		printf(language_vars["lng_db_install_process_setup_success"].c_str());
 		printf("\n");
 		m_install_state = InstallState::NeedsPrepare;
 	} else if (m_install_state == InstallState::NeedsPrepare) {
 		/* Request update preparation. */
 		if (R_FAILED(rc = amssuRequestPrepareUpdate(&m_prepare_result))) {
-			printf(language_vars["lng_db_install_process_request_preparation_error"], rc);
+			printf(language_vars["lng_db_install_process_request_preparation_error"].c_str(), rc);
 			printf("\n");
 			MarkForReboot();
 			return rc;
 		}
 
 		/* Log awaiting prepare. */
-		printf(language_vars["lng_db_install_process_preparing"]);
+		printf(language_vars["lng_db_install_process_preparing"].c_str());
 		printf("\n");
 		m_install_state = InstallState::AwaitingPrepare;
 	} else if (m_install_state == InstallState::AwaitingPrepare) {
 		/* Check if preparation has a result. */
 		if (R_FAILED(rc = asyncResultWait(&m_prepare_result, 0)) && rc != 0xea01) {
-			printf(language_vars["lng_db_install_process_get_preparation_result_error"], rc);
+			printf(language_vars["lng_db_install_process_get_preparation_result_error"].c_str(), rc);
 			printf("\n");
 			MarkForReboot();
 			return rc;
 		} else if (R_SUCCEEDED(rc)) {
 			if (R_FAILED(rc = asyncResultGet(&m_prepare_result))) {
-				printf(language_vars["lng_db_install_process_preparation_error"], rc);
+				printf(language_vars["lng_db_install_process_preparation_error"].c_str(), rc);
 				printf("\n");
 				MarkForReboot();
 				return rc;
@@ -306,7 +306,7 @@ Result TransitionUpdateState() {
 		/* Check if the update has been prepared. */
 		bool prepared;
 		if (R_FAILED(rc = amssuHasPreparedUpdate(&prepared))) {
-			printf(language_vars["lng_db_install_process_preparation_result_error"], rc);
+			printf(language_vars["lng_db_install_process_preparation_result_error"].c_str(), rc);
 			printf("\n");
 			MarkForReboot();
 			return rc;
@@ -315,9 +315,9 @@ Result TransitionUpdateState() {
 		/* Mark for application if preparation complete. */
 		if (prepared) {
 			printf("\n");
-			printf(language_vars["lng_db_install_process_preparation_success"]);
+			printf(language_vars["lng_db_install_process_preparation_success"].c_str());
 			printf("\n");
-			printf(language_vars["lng_db_install_process_applying_update"]);
+			printf(language_vars["lng_db_install_process_applying_update"].c_str());
 			printf("\n");
 			m_install_state = InstallState::NeedsApply;
 			return rc;
@@ -326,7 +326,7 @@ Result TransitionUpdateState() {
 		/* Check update progress. */
 		NsSystemUpdateProgress update_progress = {};
 		if (R_FAILED(rc = amssuGetPrepareUpdateProgress(&update_progress))) {
-			printf(language_vars["lng_db_install_process_get_progress_error"], rc);
+			printf(language_vars["lng_db_install_process_get_progress_error"].c_str(), rc);
 			printf("\n");
 			MarkForReboot();
 			return rc;
@@ -349,11 +349,11 @@ Result TransitionUpdateState() {
 	} else if (m_install_state == InstallState::NeedsApply) {
 		/* Apply the prepared update. */
 		if (R_FAILED(rc = amssuApplyPreparedUpdate())) {
-			printf(language_vars["lng_db_install_process_applying_update_error"], rc);
+			printf(language_vars["lng_db_install_process_applying_update_error"].c_str(), rc);
 			printf("\n");
 		} else {
 			/* Log success. */
-			printf(language_vars["lng_db_install_process_success"]);
+			printf(language_vars["lng_db_install_process_success"].c_str());
 			printf("\n");
 
 			if (g_reset_to_factory) {
@@ -361,20 +361,20 @@ Result TransitionUpdateState() {
 					/* Fallback on ResetToFactorySettings. */
 					if (rc == MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer)) {
 						if (R_FAILED(rc = nsResetToFactorySettings())) {
-							printf(language_vars["lng_db_install_process_reset_to_factory_error"], rc);
+							printf(language_vars["lng_db_install_process_reset_to_factory_error"].c_str(), rc);
 							printf("\n");
 							MarkForReboot();
 							return rc;
 						}
 					} else {
-						printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"], rc);
+						printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"].c_str(), rc);
 						printf("\n");
 						MarkForReboot();
 						return rc;
 					}
 				}
 
-				printf(language_vars["lng_db_install_process_reset_to_factory_success"], rc);
+				printf(language_vars["lng_db_install_process_reset_to_factory_success"].c_str(), rc);
 				printf("\n");
 			}
 		}
@@ -390,9 +390,9 @@ bool daybreak_ask_question(char *question_text) {
 	bool rc;
 	printf("%s\n", question_text);
 	printf("	[A]: ");
-	printf(language_vars["lng_yes"]);
+	printf(language_vars["lng_yes"].c_str());
 	printf("		  [B]: ");
-	printf(language_vars["lng_no"]);
+	printf(language_vars["lng_no"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
@@ -411,14 +411,14 @@ bool daybreak_ask_question(char *question_text) {
 
 bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exfat, int force_unsuported_firmware) {
 	DaybreakAppInit();
-	printf(language_vars["lng_db_title"], app_version);
+	printf(language_vars["lng_db_title"].c_str(), app_version);
 	printf("\n");
 	consoleUpdate(&logs_console);
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	padInitializeDefault(&daybreak_pad);
 	if (!DaybreakInitializeMenu()) {
 		debug_log_write("Erreur durant l'initialisation de Daybreak.\n");
-		printf(language_vars["lng_db_init_failed_error"]);
+		printf(language_vars["lng_db_init_failed_error"].c_str());
 		printf("\n");
 		custom_pause();
 		return false;
@@ -429,7 +429,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	u64 is_emummc;
 	if (R_FAILED(rc = splGetConfig(SplConfigItem_HardwareType, &hardware_type))) {
 		debug_log_write("Erreur de détection du type de hardware.\n");
-		printf(language_vars["lng_db_get_hardware_type_error"], rc);
+		printf(language_vars["lng_db_get_hardware_type_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
@@ -437,14 +437,14 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereHasRcmBugPatch), &has_rcm_bug_patch))) {
 		debug_log_write("Erreur de détermination du bug RCM.\n");
-		printf(language_vars["lng_db_get_rcm_bug_patch_error"], rc);
+		printf(language_vars["lng_db_get_rcm_bug_patch_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
 	}
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
 		debug_log_write("Erreur de détection du status de l'emummc.\n");
-		printf(language_vars["lng_db_get_emummc_status_error"], rc);
+		printf(language_vars["lng_db_get_emummc_status_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
 		return false;
@@ -452,7 +452,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Warn if we're working with a patched unit. */
 	const bool is_erista = hardware_type == 0 || hardware_type == 1;
 	if (is_erista && has_rcm_bug_patch && !is_emummc) {
-		printf(language_vars["lng_db_patched_model_warning"]);
+		printf(language_vars["lng_db_patched_model_warning"].c_str());
 		printf("\n");
 		consoleUpdate(&logs_console);
 	}
@@ -461,7 +461,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Obtain update information. */
 	if (!R_FAILED(GetUpdateInformation())) {
 		/* Log this early so it is printed out before validation causes stalling. */
-		printf(language_vars["lng_db_update_validation"]);
+		printf(language_vars["lng_db_update_validation"].c_str());
 		printf("\n");
 		consoleUpdate(&logs_console);
 	}
@@ -472,7 +472,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
 		debug_log_write("Erreur durant la validation de la mise à jour.\n");
-		printf(language_vars["lng_db_update_validation_failed_error"]);
+		printf(language_vars["lng_db_update_validation_failed_error"].c_str());
 		printf("\n");
 		custom_pause();
 		return false;
@@ -486,17 +486,17 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	if (g_exfat_supported && force_exfat == 1) {
 		g_use_exfat = true;
 	} else if (g_exfat_supported && force_exfat == 0) {
-		g_use_exfat = daybreak_ask_question((char *) language_vars["lng_db_ask_exfat_driver_install"]);
+		g_use_exfat = daybreak_ask_question((char *) language_vars["lng_db_ask_exfat_driver_install"].c_str());
 	} else {
 		g_use_exfat = false;
 	}
 	bool choose_fat32_forced = false;
 	if (!g_exfat_supported && g_use_exfat) {
-		choose_fat32_forced = daybreak_ask_question((char *) language_vars["lng_db_ask_fat32_if_exfat_not_supported"]);
+		choose_fat32_forced = daybreak_ask_question((char *) language_vars["lng_db_ask_fat32_if_exfat_not_supported"].c_str());
 		if (choose_fat32_forced) {
 			g_use_exfat = false;
 		} else {
-			printf(language_vars["lng_db_update_canceled"]);
+			printf(language_vars["lng_db_update_canceled"].c_str());
 			printf("\n");
 			custom_pause();
 			return false;
@@ -505,7 +505,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	/* Warn the user if they're updating with exFAT supposed to be supported but not present/corrupted. */
 	if (g_use_exfat == true && m_update_info.exfat_supported && R_FAILED(m_validation_info.exfat_result)) {
 		debug_log_write("Erreur, EXFAT forcé mais non supporté.\n");
-		printf(language_vars["lng_db_exfat_forced_but_not_supported_error"]);
+		printf(language_vars["lng_db_exfat_forced_but_not_supported_error"].c_str());
 		printf("\n");
 		custom_pause();
 		return false;
@@ -516,18 +516,18 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	bool force_update_not_supported = false;
 	if (EncodeVersion((version >> 26) & 0x1f, (version >> 20) & 0x1f, (version >> 16) & 0xf) > g_supported_version) {
 		if (force_unsuported_firmware == 1) {
-			printf(language_vars["lng_db_force_unsupported_firmware_enabled"]);
+			printf(language_vars["lng_db_force_unsupported_firmware_enabled"].c_str());
 			printf("\n");
 			consoleUpdate(&logs_console);
 			force_update_not_supported = true;
 		} else if (force_unsuported_firmware == 0) {
-			force_update_not_supported = daybreak_ask_question((char *) language_vars["lng_db_ask_force_unsupported_firmware_install"]);
+			force_update_not_supported = daybreak_ask_question((char *) language_vars["lng_db_ask_force_unsupported_firmware_install"].c_str());
 		} else {
 			force_update_not_supported = false;
 		}
 		if (!force_update_not_supported) {
 			debug_log_write("Erreur, firmware non supporté et installation non forcée.\n");
-			printf(language_vars["lng_db_firmware_not_supported_and_force_install_disabled"]);
+			printf(language_vars["lng_db_firmware_not_supported_and_force_install_disabled"].c_str());
 			printf("\n");
 			custom_pause();
 			return false;
@@ -545,11 +545,11 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	*/
 	if (force_reset_to_factory == 1) {
-		printf(language_vars["lng_db_reset_to_factory_forced"]);
+		printf(language_vars["lng_db_reset_to_factory_forced"].c_str());
 		printf("\n");
 		g_reset_to_factory = true;
 	} else if (force_reset_to_factory == 0) {
-		g_reset_to_factory = daybreak_ask_question((char *) language_vars["lng_db_ask_reset_to_factory"]);
+		g_reset_to_factory = daybreak_ask_question((char *) language_vars["lng_db_ask_reset_to_factory"].c_str());
 	} else {
 		g_reset_to_factory = false;
 	}
@@ -560,7 +560,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	/* We have drawn now, allow setup to occur. */
 	if (m_install_state == InstallState::NeedsDraw) {
-		printf(language_vars["lng_db_install_update_begin"]);
+		printf(language_vars["lng_db_install_update_begin"].c_str());
 		printf("\n");
 		consoleUpdate(&logs_console);
 		m_install_state = InstallState::NeedsSetup;

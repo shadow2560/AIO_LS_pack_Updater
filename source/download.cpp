@@ -76,11 +76,11 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 	if (counter == 0 || counter == 2 || counter == 4 || counter == 6 || counter == 8) {
 		if (dltotal <= 0.0) {
 			if (dif >= 1.0f || dl_speed_displayed) {
-				printf(language_vars["lng_dl_progress_0"], dlnow / _1MO, dl_speed);
+				printf(language_vars["lng_dl_progress_0"].c_str(), dlnow / _1MO, dl_speed);
 				printf("\033[0K\r");
 				dl_speed_displayed = true;
 			} else {
-				printf(language_vars["lng_dl_progress_1"], dlnow / _1MO);
+				printf(language_vars["lng_dl_progress_1"].c_str(), dlnow / _1MO);
 				printf("\r");
 			}
 		} else {
@@ -94,12 +94,12 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 			}
 			if (dif >= 1.0f || dl_speed_displayed) {
 				printf("]   ");
-				printf(language_vars["lng_dl_progress_with_bar_0"], dlnow / _1MO, dltotal / _1MO, dl_speed);
+				printf(language_vars["lng_dl_progress_with_bar_0"].c_str(), dlnow / _1MO, dltotal / _1MO, dl_speed);
 				printf("\033[0K");
 				dl_speed_displayed = true;
 			} else {
 				printf("]   ");
-				printf(language_vars["lng_dl_progress_with_bar_1"], dlnow / _1MO, dltotal / _1MO);
+				printf(language_vars["lng_dl_progress_with_bar_1"].c_str(), dlnow / _1MO, dltotal / _1MO);
 			}
 		}
 		consoleUpdate(&logs_console);
@@ -116,7 +116,7 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 bool downloadFile(const char *url, const char *output, int api, bool display_log) {
 	if (display_log) {
 		printf("\n\033[0;32m");
-		printf(language_vars["lng_dl_begin"], url);
+		printf(language_vars["lng_dl_begin"].c_str(), url);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
@@ -124,7 +124,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 	if (!internet_is_connected()) {
 		if (display_log) {
 			printf("\n\033[0;31m");
-			printf(language_vars["lng_error_no_internet_connection_for_function"]);
+			printf(language_vars["lng_error_no_internet_connection_for_function"].c_str());
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
@@ -174,7 +174,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 				if (chunk.offset != fwrite(chunk.data, 1, chunk.offset, fp)) {
 					if (display_log) {
 						printf("\033[0;31m");
-						printf(language_vars["lng_dl_file_write_error"]);
+						printf(language_vars["lng_dl_file_write_error"].c_str());
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
 						debug_log_write("Erreur durant l'écriture du fichier.\n\n");
@@ -196,7 +196,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			if (res == CURLE_OK) {
 				if (display_log) {
 					printf("\n\n\033[0;32m");
-					printf(language_vars["lng_dl_success"]);
+					printf(language_vars["lng_dl_success"].c_str());
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
@@ -205,7 +205,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			} else {
 				if (display_log) {
 					printf("\n\n\033[0;31m");
-					printf(language_vars["lng_dl_dl_error"]);
+					printf(language_vars["lng_dl_dl_error"].c_str());
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
 				}
@@ -216,7 +216,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			curl_easy_cleanup(curl);
 			if (display_log) {
 				printf("\n\n\033[0;31m");
-				printf(language_vars["lng_dl_open_temp_file_error"]);
+				printf(language_vars["lng_dl_open_temp_file_error"].c_str());
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
@@ -227,7 +227,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 	} else {
 		if (display_log) {
 			printf("\n\n\033[0;31m");
-			printf(language_vars["lng_dl_curl_init_error"]);
+			printf(language_vars["lng_dl_curl_init_error"].c_str());
 			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
 		}
@@ -246,7 +246,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_log) {
 	if (display_log) {
 		printf("\n\033[0;32m");
-		printf(language_vars["lng_dl_begin"], url);
+		printf(language_vars["lng_dl_begin"].c_str(), url);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}
@@ -254,7 +254,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 	if (!internet_is_connected()) {
 		if (display_log) {
 			printf("\n\033[0;31m");
-			printf(language_vars["lng_error_no_internet_connection_for_function"]);
+			printf(language_vars["lng_error_no_internet_connection_for_function"].c_str());
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
@@ -298,7 +298,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 		if (chunk->size <= 0) {
 			if (display_log) {
 				printf("\033[0;31m");
-				printf(language_vars["lng_dl_file_write_error"]);
+				printf(language_vars["lng_dl_file_write_error"].c_str());
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 			}
@@ -312,7 +312,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 		if (res == CURLE_OK) {
 			if (display_log) {
 				printf("\n\n\033[0;32m");
-				printf(language_vars["lng_dl_success"]);
+				printf(language_vars["lng_dl_success"].c_str());
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
@@ -323,7 +323,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 		} else {
 			if (display_log) {
 				printf("\n\n\033[0;31m");
-				printf(language_vars["lng_dl_dl_error"]);
+				printf(language_vars["lng_dl_dl_error"].c_str());
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
 			}
@@ -336,7 +336,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 	} else {
 		if (display_log) {
 			printf("\n\n\033[0;31m");
-			printf(language_vars["lng_dl_curl_init_error"]);
+			printf(language_vars["lng_dl_curl_init_error"].c_str());
 			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
 		}
@@ -355,7 +355,7 @@ bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_lo
 bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, bool display_log) {
 	if (display_log) {
 		printf("\n\033[0;32m");
-		printf(language_vars["lng_dl_directory_begin"], remote_url);
+		printf(language_vars["lng_dl_directory_begin"].c_str(), remote_url);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}

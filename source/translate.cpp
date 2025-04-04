@@ -292,7 +292,7 @@ static int translation_handler(void* config, const char * section, const char * 
 	for (size_t i=0; i < sizeof(translation_vars_list)/sizeof(translation_vars_list[0]); i++) {
 		if(MATCH("language", translation_vars_list[i])){
 			if (value != 0) {
-				pconfig->insert({translation_vars_list[i], strdup(value)});
+				pconfig->insert({translation_vars_list[i], (std::string) value});
 			} else {
 				pconfig->insert({translation_vars_list[i], (char*) ""});
 			}
@@ -340,7 +340,7 @@ translation_map set_translation_strings() {
 	int i = 0;
 	// parse the .ini file
 	if (ini_parse(file_path, translation_handler, &config) == 0) {
-		if (strcmp(config[translation_vars_list[i]], "") != 0) {
+		if (strcmp(config[translation_vars_list[i]].c_str(), "") != 0) {
 			language_temp.erase(translation_vars_list[i]);
 /*
 			int j=0;
@@ -348,7 +348,6 @@ translation_map set_translation_strings() {
 				j++;
 			}
 			language_temp[translation_vars_list[i]] = new char[j+1];
-*/
 			if (language_temp[translation_vars_list[i]] != nullptr) {
 			delete[] language_temp[translation_vars_list[i]];
 			language_temp[translation_vars_list[i]] = nullptr;
@@ -359,6 +358,8 @@ translation_map set_translation_strings() {
 				free((char*)config[translation_vars_list[i]]);
 				config[translation_vars_list[i]] = nullptr;
 			}
+			*/
+			language_temp[translation_vars_list[i]] = config[translation_vars_list[i]];
 		}
 		i++;
 	}

@@ -69,7 +69,7 @@ void rebootAms_rcm()
 	if (f == NULL) {
 		debug_log_write("Erreur durant le redémarrage sur le payload.\n");
 		printf("\033[0;31m");
-		printf(language_vars["lng_error_reboot_to_payload"]);
+		printf(language_vars["lng_error_reboot_to_payload"].c_str());
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
 	}

@@ -145,7 +145,7 @@ bool module_in_modules_to_keep(char *file_to_test) {
 
 void fnc_clean_modules() {
 	debug_log_write("Suppression des modules.\n");
-	printf(language_vars["lng_clean_modules_begin"]);
+	printf(language_vars["lng_clean_modules_begin"].c_str());
 	printf("\n");
 	remove_directory("/atmosphere/kips");
 	mkdir("/atmosphere/kips", 0777);
@@ -199,7 +199,7 @@ void fnc_clean_modules() {
 
 void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 	debug_log_write("Suppression des logos.\n");
-	printf(language_vars["lng_clean_logos_begin"]);
+	printf(language_vars["lng_clean_logos_begin"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	char base_atmo_logo_folder[FS_MAX_PATH] = "/atmosphere/exefs_patches/";
@@ -222,7 +222,7 @@ void fnc_clean_logo(char *atmo_logo_folder, char *hekate_nologo_file_path) {
 void fnc_clean_theme() {
 	debug_log_write("Suppression du thème.\n");
 	// Full theme deletion, helped  with code from nx-theme-installer
-	printf(language_vars["lng_clean_theme_begin"]);
+	printf(language_vars["lng_clean_theme_begin"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	remove_directory("atmosphere/contents/0100000000001000");
@@ -235,7 +235,7 @@ void fnc_clean_theme() {
 
 void fnc_agressive_clean(bool fw_install_only) {
 	debug_log_write("Nettoyage agressif.\n");
-	printf(language_vars["lng_agressive_clean_begin"]);
+	printf(language_vars["lng_agressive_clean_begin"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	FILE *folders_list_file;
@@ -285,9 +285,9 @@ void fnc_agressive_clean(bool fw_install_only) {
 void clean_sd(bool clean_theme, bool agressive_clean) {
 	debug_log_write("Nettoyage de la SD.\n");
 	printf("\033[0;32m");
-	printf(language_vars["lng_clean_sd_begin"]);
+	printf(language_vars["lng_clean_sd_begin"].c_str());
 	printf("\033[0;37m\n");
-	printf(language_vars["lng_clean_sd_clean_unusful_files"]);
+	printf(language_vars["lng_clean_sd_clean_unusful_files"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
 	DIR *dir = opendir("atmosphere/titles");
@@ -365,7 +365,7 @@ void clean_sd(bool clean_theme, bool agressive_clean) {
 		fnc_agressive_clean(false);
 	}
 	printf("\033[0;32m");
-	printf(language_vars["lng_clean_sd_finish"]);
+	printf(language_vars["lng_clean_sd_finish"].c_str());
 	printf("\033[0;37m\n\n");
 		consoleUpdate(&logs_console);
 }
@@ -611,7 +611,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			if (file_in_files_to_keep(filename_on_sd) && test_if_file_exist) {
 				debug_log_write("fichier ou dossier \"%s\" non copié car il est défini comme devant être conservé.\n", filename_on_sd);
 				printf("\033[0;35m");
-				printf(language_vars["lng_install_pack_file_skip"], filename_on_sd);
+				printf(language_vars["lng_install_pack_file_skip"].c_str(), filename_on_sd);
 				printf("\033[0;37m\n");
 				unzCloseCurrentFile(zfile);
 				unzGoToNextFile(zfile);
@@ -632,7 +632,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				closedir(dir);
 				if (strcmp(filename_on_sd, atmo_bootlogo_dir) == 0) {
 					printf("\033[0;34m");
-					printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
+					printf(language_vars["lng_install_pack_folder_create"].c_str(), filename_on_sd);
 					printf("\033[0;37m\n");
 					remove_directory(filename_on_sd);
 					mkdir(filename_on_sd, 0777);
@@ -648,7 +648,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 					remove(filename_on_sd);
 				}
 				printf("\033[0;34m");
-				printf(language_vars["lng_install_pack_folder_create"], filename_on_sd);
+				printf(language_vars["lng_install_pack_folder_create"].c_str(), filename_on_sd);
 				printf("\033[0;37m\n");
 				mkdir(filename_on_sd, 0777);
 				debug_log_write("Création du répertoire \"%s\".\n", filename_on_sd);
@@ -679,7 +679,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 					if (strcmp(sha256_in_test, sha256_out_test) == 0) {
 						debug_log_write("Le fichier \"%s\" est le même dans le zip et sur la SD, la copie n'est pas nécessaire.\n", filename_on_sd);
 						printf("\033[0;32m");
-						printf(language_vars["lng_install_pack_same_files"], filename_on_sd);
+						printf(language_vars["lng_install_pack_same_files"].c_str(), filename_on_sd);
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
 						unzCloseCurrentFile(zfile);
@@ -698,21 +698,21 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
 			printf("\033[0;33m");
-			printf(language_vars["lng_install_pack_extract_file_protected"], filename_on_sd);
+			printf(language_vars["lng_install_pack_extract_file_protected"].c_str(), filename_on_sd);
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
 			printf("\033[0;33m");
-			printf(language_vars["lng_install_pack_extract_file_protected"], filename_on_sd);
+			printf(language_vars["lng_install_pack_extract_file_protected"].c_str(), filename_on_sd);
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		} else {
 			outfile = fopen(filename_on_sd, "wb");
 
 			printf("\033[0;36m");
-			printf(language_vars["lng_install_pack_extract_file"], filename_on_sd);
+			printf(language_vars["lng_install_pack_extract_file"].c_str(), filename_on_sd);
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
@@ -727,13 +727,13 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				if (copy_retry > 0) {
 					debug_log_write("Tentative de réécriture du fichier...\n");
 					printf("\033[0;31m");
-					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
+					printf(language_vars["lng_install_pack_file_write__retrying_error"].c_str(), filename_on_sd);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					continue;
 				}
 				printf("\033[0;31m");
-				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
+				printf(language_vars["lng_install_pack_file_write_error"].c_str(), filename_on_sd);
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				unzClose(zfile);
@@ -762,13 +762,13 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				if (copy_retry > 0) {
 					debug_log_write("Tentative de réécriture du fichier...\n");
 					printf("\033[0;31m");
-					printf(language_vars["lng_install_pack_file_write__retrying_error"], filename_on_sd);
+					printf(language_vars["lng_install_pack_file_write__retrying_error"].c_str(), filename_on_sd);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
 					continue;
 				}
 				printf("\033[0;31m");
-				printf(language_vars["lng_install_pack_file_write_error"], filename_on_sd);
+				printf(language_vars["lng_install_pack_file_write_error"].c_str(), filename_on_sd);
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				unzClose(zfile);
