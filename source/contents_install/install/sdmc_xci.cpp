@@ -27,7 +27,7 @@ namespace tin::install::xci
 
         NcaWriter writer(ncaId, contentStorage);
 
-        float progress;
+        // float progress;
 
         u64 fileStart = GetDataOffset() + fileEntry->dataOffset;
         u64 fileOff = 0;
@@ -38,11 +38,13 @@ namespace tin::install::xci
         {
             while (fileOff < ncaSize)
             {
+/*
                 progress = (float) fileOff / (float) ncaSize;
 
                 if (fileOff % (0x400000 * 3) == 0) {
                     LOG_DEBUG("> Progress: %lu/%lu MB (%d%s)\r", (fileOff / 1000000), (ncaSize / 1000000), (int)(progress * 100.0), "%");
                 }
+*/
 
                 if (fileOff + readSize >= ncaSize) readSize = ncaSize - fileOff;
 
