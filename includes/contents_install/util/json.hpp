@@ -36,7 +36,7 @@ SOFTWARE.
 
 #include <algorithm> // all_of, find, for_each
 #include <cassert> // assert
-#include <ciso646> // and, not, or
+#include <version> // and, not, or
 #include <cstddef> // nullptr_t, ptrdiff_t, size_t
 #include <functional> // hash, less
 #include <initializer_list> // initializer_list
@@ -58,7 +58,7 @@ SOFTWARE.
 
 #include <algorithm> // transform
 #include <array> // array
-#include <ciso646> // and, not
+#include <version> // and, not
 #include <forward_list> // forward_list
 #include <iterator> // inserter, front_inserter, end
 #include <map> // map
@@ -2178,7 +2178,7 @@ class other_error : public exception
 // #include <nlohmann/detail/meta/cpp_future.hpp>
 
 
-#include <ciso646> // not
+#include <version> // not
 #include <cstddef> // size_t
 #include <type_traits> // conditional, enable_if, false_type, integral_constant, is_constructible, is_integral, is_same, remove_cv, remove_reference, true_type
 
@@ -2243,7 +2243,7 @@ constexpr T static_const<T>::value;
 // #include <nlohmann/detail/meta/type_traits.hpp>
 
 
-#include <ciso646> // not
+#include <version> // not
 #include <limits> // numeric_limits
 #include <type_traits> // false_type, is_constructible, is_integral, is_same, true_type
 #include <utility> // declval
@@ -2814,7 +2814,7 @@ struct is_constructible_tuple<T1, std::tuple<Args...>> : conjunction<std::is_con
 
 
 #include <array> // array
-#include <ciso646> // and
+#include <version> // and
 #include <cstddef> // size_t
 #include <cstdint> // uint8_t
 #include <string> // string
@@ -3263,7 +3263,7 @@ constexpr const auto& from_json = detail::static_const<detail::from_json_fn>::va
 
 
 #include <algorithm> // copy
-#include <ciso646> // or, and, not
+#include <version> // or, and, not
 #include <iterator> // begin, end
 #include <string> // string
 #include <tuple> // tuple, get
@@ -9299,7 +9299,7 @@ template<typename BasicJsonType> struct internal_iterator
 // #include <nlohmann/detail/iterators/iter_impl.hpp>
 
 
-#include <ciso646> // not
+#include <version> // not
 #include <iterator> // iterator, random_access_iterator_tag, bidirectional_iterator_tag, advance, next
 #include <type_traits> // conditional, is_const, remove_const
 
@@ -12634,7 +12634,7 @@ class binary_writer
 #include <algorithm> // reverse, remove, fill, find, none_of
 #include <array> // array
 #include <cassert> // assert
-#include <ciso646> // and, or
+#include <version> // and, or
 #include <clocale> // localeconv, lconv
 #include <cmath> // labs, isfinite, isnan, signbit
 #include <cstddef> // size_t, ptrdiff_t
@@ -12650,7 +12650,7 @@ class binary_writer
 
 #include <array> // array
 #include <cassert> // assert
-#include <ciso646> // or, and, not
+#include <version> // or, and, not
 #include <cmath>   // signbit, isfinite
 #include <cstdint> // intN_t, uintN_t
 #include <cstring> // memcpy, memmove
@@ -22695,7 +22695,7 @@ if no parse error occurred.
 @since version 1.0.0
 */
 JSON_HEDLEY_NON_NULL(1)
-inline nlohmann::json operator "" _json(const char* s, std::size_t n)
+inline nlohmann::json operator ""_json(const char* s, std::size_t n)
 {
     return nlohmann::json::parse(s, s + n);
 }
@@ -22714,7 +22714,7 @@ object if no parse error occurred.
 @since version 2.0.0
 */
 JSON_HEDLEY_NON_NULL(1)
-inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std::size_t n)
+inline nlohmann::json::json_pointer operator ""_json_pointer(const char* s, std::size_t n)
 {
     return nlohmann::json::json_pointer(std::string(s, n));
 }
