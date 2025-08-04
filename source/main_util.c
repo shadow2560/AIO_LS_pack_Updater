@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <unistd.h> // chdir
 #include <dirent.h> // mkdir
@@ -31,6 +32,33 @@ void debug_log_write(const char *text, ...) {
 	vfprintf(debug_log_file, text, v);
 	va_end(v);
 	fclose(debug_log_file);
+}
+
+void to_lowercase(char *str) {
+    if (!str) return;
+    while (*str) {
+        *str = tolower((unsigned char)*str);
+        str++;
+    }
+}
+
+void to_uppercase(char *str) {
+    if (!str) return;
+    while (*str) {
+        *str = tolower((unsigned char)*str);
+        str++;
+    }
+}
+
+bool strcmp_ignore_case(const char *s1, const char *s2) {
+    if (!s1 || !s2) return s1 == s2;
+    while (*s1 && *s2) {
+        if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2))
+            return false;
+        s1++;
+        s2++;
+    }
+    return *s1 == *s2;
 }
 
 bool custom_cp(char *filein, char *fileout) {

@@ -15,6 +15,9 @@ typedef struct {
 
 void debug_log_start();
 void debug_log_write(const char *text, ...);
+void to_lowercase(char *str);
+void to_uppercase(char *str);
+bool strcmp_ignore_case(const char *s1, const char *s2);
 bool custom_cp(char *filein, char *fileout);
 bool copy_directory_recursive(const char *source, const char *destination, bool include_source);
 int remove_directory(const char *path);
