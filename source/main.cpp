@@ -1472,29 +1472,30 @@ bool auto_update_app(bool update_app) {
 					debug_log_write("SHA256 de l'app téléchargée: ");
 					debug_log_write("%s", dl_app_sha256);
 					debug_log_write("\n\n");
-					if (strcmp_ignore_case(app_sha256, dl_app_sha256) != 0) {
+					if (strcmp_ignore_case(app_sha256, dl_app_sha256) != true) {
 						debug_log_write("Erreur de téléchargement de l'application, installation annulée.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"].c_str());
 						printDisplay("\033[0;37m\n");
 						remove(TEMP_FILE);
 						consoleSelect(&menu_console);
+					} else {
+						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+							debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+							printDisplay("\033[0;31m");;
+							printDisplay(language_vars["lng_error_copy_file"].c_str());
+							printDisplay("\033[0;37m");;
+						} else {
+							debug_log_write("Mise à jour de l'application OK.\n\n");
+							printDisplay("\033[0;32m\n");
+							printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
+							printDisplay("\033[0;37m\n");
+							sleep(5);
+							appExit();
+							envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+							return true;
+						}
 					}
-				}
-				if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-					debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-					printDisplay("\033[0;31m");;
-					printDisplay(language_vars["lng_error_copy_file"].c_str());
-					printDisplay("\033[0;37m");;
-				} else {
-					debug_log_write("Mise à jour de l'application OK.\n\n");
-					printDisplay("\033[0;32m\n");
-					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
-					printDisplay("\033[0;37m\n");
-					sleep(5);
-					appExit();
-					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-					return true;
 				}
 			} else {
 				debug_log_write("Erreur de téléchargement de l'application.\n\n");
@@ -2826,7 +2827,7 @@ int main(int argc, char **argv) {
 								debug_log_write("SHA256 du pack téléchargé: ");
 								debug_log_write("%s", dl_pack_sha256);
 								debug_log_write("\n\n");
-								if (strcmp_ignore_case(pack_sha256, dl_pack_sha256) != 0) {
+								if (strcmp_ignore_case(pack_sha256, dl_pack_sha256) != true) {
 									debug_log_write("Erreur de téléchargement du pack, installation annulée\n\n.");
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"].c_str());
@@ -2880,7 +2881,7 @@ int main(int argc, char **argv) {
 												debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
 												debug_log_write("%s", dl_custom_files_pack_sha256);
 												debug_log_write("\n");
-												if (strcmp_ignore_case(custom_files_pack_sha256, dl_custom_files_pack_sha256) != 0) {
+												if (strcmp_ignore_case(custom_files_pack_sha256, dl_custom_files_pack_sha256) != true) {
 													printDisplay("\033[0;31m");
 													printDisplay(language_vars["lng_install_custom_files_pack_download_error"].c_str());
 													printDisplay("\033[0;37m\n");

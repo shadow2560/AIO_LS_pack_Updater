@@ -51,14 +51,15 @@ void to_uppercase(char *str) {
 }
 
 bool strcmp_ignore_case(const char *s1, const char *s2) {
-    if (!s1 || !s2) return s1 == s2;
+    if (!s1 || !s2) return false;
     while (*s1 && *s2) {
-        if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2))
+        if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2)) {
             return false;
+        }
         s1++;
         s2++;
     }
-    return *s1 == *s2;
+    return true;
 }
 
 bool custom_cp(char *filein, char *fileout) {
