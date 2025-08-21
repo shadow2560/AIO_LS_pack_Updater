@@ -17,8 +17,7 @@
 // #define _1MiB   0x100000
 #define _1MO   1000000
 
-extern translation_map language_vars;
-extern PrintConsole logs_console;
+MemoryStruct_t file_dl_in_memory;
 
 time_t prevtime;
 time_t currtime;

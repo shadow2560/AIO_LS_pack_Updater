@@ -7,6 +7,8 @@
 #include "main_util.h"
 #include "ini.h"
 
+translation_map language_vars;
+
 const char* translation_vars_list[] =
 {
 	"lng_yes",

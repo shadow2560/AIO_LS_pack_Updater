@@ -14,14 +14,14 @@
 #include "contents_install/util/util.hpp"
 
 #include "main_util.h"
+#include "translate.hpp"
+#include "download.hpp"
 #include "ini_hekate_configs_parse.h"
 #include "90dns_setter.hpp"
 #include "90dns_tester.hpp"
-#include "download.hpp"
 #include "unzip.hpp"
 #include "reboot_to_payload.hpp"
 #include "firmwares_install/daybreak-cli.hpp"
-#include "translate.hpp"
 #include "main_config.h"
 #include "web_launch.h"
 #include "ntp.hpp"
@@ -30,7 +30,6 @@ extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
 const u64 app_title_id = 0x0157ba2eaeab0000;
 
-translation_map language_vars;
 #define ROOT					"/"
 #define APP_PATH				"/switch/" APP_TITLE "/"
 #define APP_OUTPUT			  "/switch/" APP_TITLE "/" APP_TITLE ".nro"
@@ -48,50 +47,6 @@ translation_map language_vars;
 #define UP_SYNC_TIME		  8
 #define UP_RESET		  9
 const char *OPTION_LIST[CURSOR_LIST_MAX+1];
-bool debug_enabled = true;
-
-char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
-char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack.txt";
-char pack_changelog_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/changelog.html";
-char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
-char pack_sha256_url_beta[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack_beta.txt";
-char pack_changelog_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/blob/main/changelog.md";
-char pack_custom_files_url[1003] = "";
-char pack_custom_files_url_beta[1003] = "";
-char pack_custom_files_sha256_url[1003] = "";
-char pack_custom_files_sha256_url_beta[1003] = "";
-char pack_custom_files_subfolder_in_zip[FS_MAX_PATH] = "";
-char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH] = "";
-s64 pack_custom_files_size = 10000000;
-s64 pack_custom_files_size_beta = 10000000;
-char pack_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/pack_version.txt";
-char pack_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/pack_version.txt";
-char pack_version_local_filepath[FS_MAX_PATH] = "/pack_version.txt";
-char pack_version_local_filepath_beta[FS_MAX_PATH] = "/pack_version.txt";
-char subfolder_in_zip[FS_MAX_PATH] = "";
-char subfolder_in_zip_beta[FS_MAX_PATH] = "switch_AIO_LS_pack-main/";
-s64 pack_size = 1000000000;
-s64 pack_size_beta = 1000000000;
-char APP_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/AIO_LS_pack_Updater.nro";
-char app_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_AIO_LS_pack_Updater.txt";
-char app_version_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/app_version.txt";
-char APP_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro";
-char app_sha256_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/sha256_AIO_LS_pack_Updater.txt";
-char app_version_url_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/raw/main/app_version.txt";
-char firmware_path[FS_MAX_PATH] = "/dernier_firmware_compatible";
-char firmware_path_beta[FS_MAX_PATH] = "/dernier_firmware_compatible";
-char atmo_logo_dir[FS_MAX_PATH] = "logo";
-char atmo_logo_dir_beta[FS_MAX_PATH] = "logo";
-char hekate_nologo_file_path[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
-char hekate_nologo_file_path_beta[FS_MAX_PATH] = "romfs:/nologo/hekate_ipl.ini";
-int pack_files_in_zip_sha256_verify_before_copy_param = 1;
-int pack_files_in_zip_sha256_verify_before_copy_param_beta = 1;
-int exit_mode_param = 0;
-int exit_mode_param_beta = 0;
-int install_pack_hekate_autoboot_choice_time = 0;
-int install_pack_hekate_autoboot_choice_time_beta = 0;
-int debug_enabled_param = 0;
-int debug_enabled_param_beta = 0;
 
 char pack_version[30];
 char last_pack_version[30];
@@ -110,23 +65,11 @@ u64 console_id = 0;
 SetSysSerialNumber console_serial;
 // bool sd_is_exfat;
 bool console_is_erista = false;
-int hekate_autoboot = 0;
-int hekate_autoboot_lineno = -1;
-int hekate_autoboot_config = 0;
-int hekate_autoboot_config_lineno = -1;
 
 autoconfig_configuration autoconfig_config;
-bool autoconfig_enabled = false;
-
-bool beta_mode = false;
-
-
 
 PadState pad;
-MemoryStruct_t file_dl_in_memory;
 
-PrintConsole menu_console;
-PrintConsole logs_console;
 /* ConsoleFont custom_font;
 custom_font->gfx=;
 custom_font->asciiOffset=;

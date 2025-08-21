@@ -18,18 +18,6 @@
 
 size_t WRITEBUFFERSIZE = 0x100000;
 
-extern translation_map language_vars;
-extern PrintConsole logs_console;
-extern char firmware_path[FS_MAX_PATH];
-extern char firmware_path_beta[FS_MAX_PATH];
-extern char atmo_logo_dir[FS_MAX_PATH];
-extern char atmo_logo_dir_beta[FS_MAX_PATH];
-extern int pack_files_in_zip_sha256_verify_before_copy_param;
-extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
-extern bool beta_mode;
-
-extern MemoryStruct_t file_dl_in_memory;
-
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
 }

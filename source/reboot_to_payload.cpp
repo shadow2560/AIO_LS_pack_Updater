@@ -12,10 +12,6 @@
 #define IRAM_PAYLOAD_MAX_SIZE 0x2F000
 #define IRAM_PAYLOAD_BASE 0x40010000
 
-extern translation_map language_vars;
-extern PrintConsole menu_console;
-extern PrintConsole logs_console;
-
  alignas(0x1000) u8 g_reboot_payload[IRAM_PAYLOAD_MAX_SIZE];
  alignas(0x1000) u8 g_ff_page[0x1000];
  alignas(0x1000) u8 g_work_page[0x1000];

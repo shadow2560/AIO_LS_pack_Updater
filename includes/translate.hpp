@@ -12,6 +12,8 @@ struct translation_map_comparator {
 
 typedef std::map<const char*, std::string, translation_map_comparator> translation_map;
 
+extern translation_map language_vars;
+
 #define INIT_LNG(X) translation_map X = {\
 	{"lng_yes", (std::string) "Oui"}, \
 	{"lng_no", (std::string) "Non"}, \

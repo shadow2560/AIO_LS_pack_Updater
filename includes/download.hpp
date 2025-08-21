@@ -6,6 +6,8 @@ typedef struct {
 	size_t size;
 } MemoryStruct_t;
 
+extern MemoryStruct_t file_dl_in_memory;
+
 typedef struct {
 	u_int8_t *data;
 	size_t data_size;

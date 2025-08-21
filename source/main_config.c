@@ -6,58 +6,6 @@
 #include "ini.h"
 #include "main_config.h"
 
-extern bool debug_enabled;
-
-extern char CFW_URL[1003];
-extern char pack_sha256_url[1003];
-extern char pack_changelog_url[1003];
-extern char CFW_URL_beta[1003];
-extern char pack_sha256_url_beta[1003];
-extern char pack_changelog_url_beta[1003];
-extern char pack_custom_files_url[1003];
-extern char pack_custom_files_url_beta[1003];
-extern char pack_custom_files_sha256_url[1003];
-extern char pack_custom_files_sha256_url_beta[1003];
-extern char pack_custom_files_subfolder_in_zip[FS_MAX_PATH];
-extern char pack_custom_files_subfolder_in_zip_beta[FS_MAX_PATH];
-extern s64 pack_custom_files_size;
-extern s64 pack_custom_files_size_beta;
-extern char pack_version_url[1003];
-extern char pack_version_url_beta[1003];
-extern char pack_version_local_filepath[FS_MAX_PATH];
-extern char pack_version_local_filepath_beta[FS_MAX_PATH];
-extern char subfolder_in_zip[FS_MAX_PATH];
-extern char subfolder_in_zip_beta[FS_MAX_PATH];
-extern s64 pack_size;
-extern s64 pack_size_beta;
-extern char APP_URL[1003];
-extern char app_sha256_url[1003];
-extern char app_version_url[1003];
-extern char APP_URL_beta[1003];
-extern char app_sha256_url_beta[1003];
-extern char app_version_url_beta[1003];
-extern char firmware_path[FS_MAX_PATH];
-extern char firmware_path_beta[FS_MAX_PATH];
-extern char atmo_logo_dir[FS_MAX_PATH];
-extern char atmo_logo_dir_beta[FS_MAX_PATH];
-extern char hekate_nologo_file_path[FS_MAX_PATH];
-extern char hekate_nologo_file_path_beta[FS_MAX_PATH];
-extern int pack_files_in_zip_sha256_verify_before_copy_param;
-extern int pack_files_in_zip_sha256_verify_before_copy_param_beta;
-extern int exit_mode_param;
-extern int exit_mode_param_beta;
-extern int install_pack_hekate_autoboot_choice_time;
-extern int install_pack_hekate_autoboot_choice_time_beta;
-extern int debug_enabled_param;
-extern int debug_enabled_param_beta;
-
-extern int hekate_autoboot;
-extern int hekate_autoboot_lineno;
-extern int hekate_autoboot_config;
-extern int hekate_autoboot_config_lineno;
-
-extern bool autoconfig_enabled;
-
 static int config_handler(void* config, const char* section, const char* name, const char* value, int lineno)
 {
 	// config instance for filling in the values.

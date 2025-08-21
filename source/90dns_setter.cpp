@@ -7,10 +7,8 @@
 #include <switch.h>
 
 #include "90dns_setter.hpp"
+#include "main_util.h"
 #include "translate.hpp"
-
-extern translation_map language_vars;
-extern PrintConsole logs_console;
 
 const char *regions[] = {
     "Japan",

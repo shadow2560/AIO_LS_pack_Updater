@@ -28,9 +28,6 @@
 #include "../main_util.h"
 #include "../translate.hpp"
 
-extern translation_map language_vars;
-extern PrintConsole logs_console;
-
 const char app_version[] = "2.1.1";
 
 PadState daybreak_pad;
