@@ -1398,6 +1398,7 @@ bool auto_update_app(bool update_app) {
 		} else {
 			get_last_sha256_app();
 			bool dl_app_res;
+			bool install_app = true;
 			if (!beta_mode) {
 				dl_app_res = downloadFile(APP_URL, TEMP_FILE, OFF, true);
 			} else {
@@ -1420,25 +1421,31 @@ bool auto_update_app(bool update_app) {
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"].c_str());
 						printDisplay("\033[0;37m\n");
-						remove(TEMP_FILE);
-						consoleSelect(&menu_console);
-					} else {
-						if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-							debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
-							printDisplay("\033[0;31m");;
-							printDisplay(language_vars["lng_error_copy_file"].c_str());
-							printDisplay("\033[0;37m");;
-						} else {
-							debug_log_write("Mise à jour de l'application OK.\n\n");
-							printDisplay("\033[0;32m\n");
-							printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
-							printDisplay("\033[0;37m\n");
-							sleep(5);
-							appExit();
-							envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
-							return true;
+						install_app = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
+						if (!install_app) {
+							remove(TEMP_FILE);
+							consoleSelect(&menu_console);
+							return false;
 						}
 					}
+				}
+				if (install_app && !custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+					debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+					printDisplay("\033[0;31m");;
+					printDisplay(language_vars["lng_error_copy_file"].c_str());
+					printDisplay("\033[0;37m");;
+					remove(TEMP_FILE);
+					consoleSelect(&menu_console);
+					return false;
+				} else {
+					debug_log_write("Mise à jour de l'application OK.\n\n");
+					printDisplay("\033[0;32m\n");
+					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
+					printDisplay("\033[0;37m\n");
+					sleep(5);
+					appExit();
+					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
+					return true;
 				}
 			} else {
 				debug_log_write("Erreur de téléchargement de l'application.\n\n");
@@ -2750,7 +2757,8 @@ int main(int argc, char **argv) {
 						printDisplay("\033[0;37m\n");
 					} else {
 						get_last_sha256_pack();
-						bool dl_pack_res;
+						bool dl_pack_res = false;
+						bool unzip_pack = true;
 						if (!beta_mode) {
 							dl_pack_res = downloadFile(CFW_URL, TEMP_FILE, OFF, true);
 							// dl_pack_res = true;
@@ -2775,13 +2783,16 @@ int main(int argc, char **argv) {
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"].c_str());
 									printDisplay("\033[0;37m\n");
-									remove(TEMP_FILE);
-									consoleSelect(&menu_console);
-									if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
-										goto exit_homebrew;
+									unzip_pack = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
+									if (!unzip_pack) {
+										remove(TEMP_FILE);
+										consoleSelect(&menu_console);
+										if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
+											goto exit_homebrew;
+										}
+										pack_update_found_install = false;
+										break;
 									}
-									pack_update_found_install = false;
-									break;
 								}
 							}
 							set_90dns();
@@ -2797,62 +2808,62 @@ int main(int argc, char **argv) {
 							if (clean_modules) {
 								fnc_clean_modules();
 							}
-							int unzip_res;
-							if (!beta_mode) {
-								unzip_res = unzip(TEMP_FILE, subfolder_in_zip, keep_files);
-							} else {
-								unzip_res = unzip(TEMP_FILE, subfolder_in_zip_beta, keep_files);
-							}
-							if (unzip_res == 0) {
-								remove(TEMP_FILE);
+							if (unzip_pack) {
+								int unzip_res;
 								if (!beta_mode) {
-									if (strcmp(pack_custom_files_url, "") != 0) {
+									unzip_res = unzip(TEMP_FILE, subfolder_in_zip, keep_files);
+								} else {
+									unzip_res = unzip(TEMP_FILE, subfolder_in_zip_beta, keep_files);
+								}
+									if (unzip_res == 0) {
+										remove(TEMP_FILE);
+									bool dl_pack_res2 = false;
+									bool unzip_custom_pack = true;
+									get_last_sha256_custom_files_pack();
+									if (!beta_mode && strcmp(pack_custom_files_url, "") != 0) {
 										printDisplay(language_vars["lng_installing_pack_custom_files"].c_str());
 										printDisplay("\n");
-										get_last_sha256_custom_files_pack();
-										dl_pack_res = false;
-										dl_pack_res = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
-										if (dl_pack_res) {
-											if (strcmp(custom_files_pack_sha256, "") != 0) {
-												printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"].c_str());
-												printDisplay("\n");
-												char dl_custom_files_pack_sha256[65] = "";
-												get_sha256_file(TEMP_FILE, dl_custom_files_pack_sha256);
-												debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
-												debug_log_write("%s", custom_files_pack_sha256);
-												debug_log_write("\n");
-												debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
-												debug_log_write("%s", dl_custom_files_pack_sha256);
-												debug_log_write("\n");
-												if (strcmp_ignore_case(custom_files_pack_sha256, dl_custom_files_pack_sha256) != true) {
-													printDisplay("\033[0;31m");
-													printDisplay(language_vars["lng_install_custom_files_pack_download_error"].c_str());
-													printDisplay("\033[0;37m\n");
+										dl_pack_res2 = downloadFile(pack_custom_files_url, TEMP_FILE, OFF, true);
+									} else if (beta_mode && strcmp(pack_custom_files_url_beta, "") != 0) {
+										printDisplay(language_vars["lng_installing_pack_custom_files"].c_str());
+										printDisplay("\n");
+										dl_pack_res2 = downloadFile(pack_custom_files_url_beta, TEMP_FILE, OFF, true);
+									}
+									if (dl_pack_res2) {
+										if (strcmp(custom_files_pack_sha256, "") != 0) {
+											printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"].c_str());
+											printDisplay("\n");
+											char dl_custom_files_pack_sha256[65] = "";
+											get_sha256_file(TEMP_FILE, dl_custom_files_pack_sha256);
+											debug_log_write("SHA256 du fichier zip complémentaire au pack à télécharger: ");
+											debug_log_write("%s", custom_files_pack_sha256);
+											debug_log_write("\n");
+											debug_log_write("SHA256 du fichier zip complémentaire au pack téléchargé: ");
+											debug_log_write("%s", dl_custom_files_pack_sha256);
+											debug_log_write("\n");
+											if (strcmp_ignore_case(custom_files_pack_sha256, dl_custom_files_pack_sha256) != true) {
+												printDisplay("\033[0;31m");
+												printDisplay(language_vars["lng_install_custom_files_pack_download_error"].c_str());
+												printDisplay("\033[0;37m\n");
+												unzip_custom_pack = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
+												if (!unzip_custom_pack) {
 													remove(TEMP_FILE);
 												}
 											}
-											unzip_res = -1;
-											unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
-											if (unzip_res == 0) {
+										}
+										if (unzip_custom_pack) {
+											int unzip_res2;
+											if (!beta_mode) {
+												unzip_res2 = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip, keep_files);
+											} else {
+												unzip_res2 = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip_beta, keep_files);
+											}
+											if (unzip_res2 == 0) {
 												remove(TEMP_FILE);
 											}
 										}
 									}
-								} else {
-									if (strcmp(pack_custom_files_url_beta, "") != 0) {
-										printDisplay(language_vars["lng_installing_pack_custom_files"].c_str());
-										printDisplay("\n");
-										dl_pack_res = false;
-										dl_pack_res = downloadFile(pack_custom_files_url_beta, TEMP_FILE, OFF, true);
-										if (dl_pack_res) {
-											unzip_res = -1;
-											unzip_res = unzip(TEMP_FILE, pack_custom_files_subfolder_in_zip_beta, keep_files);
-											if (unzip_res == 0) {
-												remove(TEMP_FILE);
-											}
-										}
 									}
-								}
 								if (clean_logos) {
 										if (!beta_mode) {
 											fnc_clean_logo(atmo_logo_dir, hekate_nologo_file_path);

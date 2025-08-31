@@ -151,6 +151,7 @@ const char* translation_vars_list[] =
 	"lng_ask_validate_choices_for_parental_reset",
 	"lng_ask_validate_choices_for_sync_time",
 	"lng_ask_validate_choices_for_reset",
+	"lng_ask_force_error_with_sha256",
 
 	"lng_install_firmware_end_error",
 	"lng_install_firmware_end_success",

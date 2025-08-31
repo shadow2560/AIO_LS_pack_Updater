@@ -155,6 +155,7 @@ extern translation_map language_vars;
 	{"lng_ask_validate_choices_for_parental_reset", (std::string) "Ceci va reinitialiser le controle parental.\n\nSouhaitez-vous vraiment continuer?"}, \
 	{"lng_ask_validate_choices_for_sync_time", (std::string) "Souhaitez-vous vraiment synchroniser l'heure de la console via internet?"}, \
 	{"lng_ask_validate_choices_for_reset", (std::string) "Ceci va reinitialiser le systeme, toutes les donnees liees a celui-ci seront supprimees.\n\nSouhaitez-vous vraiment continuer?"}, \
+	{"lng_ask_force_error_with_sha256", (std::string) "Souhaitez-vous quand même continuer malgre l'erreur de la verification du sha256?"}, \
 \
 	{"lng_install_firmware_end_error", (std::string) "Une erreur s'est produite durant l'installation du firmware."}, \
 	{"lng_install_firmware_end_success", (std::string) "Mise a jour du firmware effectuee."}, \
