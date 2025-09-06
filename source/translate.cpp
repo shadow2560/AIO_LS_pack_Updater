@@ -41,7 +41,7 @@ const char* translation_vars_list[] =
 	"lng_y_menu",
 	"lng_minus_menu",
 	"lng_minus_menu_beta",
-	"lng_minus_switch_menu",
+	"lng_minus_menu_switch",
 	"lng_l_r_menu",
 	"lng_zl_zr_menu",
 	"lng_l_zl_menu",
@@ -297,7 +297,7 @@ static int translation_handler(void* config, const char * section, const char * 
 			if (value != 0) {
 				pconfig->insert({translation_vars_list[i], (std::string) value});
 			} else {
-				pconfig->insert({translation_vars_list[i], (char*) ""});
+				pconfig->insert({translation_vars_list[i], (std::string) ""});
 			}
 		// fprintf(test, "Pass\n\n");
 		// fclose(test);
@@ -306,7 +306,8 @@ static int translation_handler(void* config, const char * section, const char * 
 	}
 	// fprintf(test, "Error\n\n");
 	// fclose(test);
-	return 0;
+	debug_log_write("Clé inconnue: [%s] %s=%s (ligne %d)\n", section, name, value ? value : "(null)", lineno);
+	return 1;
 }
 
 translation_map set_translation_strings() {
@@ -323,8 +324,11 @@ translation_map set_translation_strings() {
 		u64 language_code = 0;
 		setGetSystemLanguage(&language_code);
 		setExit();
-		strcpy(file_path, "romfs:/lng/");
-		strcat(strcat(file_path, (char *) &language_code), ".ini");
+		char lang_str[0x40] = {0};
+		memcpy(lang_str, &language_code, sizeof(language_code));
+		snprintf(file_path, sizeof(file_path), "romfs:/lng/%s.ini", lang_str);
+		// strcpy(file_path, "romfs:/lng/");
+		// strcat(strcat(file_path, (char *) &language_code), ".ini");
 		test_ini = fopen(file_path, "r");
 		if (test_ini != NULL) {
 			fclose(test_ini);
@@ -340,11 +344,17 @@ translation_map set_translation_strings() {
 		}
 	}
 	debug_log_write("Fichier de langage: %s\n", file_path);
-	int i = 0;
+	// int i = 0;
 	// parse the .ini file
 	if (ini_parse(file_path, translation_handler, &config) == 0) {
-		if (strcmp(config[translation_vars_list[i]].c_str(), "") != 0) {
-			language_temp.erase(translation_vars_list[i]);
+		for (size_t i = 0; i < sizeof(translation_vars_list)/sizeof(translation_vars_list[0]); i++) {
+			auto it = config.find(translation_vars_list[i]);
+			if (it != config.end()) {
+				language_temp[translation_vars_list[i]] = it->second;
+			}
+		}
+		// if (strcmp(config[translation_vars_list[i]].c_str(), "") != 0) {
+			// language_temp.erase(translation_vars_list[i]);
 /*
 			int j=0;
 			while (config[translation_vars_list[i]][j] != '\0') {
@@ -362,9 +372,9 @@ translation_map set_translation_strings() {
 				config[translation_vars_list[i]] = nullptr;
 			}
 			*/
-			language_temp[translation_vars_list[i]] = config[translation_vars_list[i]];
-		}
-		i++;
+			// language_temp[translation_vars_list[i]] = config[translation_vars_list[i]];
+		// }
+		// i++;
 	}
 	return language_temp;
 }

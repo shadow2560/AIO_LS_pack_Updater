@@ -142,7 +142,7 @@ static int config_handler(void* config, const char* section, const char* name, c
 			pconfig->s1.debug_enabled = 0;
 		}
 	}else{
-		return 0;
+		return 1;
 	}
 	return 1;
 }
@@ -414,7 +414,7 @@ static int emummc_config_handler(void* config, const char* section, const char* 
 			pconfig->e1.nintendo_path = "";
 		}
 	}else{
-		return 0;
+		return 1;
 	}
 	return 1;
 }
@@ -478,8 +478,8 @@ static int hekate_config_handler(void* config, const char* section, const char* 
 			pconfig->h1.autoboot_config = 0;
 			pconfig->h1.autoboot_config_lineno = -1;
 		}
-	// }else{
-		// return 0;
+	}else{
+		return 1;
 	}
 	return 1;
 }

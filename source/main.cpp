@@ -178,7 +178,7 @@ void help_menu() {
 	printf("\n");
 	printf(language_vars["lng_a_menu"].c_str());
 	printf("\n");
-	printf(language_vars["lng_minus_switch_menu"].c_str());
+	printf(language_vars["lng_minus_menu_switch"].c_str());
 	printf("\n\n");
 	printf(language_vars["lng_x_menu"].c_str());
 	printf("\n");

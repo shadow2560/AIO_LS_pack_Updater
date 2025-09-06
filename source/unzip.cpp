@@ -16,7 +16,7 @@
 // #include "json.hpp"
 // #include "zip.h"
 
-size_t WRITEBUFFERSIZE = 0x100000;
+// size_t WRITEBUFFERSIZE = 0x100000;
 
 bool prefix(const char* pre, const char *str){
 	return strncmp(pre, str, strlen(pre)) == 0;
@@ -145,9 +145,9 @@ void fnc_clean_modules() {
 			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
 				continue;
 			}
-			char temp_exefs_path[46] = "";
+			char temp_exefs_path[50] = "";
 			strcat(strcat(strcat(temp_exefs_path, "atmosphere/contents/"), ent->d_name), "/exefs.nsp");
-			char temp_module_path[36] = "";
+			char temp_module_path[40] = "";
 			strcat(strcat(temp_module_path, "atmosphere/contents/"), ent->d_name);
 			u64 module_id = 0;
 			FILE* f=fopen(temp_exefs_path, "r");
@@ -441,7 +441,7 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 			consoleUpdate(&logs_console);
 		}
 		unziped_file = fopen(outfile, "wb");
-		WRITEBUFFERSIZE = zip_entry_size(zip);
+		size_t WRITEBUFFERSIZE = zip_entry_size(zip);
 		buf = calloc(sizeof(unsigned char), WRITEBUFFERSIZE);
 		size_t j = zip_entry_noallocread(zip, buf, WRITEBUFFERSIZE);
 			if (j != fwrite(buf, 1, j, unziped_file)) {
@@ -501,7 +501,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	unz_file_info file_info = {0};
 	DIR *dir;
 	FILE *outfile;
-	void *buf;
+	// void *buf;
 	// void* temp_file;
 	char sha256_in_test[65];
 	char sha256_out_test[65];
@@ -510,7 +510,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	FsFileSystem *fs_sd = fsdevGetDeviceFileSystem("sdmc");
 	char* atmo_bootlogo_dir;
 	if (!beta_mode) {
-		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir) * sizeof(char)) + (31 * sizeof(char)));
+		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir) * sizeof(char)) + (40 * sizeof(char)));
 		strcpy(atmo_bootlogo_dir, "");
 		if ((atmo_logo_dir[strlen(atmo_logo_dir)-1]) != '/') {
 			strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir), "/");
@@ -518,7 +518,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir);
 		}
 	} else {
-		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir_beta) * sizeof(char)) + (31 * sizeof(char)));
+		atmo_bootlogo_dir = (char*) malloc((strlen(atmo_logo_dir_beta) * sizeof(char)) + (40 * sizeof(char)));
 		strcpy(atmo_bootlogo_dir, "");
 		if ((atmo_logo_dir_beta[strlen(atmo_logo_dir_beta)-1]) != '/') {
 			strcat(strcat(strcat(atmo_bootlogo_dir, "atmosphere/exefs_patches/"), atmo_logo_dir_beta), "/");
@@ -531,6 +531,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
+		size_t WRITEBUFFERSIZE = file_info.uncompressed_size;
 
 		// debug_log_write("%s\n", filename_inzip);
 		c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
@@ -704,9 +705,59 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 		}
+
+		const size_t CHUNK = 512*1024;
+		void *buf = malloc(CHUNK);
+		if (!buf) {
+			// debug_log_write("[UNZIP] malloc chunk failed\n");
+			printf("\033[0;31m");
+			printf(language_vars["lng_install_pack_file_write_error"].c_str(), filename_on_sd);
+			printf("\033[0;37m\n");
+			fclose(outfile);
+			unzCloseCurrentFile(zfile);
+			unzClose(zfile);
+			return 1;
+		}
+		bool retry_copy = false;
+		int r;
+		while ((r = unzReadCurrentFile(zfile, buf, CHUNK)) > 0) {
+			if ((size_t)r != fwrite(buf, 1, r, outfile)) {
+				// debug_log_write("[UNZIP] fwrite error for %s\n", filename_on_sd);
+				free(buf);
+				fclose(outfile);
+				unzCloseCurrentFile(zfile);
+				retry_copy = true;
+			}
+		}
+		if (r < 0) {
+			// debug_log_write("[UNZIP] unzReadCurrentFile error %d for %s\n", r, filename_on_sd);
+			free(buf);
+			fclose(outfile);
+			unzCloseCurrentFile(zfile);
+			retry_copy = true;
+		}
+		if (retry_copy) {
+			debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
+			copy_retry--;
+			if (copy_retry > 0) {
+				debug_log_write("Tentative de réécriture du fichier...\n");
+				printf("\033[0;31m");
+				printf(language_vars["lng_install_pack_file_write__retrying_error"].c_str(), filename_on_sd);
+				printf("\033[0;37m\n");
+				consoleUpdate(&logs_console);
+				continue;
+			}
+			printf("\033[0;31m");
+			printf(language_vars["lng_install_pack_file_write_error"].c_str(), filename_on_sd);
+			printf("\033[0;37m\n");
+			consoleUpdate(&logs_console);
+			unzClose(zfile);
+			return 1;
+		}
+		/*
 		buf = malloc(WRITEBUFFERSIZE);
-		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
-			if (j != fwrite(buf, 1, j, outfile)) {
+		// for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
+			// if (j != fwrite(buf, 1, j, outfile)) {
 				debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
 				fclose(outfile);
 				unzCloseCurrentFile(zfile);
@@ -728,6 +779,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				return 1;
 			}
 		}
+		*/
 
 		fclose(outfile);
 		free(buf);
