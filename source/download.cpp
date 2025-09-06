@@ -365,8 +365,10 @@ bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, 
 		return false;
 	}
 
-	char *file_list = (char*) calloc(1, 1);
-	if (!file_list) {
+	MemoryStruct_t file_list = {0};
+	file_list.memory = (char*) malloc(1);
+	file_list.size = 0;
+	if (!file_list.memory) {
 		fprintf(stderr, "Échec de l'allocation mémoire.\n");
 		curl_easy_cleanup(curl);
 		return false;
@@ -384,7 +386,7 @@ bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, 
 			printf("\033[0;31mErreur lors de la récupération du dossier %s.\033[0;37m\n", remote_url);
 		}
 		curl_easy_cleanup(curl);
-		free(file_list);
+		free(file_list.memory);
 		return false;
 	}
 
@@ -392,7 +394,7 @@ bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, 
 	mkdir(local_path, 0777);
 
 	// Parcours des fichiers et sous-dossiers
-	char *line = strtok(file_list, "\n");
+	char *line = strtok(file_list.memory, "\n");
 	while (line) {
 		char remote_item_url[1024];
 		snprintf(remote_item_url, sizeof(remote_item_url), "%s/%s", remote_url, line);
@@ -400,16 +402,24 @@ bool downloadDirectoryRecursive(const char *remote_url, const char *local_path, 
 		char local_item_path[1024];
 		snprintf(local_item_path, sizeof(local_item_path), "%s/%s", local_path, line);
 
+	bool ok = true;
 		if (line[strlen(line) - 1] == '/') {
-			downloadDirectoryRecursive(remote_item_url, local_item_path, display_log);
+			ok = downloadDirectoryRecursive(remote_item_url, local_item_path, display_log);
 		} else {
-			downloadFile(remote_item_url, local_item_path, OFF, display_log);
+			ok = downloadFile(remote_item_url, local_item_path, OFF, display_log);
 		}
+
+	if (!ok) {
+		debug_log_write("Échec lors du traitement de %s (dans %s).\n", line, remote_url);
+		free(file_list.memory);
+		curl_easy_cleanup(curl);
+            return false; // stoppe immédiatement si un élément échoue
+	}
 
 		line = strtok(NULL, "\n");
 	}
 
-	free(file_list);
+	free(file_list.memory);
 	curl_easy_cleanup(curl);
 	return true;
 }
