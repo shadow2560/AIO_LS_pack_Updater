@@ -531,7 +531,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	for (uLong i = 0; i < gi.number_entry; i++) {
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
-		size_t WRITEBUFFERSIZE = file_info.uncompressed_size;
+		// size_t file_uncompressed_size = file_info.uncompressed_size;
 
 		// debug_log_write("%s\n", filename_inzip);
 		c1 = substr(filename_inzip,subfolder_in_zip_length, strlen(filename_inzip));
@@ -662,7 +662,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 					// unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
 					// get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
 					// free(temp_file);
-					get_sha256_data_for_minizip_opened_file(&zfile, WRITEBUFFERSIZE, sha256_in_test);
+					get_sha256_data_for_minizip_opened_file(&zfile, sha256_in_test);
 					get_sha256_file(filename_on_sd, sha256_out_test);
 					// debug_log_write("%s - %s\n", sha256_in_test, sha256_out_test);
 					if (strcmp(sha256_in_test, sha256_out_test) == 0) {
@@ -755,8 +755,8 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		}
 		/*
 		buf = malloc(WRITEBUFFERSIZE);
-		// for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
-			// if (j != fwrite(buf, 1, j, outfile)) {
+		for (size_t j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE); j > 0; j = unzReadCurrentFile(zfile, buf, WRITEBUFFERSIZE)) {
+			if (j != fwrite(buf, 1, j, outfile)) {
 				debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
 				fclose(outfile);
 				unzCloseCurrentFile(zfile);
@@ -792,7 +792,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				// unzReadCurrentFile(zfile, temp_file, file_info.uncompressed_size);
 				// get_sha256_data(temp_file, file_info.uncompressed_size, sha256_in_test);
 				// free(temp_file);
-				get_sha256_data_for_minizip_opened_file(&zfile, WRITEBUFFERSIZE, sha256_in_test);
+				get_sha256_data_for_minizip_opened_file(&zfile, sha256_in_test);
 			}
 			if (strcmp(sha256_in_test, sha256_out_test) != 0) {
 				debug_log_write("Erreur durant l'écriture du fichier \"%s\", erreur de vérification du SHA256 après copie.\n", filename_on_sd);

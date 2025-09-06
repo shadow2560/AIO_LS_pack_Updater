@@ -342,125 +342,136 @@ void get_last_version_pack() {
 void get_last_sha256_custom_files_pack() {
 	FILE *pack_sha256_file;
 	bool res;
-	if (!beta_mode) {
-		if (strcmp(pack_custom_files_sha256_url, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(pack_custom_files_sha256_url, &file_dl_in_memory, OFF, false);
-	} else {
-		if (strcmp(pack_custom_files_sha256_url_beta, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(pack_custom_files_sha256_url_beta, &file_dl_in_memory, OFF, false);
+
+	char *url = beta_mode ? pack_custom_files_sha256_url_beta : pack_custom_files_sha256_url;
+	if (strcmp(url, "") == 0) {
+		custom_files_pack_sha256[0] = '\0';
+		return;
 	}
-	if (res) {
-		pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
-		if (pack_sha256_file == NULL) {
-			free(file_dl_in_memory.memory);
-			file_dl_in_memory.size = 0;
-			return;
-		}
-		char * buffer = (char *) malloc( 65 );
-		fgets(buffer, 65, pack_sha256_file);
-		int i = 0;
-		while (1) {
-			if (buffer[i] == '\n' || buffer[i] == '\0') {
-				break;
-			} else {
-				custom_files_pack_sha256[i] = buffer[i];
-			}
-			i++;
-		}
-		custom_files_pack_sha256[i] = '\0';
-		free(buffer);
-		fclose(pack_sha256_file);
-		free(file_dl_in_memory.memory);
+
+	res = downloadInMemory(url, &file_dl_in_memory, OFF, false);
+	if (!res) {
+		file_dl_in_memory.memory = NULL;
 		file_dl_in_memory.size = 0;
+		custom_files_pack_sha256[0] = '\0';
+		return;
 	}
+
+	pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
+	if (pack_sha256_file == NULL) {
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.memory = NULL;
+		file_dl_in_memory.size = 0;
+		custom_files_pack_sha256[0] = '\0';
+		return;
+	}
+
+	char buffer[65] = {0};
+	if (fgets(buffer, sizeof(buffer), pack_sha256_file)) {
+		strncpy(custom_files_pack_sha256, buffer, 64);
+		custom_files_pack_sha256[64] = '\0';
+		char *newline = strchr(custom_files_pack_sha256, '\n');
+		if (newline) *newline = '\0';
+	} else {
+		custom_files_pack_sha256[0] = '\0';
+	}
+
+	fclose(pack_sha256_file);
+	free(file_dl_in_memory.memory);
+	file_dl_in_memory.memory = NULL;
+	file_dl_in_memory.size = 0;
 }
 
 void get_last_sha256_pack() {
 	FILE *pack_sha256_file;
 	bool res;
-	if (!beta_mode) {
-		if (strcmp(pack_sha256_url, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(pack_sha256_url, &file_dl_in_memory, OFF, false);
-	} else {
-		if (strcmp(pack_sha256_url_beta, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(pack_sha256_url_beta, &file_dl_in_memory, OFF, false);
+
+	char *url = beta_mode ? pack_sha256_url_beta : pack_sha256_url;
+	if (strcmp(url, "") == 0) {
+		pack_sha256[0] = '\0';
+		return;
 	}
-	if (res) {
-		logs_console_clear();
-		consoleSelect(&logs_console);
-		pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
-		if (pack_sha256_file == NULL) {
-			free(file_dl_in_memory.memory);
-			file_dl_in_memory.size = 0;
-			return;
-		}
-		char * buffer = (char *) malloc( 65 );
-		fgets(buffer, 65, pack_sha256_file);
-		int i = 0;
-		while (1) {
-			if (buffer[i] == '\n' || buffer[i] == '\0') {
-				break;
-			} else {
-				pack_sha256[i] = buffer[i];
-			}
-			i++;
-		}
-		pack_sha256[i] = '\0';
-		free(buffer);
-		fclose(pack_sha256_file);
-		free(file_dl_in_memory.memory);
+
+	res = downloadInMemory(url, &file_dl_in_memory, OFF, false);
+	if (!res) {
+		file_dl_in_memory.memory = NULL;
 		file_dl_in_memory.size = 0;
+		pack_sha256[0] = '\0';
+		return;
 	}
+
+	logs_console_clear();
+	consoleSelect(&logs_console);
+
+	pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
+	if (pack_sha256_file == NULL) {
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.memory = NULL;
+		file_dl_in_memory.size = 0;
+		pack_sha256[0] = '\0';
+		return;
+	}
+
+	char buffer[65] = {0};
+	if (fgets(buffer, sizeof(buffer), pack_sha256_file)) {
+		strncpy(pack_sha256, buffer, 64);
+		pack_sha256[64] = '\0';
+		char *newline = strchr(pack_sha256, '\n');
+		if (newline) *newline = '\0';
+	} else {
+		pack_sha256[0] = '\0';
+	}
+
+	fclose(pack_sha256_file);
+	free(file_dl_in_memory.memory);
+	file_dl_in_memory.memory = NULL;
+	file_dl_in_memory.size = 0;
 }
 
 void get_last_sha256_app() {
 	FILE *app_sha256_file;
 	bool res;
-	if (!beta_mode) {
-		if (strcmp(app_sha256_url, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(app_sha256_url, &file_dl_in_memory, OFF, false);
-	} else {
-		if (strcmp(app_sha256_url_beta, "") == 0) {
-			return;
-		}
-		res = downloadInMemory(app_sha256_url_beta, &file_dl_in_memory, OFF, false);
+
+	char *url = beta_mode ? app_sha256_url_beta : app_sha256_url;
+	if (strcmp(url, "") == 0) {
+		app_sha256[0] = '\0';
+		return;
 	}
-	if (res) {
-		logs_console_clear();
-		consoleSelect(&logs_console);
-		app_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
-		if (app_sha256_file == NULL) {
-			free(file_dl_in_memory.memory);
-			file_dl_in_memory.size = 0;
-			return;
-		}
-		char * buffer = (char *) malloc( 65 );
-		fgets(buffer, 65, app_sha256_file);
-		int i = 0;
-		while (1) {
-			if (buffer[i] == '\n' || buffer[i] == '\0') {
-				break;
-			} else {
-				app_sha256[i] = buffer[i];
-			}
-			i++;
-		}
-		app_sha256[i] = '\0';
-		free(buffer);
-		fclose(app_sha256_file);
-		free(file_dl_in_memory.memory);
+
+	res = downloadInMemory(url, &file_dl_in_memory, OFF, false);
+	if (!res) {
+		file_dl_in_memory.memory = NULL;
 		file_dl_in_memory.size = 0;
+		app_sha256[0] = '\0';
+		return;
 	}
+
+	logs_console_clear();
+	consoleSelect(&logs_console);
+
+	app_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
+	if (app_sha256_file == NULL) {
+		free(file_dl_in_memory.memory);
+		file_dl_in_memory.memory = NULL;
+		file_dl_in_memory.size = 0;
+		app_sha256[0] = '\0';
+		return;
+	}
+
+	char buffer[65] = {0};
+	if (fgets(buffer, sizeof(buffer), app_sha256_file)) {
+		strncpy(app_sha256, buffer, 64);
+		app_sha256[64] = '\0';
+		char *newline = strchr(app_sha256, '\n');
+		if (newline) *newline = '\0';
+	} else {
+		app_sha256[0] = '\0';
+	}
+
+	fclose(app_sha256_file);
+	free(file_dl_in_memory.memory);
+	file_dl_in_memory.memory = NULL;
+	file_dl_in_memory.size = 0;
 }
 
 void get_last_version_app() {

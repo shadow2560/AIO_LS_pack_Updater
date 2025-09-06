@@ -87,31 +87,31 @@ void debug_log_write(const char *text, ...) {
 }
 
 void to_lowercase(char *str) {
-    if (!str) return;
-    while (*str) {
-        *str = tolower((unsigned char)*str);
-        str++;
-    }
+	if (!str) return;
+	while (*str) {
+		*str = tolower((unsigned char)*str);
+		str++;
+	}
 }
 
 void to_uppercase(char *str) {
-    if (!str) return;
-    while (*str) {
-        *str = tolower((unsigned char)*str);
-        str++;
-    }
+	if (!str) return;
+	while (*str) {
+		*str = tolower((unsigned char)*str);
+		str++;
+	}
 }
 
 bool strcmp_ignore_case(const char *s1, const char *s2) {
-    if (!s1 || !s2) return false;
-    while (*s1 && *s2) {
-        if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2)) {
-            return false;
-        }
-        s1++;
-        s2++;
-    }
-    return true;
+	if (!s1 || !s2) return false;
+	while (*s1 && *s2) {
+		if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2)) {
+			return false;
+		}
+		s1++;
+		s2++;
+	}
+	return true;
 }
 
 bool custom_cp(char *filein, char *fileout) {
@@ -447,9 +447,14 @@ void get_sha256_file(const char* filepath, char* ret) {
 	if (file == NULL) {
 		return;
 	}
-	char sha256_hash[0x50] = "";
-	char * buf = (char *) malloc(128);
-	char * buf2 = (char *) malloc(3);
+	unsigned char sha256_hash[32];
+	const size_t CHUNK = 512 * 1024;
+	char *buf = (char *) malloc(CHUNK);
+	if (!buf) {
+		debug_log_write("Erreur malloc dans get_sha256_file\n");
+		strcpy(ret, "");
+		return;
+	}
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
 	size_t i;
@@ -459,19 +464,26 @@ void get_sha256_file(const char* filepath, char* ret) {
 	sha256ContextGetHash(&ctx, sha256_hash);
 	free(buf);
 	fclose(file);
-	for(int j = 0; j < 32; j++) {
-		sprintf(buf2, "%02x", sha256_hash[j]);
-		strcat(ret, buf2);
+	char tmp[3];
+	ret[0] = '\0';
+	for (int j = 0; j < 32; j++) {
+		sprintf(tmp, "%02x", sha256_hash[j]);
+		strcat(ret, tmp);
 	}
-	free(buf2);
 }
 
 void get_sha256_data(void* datas, size_t size, char* ret) {
 	// ret = "";
 	// FILE* file=fmemopen(datas, size, "r");
-	char sha256_hash[0x50] = "";
-	// char * buf = (char *) malloc(128);
-	char * buf2 = (char *) malloc(3);
+	unsigned char sha256_hash[32];
+	const size_t CHUNK = 512 * 1024;
+	char *buf = (char *) malloc(CHUNK);
+	if (!buf) {
+		debug_log_write("Erreur malloc dans get_sha256_data\n");
+		strcpy(ret, "");
+		return;
+	}
+	// char * buf = (char *) malloc(512);
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
 	// size_t i;
@@ -482,29 +494,37 @@ void get_sha256_data(void* datas, size_t size, char* ret) {
 	sha256ContextGetHash(&ctx, sha256_hash);
 	// free(buf);
 	// fclose(file);
-	for(int j = 0; j < 32; j++) {
-		sprintf(buf2, "%02x", sha256_hash[j]);
-		strcat(ret, buf2);
+	char tmp[3];
+	ret[0] = '\0';
+	for (int j = 0; j < 32; j++) {
+		sprintf(tmp, "%02x", sha256_hash[j]);
+		strcat(ret, tmp);
 	}
-	free(buf2);
 }
 
-void get_sha256_data_for_minizip_opened_file(unzFile* zfile, size_t buf_size, char* ret) {
-	char sha256_hash[0x50] = "";
-	char * buf = (char *) malloc(buf_size);
-	char * buf2 = (char *) malloc(3);
+void get_sha256_data_for_minizip_opened_file(unzFile* zfile, char* ret) {
+	unsigned char sha256_hash[32];
+	const size_t CHUNK = 512 * 1024;
+	char *buf = (char *) malloc(CHUNK);
+	if (!buf) {
+		debug_log_write("Erreur malloc dans get_sha256_data_for_minizip_opened_file\n");
+		strcpy(ret, "");
+		return;
+	}
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
-	for (size_t i = unzReadCurrentFile(*zfile, buf, buf_size); i > 0; i = unzReadCurrentFile(*zfile, buf, buf_size)) {
-		sha256ContextUpdate(&ctx, buf, i);
+	int r;
+	while ((r = unzReadCurrentFile(*zfile, buf, CHUNK)) > 0) {
+		sha256ContextUpdate(&ctx, buf, r);
 	}
 	sha256ContextGetHash(&ctx, sha256_hash);
 	free(buf);
-	for(int j = 0; j < 32; j++) {
-		sprintf(buf2, "%02x", sha256_hash[j]);
-		strcat(ret, buf2);
+	char tmp[3];
+	ret[0] = '\0';
+	for (int j = 0; j < 32; j++) {
+		sprintf(tmp, "%02x", sha256_hash[j]);
+		strcat(ret, tmp);
 	}
-	free(buf2);
 }
 
 bool module_is_running(u64 module) {
