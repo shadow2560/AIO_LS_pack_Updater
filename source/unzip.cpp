@@ -709,7 +709,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		const size_t CHUNK = 512*1024;
 		void *buf = malloc(CHUNK);
 		if (!buf) {
-			// debug_log_write("[UNZIP] malloc chunk failed\n");
+			debug_log_write("Echec Malloc chunk\n");
 			printf("\033[0;31m");
 			printf(language_vars["lng_install_pack_file_write_error"].c_str(), filename_on_sd);
 			printf("\033[0;37m\n");
@@ -722,7 +722,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 		int r;
 		while ((r = unzReadCurrentFile(zfile, buf, CHUNK)) > 0) {
 			if ((size_t)r != fwrite(buf, 1, r, outfile)) {
-				// debug_log_write("[UNZIP] fwrite error for %s\n", filename_on_sd);
+				// debug_log_write("Erreur durant fwrite pour le fichier %s\n", filename_on_sd);
 				free(buf);
 				fclose(outfile);
 				unzCloseCurrentFile(zfile);
@@ -730,14 +730,13 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			}
 		}
 		if (r < 0) {
-			// debug_log_write("[UNZIP] unzReadCurrentFile error %d for %s\n", r, filename_on_sd);
+			debug_log_write("Erreur durant unzReadCurrentFile (%d) pour le fichier %s\n", r, filename_on_sd);
 			free(buf);
 			fclose(outfile);
 			unzCloseCurrentFile(zfile);
 			retry_copy = true;
 		}
 		if (retry_copy) {
-			debug_log_write("Erreur durant l'ecriture du fichier \"%s\".\n", filename_on_sd);
 			copy_retry--;
 			if (copy_retry > 0) {
 				debug_log_write("Tentative de réécriture du fichier...\n");
