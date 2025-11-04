@@ -7,6 +7,7 @@ $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/de
 endif
 
 TOPDIR ?= $(CURDIR)
+LIBNX := $(CURDIR)/libnx
 include $(DEVKITPRO)/libnx/switch_rules
 
 #---------------------------------------------------------------------------------
@@ -39,7 +40,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.07.00
+APP_VERSION := 	7.08.00
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -53,18 +54,32 @@ ROMFS		:=	romfs
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
-			$(ARCH) $(DEFINES)
+# debug flags
+# CFLAGS	:=	-g -Wall -O0 -ffunction-sections \
+			# $(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall \
+# CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall \
+# -DAPP_VERSION="\"$(APP_VERSION)\"" \
+# -DAPP_TITLE="\"$(APP_TITLE)\"" \
+# -DAPP_AUTHOR="\"$(APP_AUTHOR)\""
+
+# CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
+
+# ASFLAGS	:=	-g $(ARCH)
+
+# LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+
+# release flags
+CFLAGS := -Os -Wall -ffunction-sections -fdata-sections $(ARCH) $(DEFINES) $(INCLUDE) -D__SWITCH__ \
 -DAPP_VERSION="\"$(APP_VERSION)\"" \
 -DAPP_TITLE="\"$(APP_TITLE)\"" \
 -DAPP_AUTHOR="\"$(APP_AUTHOR)\""
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
 
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASFLAGS := $(ARCH)
+
+LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--gc-sections
 
 LIBS	:=  -lcurl -lminizip -lz -lnx -lmbedtls -lmbedcrypto -lmbedx509 -lzstd
 # LIBS	+= -lzzip -lstdc++fs
@@ -82,6 +97,21 @@ LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------
+
+# Build libnx before creating build/ and entering second pass
+$(BUILD): libnx_build
+
+.PHONY: libnx_build
+libnx_build:
+	@echo "=== Building local libnx ==="
+	@$(MAKE) -C $(LIBNX)
+	@echo "=== Installing local libnx ==="
+		@cd $(CURDIR)/libnx/nx/ && \
+		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ && \
+		cp -rv include lib ../ && \
+		cp -rv external/bsd/include ../
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
@@ -175,6 +205,9 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
+	@if [ -f "$(LIBNX)/Makefile" ]; then $(MAKE) -C $(LIBNX) clean; fi
+		@rm -fr $(CURDIR)/libnx/include $(CURDIR)/libnx/lib
+		@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules
 ifeq ($(strip $(APP_JSON)),)
 	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 else

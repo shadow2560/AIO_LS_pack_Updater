@@ -13,3 +13,17 @@
 /Daybreak-cli/Daybreak-cli.elf
 /Daybreak-cli/Daybreak-cli.nacp
 /Daybreak-cli/Daybreak-cli.nro
+build_cmake*
+/libnx/include
+/libnx/lib
+/libnx/default_icon.jpg
+/libnx/switch.ld
+/libnx/switch.specs
+/libnx/switch_rules
+/libnx/nx/debug/
+/libnx/nx/release/
+/libnx/nx/lib/
+/libnx/nx/docs/
+/libnx/*.o
+/libnx/*.d
+/libnx/*.bz2

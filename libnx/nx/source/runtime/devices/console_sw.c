@@ -1,0 +1,263 @@
+#include <stdio.h>
+#include <string.h>
+#include <sys/iosupport.h>
+#include "result.h"
+#include "runtime/devices/console.h"
+#include "display/native_window.h"
+#include "display/framebuffer.h"
+
+//set up the palette for color printing
+static const u16 colorTable[] = {
+    RGB565_FROM_RGB8(  0,  0,  0),	// black
+    RGB565_FROM_RGB8(128,  0,  0),	// red
+    RGB565_FROM_RGB8(  0,128,  0),	// green
+    RGB565_FROM_RGB8(128,128,  0),	// yellow
+    RGB565_FROM_RGB8(  0,  0,128),	// blue
+    RGB565_FROM_RGB8(128,  0,128),	// magenta
+    RGB565_FROM_RGB8(  0,128,128),	// cyan
+    RGB565_FROM_RGB8(192,192,192),	// white
+
+    RGB565_FROM_RGB8(128,128,128),	// bright black
+    RGB565_FROM_RGB8(255,  0,  0),	// bright red
+    RGB565_FROM_RGB8(  0,255,  0),	// bright green
+    RGB565_FROM_RGB8(255,255,  0),	// bright yellow
+    RGB565_FROM_RGB8(  0,  0,255),	// bright blue
+    RGB565_FROM_RGB8(255,  0,255),	// bright magenta
+    RGB565_FROM_RGB8(  0,255,255),	// bright cyan
+    RGB565_FROM_RGB8(255,255,255),	// bright white
+
+    RGB565_FROM_RGB8(  0,  0,  0),	// faint black
+    RGB565_FROM_RGB8( 64,  0,  0),	// faint red
+    RGB565_FROM_RGB8(  0, 64,  0),	// faint green
+    RGB565_FROM_RGB8( 64, 64,  0),	// faint yellow
+    RGB565_FROM_RGB8(  0,  0, 64),	// faint blue
+    RGB565_FROM_RGB8( 64,  0, 64),	// faint magenta
+    RGB565_FROM_RGB8(  0, 64, 64),	// faint cyan
+    RGB565_FROM_RGB8( 96, 96, 96),	// faint white
+};
+
+struct ConsoleSwRenderer
+{
+    ConsoleRenderer base;
+    Framebuffer fb;          ///< Framebuffer object
+    u16 *frameBuffer;        ///< Framebuffer address
+    u32 frameBufferStride;   ///< Framebuffer stride (in pixels)
+    bool initialized;
+};
+
+static struct ConsoleSwRenderer* ConsoleSwRenderer(PrintConsole* con)
+{
+    return (struct ConsoleSwRenderer*)con->renderer;
+}
+
+static bool ConsoleSwRenderer_init(PrintConsole* con)
+{
+    struct ConsoleSwRenderer* sw = ConsoleSwRenderer(con);
+
+    if (con->font.tileWidth != 16 || con->font.tileHeight != 16) {
+        // Only 16x16 tiles are supported for the font (legacy renderer)
+        // This early return preserves old behavior; background-fill path below still works for spaces.
+        // If you switched to 8x16 tiles, update this renderer accordingly.
+        return false;
+    }
+
+    if (sw->initialized) {
+        // We're already initialized
+        return true;
+    }
+
+    NWindow* win = nwindowGetDefault();
+    u32 width = con->font.tileWidth * con->consoleWidth;
+    u32 height = con->font.tileHeight * con->consoleHeight;
+
+    if (R_FAILED(nwindowSetDimensions(win, width, height))) {
+        // Failed to set dimensions
+        return false;
+    }
+
+    if (R_FAILED(framebufferCreate(&sw->fb, win, width, height, PIXEL_FORMAT_RGB_565, 2))) {
+        // Failed to create framebuffer
+        return false;
+    }
+
+    if (R_FAILED(framebufferMakeLinear(&sw->fb))) {
+        // Failed to make framebuffer linear
+        framebufferClose(&sw->fb);
+        return false;
+    }
+
+    sw->frameBuffer = NULL;
+    sw->frameBufferStride = 0;
+    sw->initialized = true;
+
+    return true;
+}
+
+static u16* _getFrameBuffer(struct ConsoleSwRenderer* sw, u32* out_stride)
+{
+    if (!sw->frameBuffer) {
+        sw->frameBuffer = (u16*)framebufferBegin(&sw->fb, &sw->frameBufferStride);
+        sw->frameBufferStride /= sizeof(u16);
+    }
+    if (out_stride)
+        *out_stride = sw->frameBufferStride;
+    return sw->frameBuffer;
+}
+
+static void ConsoleSwRenderer_drawChar(PrintConsole* con, int x, int y, int c)
+{
+    struct ConsoleSwRenderer* sw = ConsoleSwRenderer(con);
+    u32 stride;
+    u16* frameBuffer = _getFrameBuffer(sw, &stride);
+    u16 fg = con->fg;
+    u16 bg = con->bg;
+
+    if (!(con->flags & CONSOLE_FG_CUSTOM)) {
+        if (con->flags & CONSOLE_COLOR_BOLD) {
+            fg = colorTable[fg + 8];
+        } else if (con->flags & CONSOLE_COLOR_FAINT) {
+            fg = colorTable[fg + 16];
+        } else {
+            fg = colorTable[fg];
+        }
+    }
+
+    if (!(con->flags & CONSOLE_BG_CUSTOM)) {
+        bg = colorTable[bg];
+    }
+
+    if (con->flags & CONSOLE_COLOR_REVERSE) {
+        u16 tmpc = fg;
+        fg = bg;
+        bg = tmpc;
+    }
+
+    // Sentinel: c < 0 means "fill this cell with background" (used for clearing)
+    if (c < 0) {
+        const int cell_w = 16;
+        const int cell_h = 16;
+        const int px = x * cell_w;
+        const int py = y * cell_h;
+        for (int j = 0; j < cell_h; ++j) {
+            u32 rowOff = (u32)px + stride * (u32)(py + j);
+            for (int i = 0; i < cell_w; ++i) {
+                frameBuffer[rowOff + (u32)i] = bg;
+            }
+        }
+        return;
+    }
+    // Support legacy linear font and new indexed FN16 format
+    const u16 *fontdata;
+    typedef struct {
+        u32 magic;
+        u16 version;
+        u16 cell_size;
+        u32 glyph_count;
+        u32 index_offset;
+        u32 bitmap_offset;
+    } __attribute__((packed)) Fn16Header;
+    #define FN16_MAGIC 0x464E3136u
+
+    const Fn16Header* hdr = (const Fn16Header*)con->font.gfx;
+    if (hdr && hdr->magic == FN16_MAGIC && hdr->cell_size == 16) {
+        const u8* base = (const u8*)con->font.gfx + hdr->bitmap_offset;
+        fontdata = (const u16*)(base + (size_t)c * 16 * sizeof(u16));
+    } else {
+        fontdata = (const u16*)con->font.gfx + (16 * c);
+    }
+
+    // fg/bg already prepared above
+
+    u128 *tmp = (u128*)fontdata;
+
+    u128 bvaltop = tmp[0];
+    u128 bvalbtm = tmp[1];
+
+    if (con->flags & CONSOLE_UNDERLINE)  bvalbtm |= (u128)0xffffULL << 7*16;
+
+    if (con->flags & CONSOLE_CROSSED_OUT) bvaltop |= (u128)0xffffULL << 7*16;
+
+    u16 mask = 0x8000;
+
+    int i, j;
+
+    x *= 16;
+    y *= 16;
+
+    u16 *screen;
+
+    for (i=0;i<16;i++) {
+        for (j=0;j<8;j++) {
+            uint32_t screenOffset = (x + i) + stride*(y + j);
+            screen = &frameBuffer[screenOffset];
+            if (bvaltop >> (16*j) & mask) { *screen = fg; }else{ *screen = bg; }
+
+            screenOffset = (x + i) + stride*(y + j + 8);
+            screen = &frameBuffer[screenOffset];
+            if (bvalbtm >> (16*j) & mask) { *screen = fg; }else{ *screen = bg; }
+        }
+        mask >>= 1;
+    }
+}
+
+static void ConsoleSwRenderer_scrollWindow(PrintConsole* con)
+{
+    struct ConsoleSwRenderer* sw = ConsoleSwRenderer(con);
+    u32 stride;
+    u16* frameBuffer = _getFrameBuffer(sw, &stride);
+    int i,j;
+    u32 x, y;
+
+    x = (con->windowX - 1) * 16;
+    y = (con->windowY - 1) * 16;
+
+    for (i=0; i<con->windowWidth*16; i+=sizeof(u128)/sizeof(u16)) {
+        u128 *from;
+        u128 *to;
+        for (j=0;j<(con->windowHeight-1)*16;j++) {
+            to = (u128*)&frameBuffer[(x + i) + stride*(y + j)];
+            from = (u128*)&frameBuffer[(x + i) + stride*(y + 16 + j)];
+            *to = *from;
+        }
+    }
+}
+
+static void ConsoleSwRenderer_flushAndSwap(PrintConsole* con)
+{
+    struct ConsoleSwRenderer* sw = ConsoleSwRenderer(con);
+    _getFrameBuffer(sw, NULL); // Make sure we dequeued
+
+    framebufferEnd(&sw->fb);
+    sw->frameBuffer = NULL;
+    sw->frameBufferStride = 0;
+}
+
+
+static void ConsoleSwRenderer_deinit(PrintConsole* con)
+{
+    struct ConsoleSwRenderer* sw = ConsoleSwRenderer(con);
+
+    if (sw->initialized) {
+        if (sw->frameBuffer)
+            ConsoleSwRenderer_flushAndSwap(con);
+
+        framebufferClose(&sw->fb);
+        sw->initialized = false;
+    }
+}
+
+static struct ConsoleSwRenderer s_consoleSwRenderer =
+{
+    {
+        ConsoleSwRenderer_init,
+        ConsoleSwRenderer_deinit,
+        ConsoleSwRenderer_drawChar,
+        ConsoleSwRenderer_scrollWindow,
+        ConsoleSwRenderer_flushAndSwap,
+    }
+};
+
+__attribute__((weak)) ConsoleRenderer* getDefaultConsoleRenderer(void)
+{
+    return &s_consoleSwRenderer.base;
+}

@@ -90,7 +90,7 @@ To build the project you have to download devkitPro, install devkitPro and the m
 ## Credits 📜 
 
 - Thanks all the contributors of the [Libnx project](https://github.com/switchbrew/libnx) and the [Homebrew Loader](https://github.com/switchbrew/nx-hbloader)
-- Thanks [PoloNX](https://github.com/PoloNX) for [AtmoPackUpdater](https://github.com/PoloNX/AtmoPackUpdater) witch is the project from where mine is forked
+- Thanks [PoloNX](https://github.com/PoloNX) for [AtmoPackUpdater](https://github.com/PoloNX/AtmoPackUpdater) witch is the project from where mine is forked and for [this fork of the Libnx with console special chars support](https://github.com/PoloNX/libnx) witch is also used in this project
 - Thanks [benhoyt](https://github.com/benhoyt/) for [Inih](https://github.com/benhoyt/inih)
 - Thanks [arnavyc](https://github.com/arnavyc/) for [getdelim](https://github.com/arnavyc/getdelim)
 - Thanks [SciresM](https://github.com/SciresM) for [Reboot_to_payload](https://github.com/Atmosphere-NX/Atmosphere/tree/master/troposphere/reboot_to_payload) and [Daybreak](https://github.com/Atmosphere-NX/Atmosphere/tree/master/troposphere/daybreak) and probably for others things in Atmosphere

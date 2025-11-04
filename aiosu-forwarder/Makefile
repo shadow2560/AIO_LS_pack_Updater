@@ -52,15 +52,20 @@ APP_VERSION :=  1.1
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
-			$(ARCH) $(DEFINES)
+# CFLAGS	:=	-g -Wall -O0 -ffunction-sections \
+			# $(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__
+# CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
+# CXXFLAGS	:= $(CFLAGS) -std=gnu++23 -fno-rtti -fno-exceptions
+
+# ASFLAGS	:=	-g $(ARCH)
+# LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+
+CFLAGS := -Os -Wall -ffunction-sections -fdata-sections $(ARCH) $(DEFINES) $(INCLUDE) -D__SWITCH__
 CXXFLAGS	:= $(CFLAGS) -std=gnu++23 -fno-rtti -fno-exceptions
-
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASFLAGS	:=	$(ARCH)
+LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--gc-sections
 
 LIBS	:= -lnx
 
