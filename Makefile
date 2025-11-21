@@ -109,15 +109,16 @@ libnx_build:
 	@touch libnx/.before_build
 	@$(MAKE) -C $(LIBNX)
 	@if find $(LIBNX)/nx -type f -newer libnx/.before_build | grep -q .; then \
-		echo "=== Installing local libnx ===" && \
+		echo "=== Installing local libnx ==="; \
 		cd $(CURDIR)/libnx/nx/ && \
-		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ && \
-		cp -rv include lib ../ && \
-		cp -rv external/bsd/include ../; \
+		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ >/dev/null 2>&1 && \
+		cp -r include lib ../ >/dev/null 2>&1 && \
+		cp -r external/bsd/include ../ >/dev/null 2>&1; \
 	else \
 		echo "=== No changes in libnx: skipping copy ==="; \
 	fi
 	@rm -f libnx/.before_build
+	@echo "=== Compiling project ==="; \
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
