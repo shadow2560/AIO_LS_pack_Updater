@@ -108,12 +108,20 @@ libnx_build:
 	@echo "=== Building local libnx ==="
 	@touch libnx/.before_build
 	@$(MAKE) -C $(LIBNX)
-	@if find $(LIBNX)/nx -type f -newer libnx/.before_build | grep -q .; then \
+	@if \
+	find $(LIBNX)/nx -type f -newer libnx/.before_build | grep -q . || \
+	[ ! -f $(LIBNX)/default_icon.jpg ] || \
+	[ ! -f $(LIBNX)/switch_rules ] || \
+	[ ! -f $(LIBNX)/switch.ld ] || \
+	[ ! -f $(LIBNX)/switch.specs ] || \
+	[ ! -d $(LIBNX)/include ] || \
+	[ ! -d $(LIBNX)/lib ]; \
+	then \
 		echo "=== Installing local libnx ==="; \
 		cd $(CURDIR)/libnx/nx/ && \
-		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ >/dev/null 2>&1 && \
-		cp -r include lib ../ >/dev/null 2>&1 && \
-		cp -r external/bsd/include ../ >/dev/null 2>&1; \
+		cp -r include lib ../ >/dev/null 2>&1 || { echo 'Error during Libnx local installation'; exit 1; } && \
+		cp -r external/bsd/include ../ >/dev/null 2>&1 || { echo 'Error during Libnx local installation'; exit 1; } && \
+		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ >/dev/null 2>&1 || { echo 'Error during Libnx local installation'; exit 1; }; \
 	else \
 		echo "=== No changes in libnx: skipping copy ==="; \
 	fi
