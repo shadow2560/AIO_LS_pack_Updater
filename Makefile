@@ -106,12 +106,18 @@ $(BUILD): libnx_build
 .PHONY: libnx_build
 libnx_build:
 	@echo "=== Building local libnx ==="
+	@touch libnx/.before_build
 	@$(MAKE) -C $(LIBNX)
-	@echo "=== Installing local libnx ==="
+	@if find $(LIBNX)/nx -type f -newer libnx/.before_build | grep -q .; then \
+		@echo "=== Installing local libnx ===" \
 		@cd $(CURDIR)/libnx/nx/ && \
 		cp -v default_icon.jpg switch_rules switch.ld switch.specs ../ && \
 		cp -rv include lib ../ && \
-		cp -rv external/bsd/include ../
+		cp -rv external/bsd/include ../ \
+	else \
+		echo "=== No changes in libnx: skipping copy ==="; \
+	fi
+	@rm -f libnx/.before_build
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
@@ -207,7 +213,7 @@ clean:
 	@echo clean ...
 	@if [ -f "$(LIBNX)/Makefile" ]; then $(MAKE) -C $(LIBNX) clean; fi
 		@rm -fr $(CURDIR)/libnx/include $(CURDIR)/libnx/lib
-		@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules
+		@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules $(CURDIR)/libnx/.before_build
 ifeq ($(strip $(APP_JSON)),)
 	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 else

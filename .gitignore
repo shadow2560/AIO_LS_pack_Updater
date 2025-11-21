@@ -27,3 +27,4 @@ build_cmake*
 /libnx/*.o
 /libnx/*.d
 /libnx/*.bz2
+/libnx/.before_build
