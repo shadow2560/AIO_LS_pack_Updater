@@ -2373,14 +2373,14 @@ int main(int argc, char **argv) {
 					update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"].c_str());
 				}
 				if (update_firmware2) {
-					fnc_clean_theme();
-					if (agressive_clean2) {
-						fnc_agressive_clean(true);
-					}
-					if (clean_modules_2) {
-						fnc_clean_modules();
-					}
 					if (fnc_install_firmware()) {
+						fnc_clean_theme();
+						if (agressive_clean2) {
+							fnc_agressive_clean(true);
+						}
+						if (clean_modules_2) {
+							fnc_clean_modules();
+						}
 						debug_log_write("Installation du firmware OK.\n\n");
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());

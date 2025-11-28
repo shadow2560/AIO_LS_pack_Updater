@@ -28,7 +28,7 @@
 #include "../main_util.h"
 #include "../translate.hpp"
 
-const char app_version[] = "2.1.1";
+const char app_version[] = "2.1.2";
 
 PadState daybreak_pad;
 
@@ -66,6 +66,10 @@ static constexpr size_t UpdateTaskBufferSize = 0x100000;
 InstallState m_install_state;
 AsyncResult m_prepare_result;
 float m_progress_percent = 0.0f;
+
+SetSysFirmwareVersion fw_ver;
+bool need_clean_21_dg = false;
+bool ask_dg = false;
 
 void custom_pause() {
 	printf(language_vars["lng_db_pause"].c_str());
@@ -109,6 +113,14 @@ void DaybreakAppInit() {
 		fatalThrow(rc);
 	}
 
+	if (R_FAILED(rc = setsysInitialize())) {
+		fatalThrow(rc);
+	}
+	if (R_FAILED(rc = setsysGetFirmwareVersion(&fw_ver))) {
+		setsysExit();
+		fatalThrow(rc);
+	}
+	setsysExit();
 }
 
 void DaybreakAppExit() {
@@ -120,6 +132,29 @@ void DaybreakAppExit() {
 	amssuExit();
 }
 
+}
+
+bool daybreak_ask_question(char *question_text) {
+	bool rc;
+	printf("%s\n", question_text);
+	printf("	[A]: ");
+	printf(language_vars["lng_yes"].c_str());
+	printf("		  [B]: ");
+	printf(language_vars["lng_no"].c_str());
+	printf("\n");
+	consoleUpdate(&logs_console);
+	while(1) {
+		padUpdate(&daybreak_pad);
+		u64 kDown = padGetButtonsDown(&daybreak_pad);
+		if (kDown & HidNpadButton_A) {
+			rc = true;
+			break;
+		} else if (kDown & HidNpadButton_B) {
+			rc = false;
+			break;
+		}
+	}
+	return rc;
 }
 
 bool DaybreakInitializeMenu() {
@@ -185,6 +220,17 @@ Result GetUpdateInformation() {
 		return rc;
 	}
 	/* Print update information. */
+	uint32_t major_update = (m_update_info.version >> 26) & 0x1f;
+	if (major_update <= 20 && fw_ver.major >= 21) {
+		need_clean_21_dg = true;
+		ask_dg = daybreak_ask_question((char *) language_vars["lng_db_ask_special_dg"].c_str());
+		if (ask_dg == false) {
+			debug_log_write("Mise à jour annulée par l'utilisateur à cause du downgrade du firmware 21.0.0 au moins vers un firmware inférieur.\n");
+			return 1;
+		}
+	} else {
+	need_clean_21_dg = false;
+}
 	printf(language_vars["lng_db_update_infos_fw_version"].c_str(), (m_update_info.version >> 26) & 0x1f, (m_update_info.version >> 20) & 0x1f, (m_update_info.version >> 16) & 0xf);
 	printf("\n");
 	if (m_update_info.exfat_supported) {
@@ -383,29 +429,6 @@ Result TransitionUpdateState() {
 	return rc;
 }
 
-bool daybreak_ask_question(char *question_text) {
-	bool rc;
-	printf("%s\n", question_text);
-	printf("	[A]: ");
-	printf(language_vars["lng_yes"].c_str());
-	printf("		  [B]: ");
-	printf(language_vars["lng_no"].c_str());
-	printf("\n");
-	consoleUpdate(&logs_console);
-	while(1) {
-		padUpdate(&daybreak_pad);
-		u64 kDown = padGetButtonsDown(&daybreak_pad);
-		if (kDown & HidNpadButton_A) {
-			rc = true;
-			break;
-		} else if (kDown & HidNpadButton_B) {
-			rc = false;
-			break;
-		}
-	}
-	return rc;
-}
-
 bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exfat, int force_unsuported_firmware) {
 	DaybreakAppInit();
 	printf(language_vars["lng_db_title"].c_str(), app_version);
@@ -418,6 +441,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_init_failed_error"].c_str());
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 	}
 	Result rc = 0;
@@ -429,6 +453,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_get_hardware_type_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 	}
 	
@@ -437,6 +462,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_get_rcm_bug_patch_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 	}
 	if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
@@ -444,6 +470,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_get_emummc_status_error"].c_str(), rc);
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 	}
 	/* Warn if we're working with a patched unit. */
@@ -468,10 +495,15 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	}
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
+		if (need_clean_21_dg == true && ask_dg == false) {
+			DaybreakAppExit();
+			return false;
+		}
 		debug_log_write("Erreur durant la validation de la mise à jour.\n");
 		printf(language_vars["lng_db_update_validation_failed_error"].c_str());
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 	}
 
@@ -496,6 +528,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 			printf(language_vars["lng_db_update_canceled"].c_str());
 			printf("\n");
 			custom_pause();
+			DaybreakAppExit();
 			return false;
 		}
 	}
@@ -505,6 +538,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_exfat_forced_but_not_supported_error"].c_str());
 		printf("\n");
 		custom_pause();
+		DaybreakAppExit();
 		return false;
 		
 	}
@@ -527,6 +561,7 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 			printf(language_vars["lng_db_firmware_not_supported_and_force_install_disabled"].c_str());
 			printf("\n");
 			custom_pause();
+			DaybreakAppExit();
 			return false;
 		}
 	}
@@ -587,6 +622,9 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		TransitionUpdateState();
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	if (need_clean_21_dg == true) {
+		debug_log_write("Suppression nécessaire du fichier proglématique lors du downgrade d'un firmware 21.0.0+ vers un firmware inférieur.\n");
+	}
 	DaybreakAppExit();
 	return true;
 }
