@@ -40,7 +40,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.10.00
+APP_VERSION := 	7.11.06
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -98,8 +98,6 @@ LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
-#---------------------------------------------------------------------------------
-
 # Build libnx before creating build/ and entering second pass
 $(BUILD): libnx_build
 
@@ -126,7 +124,7 @@ libnx_build:
 		echo "=== No changes in libnx: skipping copy ==="; \
 	fi
 	@rm -f libnx/.before_build
-	@echo "=== Compiling project ==="; \
+	@echo "=== Compiling project ===";
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
@@ -221,13 +219,13 @@ $(BUILD):
 clean:
 	@echo clean ...
 	@if [ -f "$(LIBNX)/Makefile" ]; then $(MAKE) -C $(LIBNX) clean; fi
-		@rm -fr $(CURDIR)/libnx/include $(CURDIR)/libnx/lib
-		@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules $(CURDIR)/libnx/.before_build
-ifeq ($(strip $(APP_JSON)),)
-	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
-else
-	@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf
-endif
+	@rm -fr $(CURDIR)/libnx/include $(CURDIR)/libnx/lib
+	@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules $(CURDIR)/libnx/.before_build $(CURDIR)/aiosu-forwarder/.before_build $(CURDIR)/amssu-rcm/.before_build
+	ifeq ($(strip $(APP_JSON)),)
+		@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+	else
+		@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf
+	endif
 
 
 #---------------------------------------------------------------------------------

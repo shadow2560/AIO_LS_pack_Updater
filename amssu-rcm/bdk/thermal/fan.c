@@ -1,7 +1,7 @@
 /*
  * Fan driver for Nintendo Switch
  *
- * Copyright (c) 2018-2020 CTCaer
+ * Copyright (c) 2018-2024 CTCaer
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,25 +18,38 @@
 
 #include <thermal/fan.h>
 #include <power/regulator_5v.h>
+#include <soc/bpmp.h>
+#include <soc/clock.h>
+#include <soc/fuse.h>
 #include <soc/gpio.h>
+#include <soc/hw_init.h>
 #include <soc/pinmux.h>
+#include <soc/timer.h>
 #include <soc/t210.h>
-#include <utils/util.h>
 
-void set_fan_duty(u32 duty)
+void fan_set_duty(u32 duty)
 {
 	static bool fan_init = false;
-	static u16 curr_duty = -1;
+	static u16  curr_duty = -1;
+
+	if (duty > 236)
+		duty = 236;
 
 	if (curr_duty == duty)
 		return;
 
+	curr_duty = duty;
+
 	if (!fan_init)
 	{
 		// Fan tachometer.
-		PINMUX_AUX(PINMUX_AUX_CAM1_PWDN) = PINMUX_TRISTATE | PINMUX_INPUT_ENABLE | PINMUX_PULL_UP | 1;
-		gpio_config(GPIO_PORT_S, GPIO_PIN_7, GPIO_MODE_GPIO);
-		gpio_output_enable(GPIO_PORT_S, GPIO_PIN_7, GPIO_OUTPUT_DISABLE);
+		u32 pull_resistor = hw_get_chip_id() == GP_HIDREV_MAJOR_T210 ? PINMUX_PULL_UP : 0;
+		PINMUX_AUX(PINMUX_AUX_CAM1_PWDN) = PINMUX_TRISTATE | PINMUX_INPUT_ENABLE | pull_resistor | 1;
+		gpio_direction_input(GPIO_PORT_S, GPIO_PIN_7);
+
+		// Enable PWM if disabled.
+		if (fuse_read_hw_type() == FUSE_NX_HW_TYPE_AULA)
+			clock_enable_pwm();
 
 		PWM(PWM_CONTROLLER_PWM_CSR_1) = PWM_CSR_EN | (0x100 << 16); // Max PWM to disable fan.
 
@@ -45,9 +58,6 @@ void set_fan_duty(u32 duty)
 
 		fan_init = true;
 	}
-
-	if (duty > 236)
-		duty = 236;
 
 	// Inverted polarity.
 	u32 inv_duty = 236 - duty;
@@ -59,8 +69,8 @@ void set_fan_duty(u32 duty)
 		regulator_5v_disable(REGULATOR_5V_FAN);
 
 		// Disable fan.
-		PINMUX_AUX(PINMUX_AUX_LCD_GPIO2) =
-				PINMUX_INPUT_ENABLE | PINMUX_PARKED |  PINMUX_TRISTATE | PINMUX_PULL_DOWN; // Set source to PWM1.
+		PINMUX_AUX(PINMUX_AUX_LCD_GPIO2) = PINMUX_INPUT_ENABLE | PINMUX_PARKED    |
+										   PINMUX_TRISTATE     | PINMUX_PULL_DOWN; // Set source to PWM1.
 	}
 	else // Set PWM duty.
 	{
@@ -71,23 +81,20 @@ void set_fan_duty(u32 duty)
 		// Enable fan.
 		PINMUX_AUX(PINMUX_AUX_LCD_GPIO2) = 1; // Set source to PWM1.
 	}
-
-	curr_duty = duty;
 }
 
-void get_fan_speed(u32 *duty, u32 *rpm)
+void fan_get_speed(u32 *duty, u32 *rpm)
 {
 	if (rpm)
 	{
-		u32  irq_count = 1;
+		u32  irq_count = 0;
 		bool should_read = true;
-		bool irq_val = 0;
 
-		// Poll irqs for 2 seconds.
-		int timer = get_tmr_us() + 1000000;
-		while (timer - get_tmr_us())
+		// Poll irqs for 2 seconds. (5 seconds for accurate count).
+		int  timer = get_tmr_us() + 2000000;
+		while ((timer - get_tmr_us()) > 0)
 		{
-			irq_val = gpio_read(GPIO_PORT_S, GPIO_PIN_7);
+			bool irq_val = gpio_read(GPIO_PORT_S, GPIO_PIN_7);
 			if (irq_val && should_read)
 			{
 				irq_count++;
@@ -97,10 +104,25 @@ void get_fan_speed(u32 *duty, u32 *rpm)
 				should_read = true;
 		}
 
+		// Halve the irq count.
+		irq_count /= 2;
+
 		// Calculate rpm based on triggered interrupts.
-		*rpm = 60000000 / ((1000000 * 2) / irq_count);
+		*rpm = irq_count * (60 / 2);
 	}
 
 	if (duty)
 		*duty = 236 - ((PWM(PWM_CONTROLLER_PWM_CSR_1) >> 16) & 0xFF);
+}
+
+void fan_set_from_temp(u32 temp)
+{
+	if (temp >= 52)
+		fan_set_duty(102);
+	else if (temp >= 47)
+		fan_set_duty(76);
+	else if (temp >= 42)
+		fan_set_duty(51);
+	else if (temp <= 39)
+		fan_set_duty(0);
 }

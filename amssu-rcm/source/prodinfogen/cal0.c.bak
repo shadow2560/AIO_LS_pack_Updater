@@ -1,0 +1,872 @@
+/*
+ * Copyright (c) 2019-2021 CaramelDunes
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "cal0.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include "gcm.h"
+#include <sec/se.h>
+#include <sec/se_t210.h>
+#include <soc/fuse.h>
+#include <utils/util.h>
+
+#include "../storage/nx_emmc_bis.h"
+
+#include "crc16.h"
+
+#include "../hos/hos.h"
+#include "../keys/crypto.h"
+#include "../keys/es_crypto.h"
+#include "../keys/key_sources.inl"
+#include "../keys/ssl_crypto.h"
+
+const u32 MINIMUM_PRODINFO_SIZE = 0x3D70;
+const u32 MAXIMUM_PRODINFO_SIZE = 0x3FBC00;
+
+static const u8 es_kek_source_y[0x10] = {0xaf, 0x44, 0xf3, 0x3e, 0x82, 0x4e, 0x83, 0x92, 0xed, 0x38, 0xe1, 0x2f, 0x29, 0xcf, 0x6f, 0x4d};
+
+static const u8 lotus_kek_source_x[0x10] = {0xD0, 0xCC, 0xDE, 0x8D, 0x10, 0x98, 0x67, 0x2F, 0x64, 0x9A, 0x1E, 0xC4, 0xFE, 0x85, 0x62, 0xF0};
+static const u8 lotus_kek_source_y[0x10] = {0xC3, 0xB5, 0x86, 0x0A, 0xE9, 0xF7, 0x80, 0xF5, 0xAF, 0xA8, 0x49, 0x2D, 0xD4, 0x33, 0xB5, 0xA9};
+
+static inline void write64le(volatile void *qword, size_t offset, uint64_t value)
+{
+	*(uint64_t *)((uintptr_t)qword + offset) = value;
+}
+
+static inline void write64be(volatile void *qword, size_t offset, uint64_t value)
+{
+	write64le(qword, offset, __builtin_bswap64(value));
+}
+
+void device_id_string(char device_id_string[0x11])
+{
+	u64 device_id = fuse_get_device_id();
+	device_id |= 0x6300000000000000ULL;
+
+	static const char digits[] = "0123456789ABCDEF";
+	int i = 0;
+	u64 v = device_id;
+	for (i = 0xF; i >= 0; i--)
+	{
+		device_id_string[i] = digits[v % 16];
+		v /= 16;
+	}
+}
+
+bool valid_prodinfo_checksums(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	return prodinfo_size >= MINIMUM_PRODINFO_SIZE &&
+		   prodinfo_size <= MAXIMUM_PRODINFO_SIZE &&
+		   valid_cal0_signature(prodinfo_buffer, prodinfo_size) &&
+		   valid_base_crcs(prodinfo_buffer, prodinfo_size) &&
+		   valid_body_checksum(prodinfo_buffer, prodinfo_size) &&
+		   valid_sha256_blocks(prodinfo_buffer, prodinfo_size);
+}
+
+bool valid_own_prodinfo(u8 *prodinfo_buffer, u32 prodinfo_size, u8 *master_key)
+{
+	return valid_prodinfo_checksums(prodinfo_buffer, prodinfo_size) &&
+		   valid_extended_rsa_2048_eticket_key(prodinfo_buffer, master_key) &&
+		   valid_extended_ecc_b233_device_key(prodinfo_buffer, master_key);
+}
+
+#define CRC16_FIELD(base, field) \
+    write_crc16( \
+        (u8 *)(base), \
+        offsetof(nx_emmc_cal0_t, field), \
+        sizeof(((nx_emmc_cal0_t *)0)->field) \
+    )
+
+#define CRC16_FIELD_IF_PRESENT(base, field, prodinfo_size) \
+    do { \
+        u32 off = offsetof(nx_emmc_cal0_t, field); \
+        if (off + sizeof(((nx_emmc_cal0_t *)0)->field) <= (prodinfo_size)) \
+            CRC16_FIELD(base, field); \
+    } while (0)
+
+#define CRC16_FIELD_VALID(base, field) \
+    has_valid_crc16( \
+        (u8 *)(base), \
+        offsetof(nx_emmc_cal0_t, field), \
+        sizeof(((nx_emmc_cal0_t *)0)->field) \
+    )
+
+#define SHA256_FIELD_DATA(base, field, data_len, hash_field) \
+    do { \
+        se_calc_sha256_oneshot( \
+            (base)->hash_field, \
+            (base)->field, \
+            (data_len) \
+        ); \
+    } while (0)
+
+#define CRC16_RANGE(base, first_field, last_field)                     \
+	do {                                                               \
+		u32 off = offsetof(nx_emmc_cal0_t, first_field);               \
+		u32 end = offsetof(nx_emmc_cal0_t, last_field)                 \
+		          + sizeof(((nx_emmc_cal0_t *)0)->last_field);         \
+		write_crc16((u8 *)(base), off, end - off);                      \
+	} while (0)
+
+#define CRC16_RANGE_VALID(base, first_field, last_field)               \
+	({                                                                 \
+		u32 off = offsetof(nx_emmc_cal0_t, first_field);               \
+		u32 end = offsetof(nx_emmc_cal0_t, last_field)                 \
+		          + sizeof(((nx_emmc_cal0_t *)0)->last_field);         \
+		has_valid_crc16((u8 *)(base), off, end - off);                  \
+	})
+
+bool valid_base_crcs(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	return
+		/* ConfigurationId1 */
+		CRC16_FIELD_VALID(cal0, cfg_id1) &&
+
+		/* WlanCountryCodes */
+		CRC16_FIELD_VALID(cal0, wlan_cc) &&
+
+		/* MACs */
+		CRC16_FIELD_VALID(cal0, wlan_mac) &&
+		CRC16_FIELD_VALID(cal0, bd_mac) &&
+
+		/* Sensors */
+		CRC16_FIELD_VALID(cal0, acc_offset) &&
+		CRC16_FIELD_VALID(cal0, acc_scale) &&
+		CRC16_FIELD_VALID(cal0, gyro_offset) &&
+		CRC16_FIELD_VALID(cal0, gyro_scale) &&
+
+		/* Serial */
+		CRC16_FIELD_VALID(cal0, serial_number) &&
+
+		/* Device certs / keys */
+		CRC16_RANGE_VALID(cal0, ecc_p256_device_key, crc16_pad10) &&
+		CRC16_RANGE_VALID(cal0, ecc_p256_device_cert, crc16_pad11) &&
+		CRC16_RANGE_VALID(cal0, ecc_p233_device_key, crc16_pad12) &&
+		CRC16_RANGE_VALID(cal0, ecc_p33_device_cert, crc16_pad13) &&
+
+		/* eTicket certs / keys */
+		CRC16_RANGE_VALID(cal0, ecc_p256_ticket_key, crc16_pad14) &&
+		CRC16_RANGE_VALID(cal0, ecc_p256_ticket_cert, crc16_pad15) &&
+		CRC16_RANGE_VALID(cal0, ecc_p233_ticket_key, crc16_pad16) &&
+		CRC16_RANGE_VALID(cal0, ecc_p33_ticket_cert, crc16_pad17) &&
+
+		/* SSL key */
+		CRC16_RANGE_VALID(cal0, ssl_key_iv, ssl_key_crc) &&
+
+		/* GameCard key */
+		CRC16_RANGE_VALID(cal0, gc_key, crc16_pad20) &&
+
+		/* RSA eTicket */
+		CRC16_RANGE_VALID(cal0, rsa2048_eticket_key_iv, rsa2048_eticket_key_crc) &&
+
+		/* Battery / speaker */
+		CRC16_FIELD_VALID(cal0, battery_lot) &&
+		CRC16_RANGE_VALID(cal0, spk_cal, crc16_pad24) &&
+
+		/* Region */
+		CRC16_FIELD_VALID(cal0, region_code) &&
+
+		/* Amiibo */
+		CRC16_RANGE_VALID(cal0, amiibo_key, crc16_pad26) &&
+		CRC16_RANGE_VALID(cal0, amiibo_ecqv_cert, crc16_pad27) &&
+		CRC16_RANGE_VALID(cal0, amiibo_ecqdsa_cert, crc16_pad28) &&
+		CRC16_RANGE_VALID(cal0, amiibo_ecqv_bls_key, crc16_pad29) &&
+		CRC16_RANGE_VALID(cal0, amiibo_ecqv_bls_cert, crc16_pad30) &&
+		CRC16_RANGE_VALID(cal0, amiibo_ecqv_bls_root_cert, crc16_pad31) &&
+
+		/* Product / LCD */
+		CRC16_FIELD_VALID(cal0, product_model) &&
+		CRC16_FIELD_VALID(cal0, lcd_bl_brightness_mapping) &&
+
+		/* Extended ECC device key */
+		CRC16_RANGE_VALID(cal0, ext_ecc_b233_device_key, crc16_pad35);
+}
+
+bool valid_sha256_blocks(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+	u8 hash[0x20];
+
+	/* RandomNumber */
+	se_calc_sha256_oneshot(
+		hash,
+		cal0->random_number,
+		sizeof(cal0->random_number)
+	);
+	if (memcmp(hash, cal0->random_number_sha256, 0x20))
+		return false;
+
+	/* GameCardCertificate */
+	se_calc_sha256_oneshot(
+		hash,
+		cal0->gc_cert,
+		sizeof(cal0->gc_cert)
+	);
+	if (memcmp(hash, cal0->gc_cert_sha256, 0x20))
+		return false;
+
+	/* SslCertificate (size-based) */
+	se_calc_sha256_oneshot(
+		hash,
+		cal0->ssl_cert,
+		cal0->ssl_cert_size
+	);
+	if (memcmp(hash, cal0->ssl_sha256, 0x20))
+		return false;
+
+	return true;
+}
+
+static void _generate_kek(u32 ks, const void *key_source, void *master_key, const void *kek_seed)
+{
+	se_aes_key_set(ks, master_key, 0x10);
+	se_aes_unwrap_key(ks, ks, kek_seed);
+	se_aes_unwrap_key(ks, ks, key_source);
+}
+
+void unseal_key(const u8 *kek_source_x, const u8 *kek_source_y, u8 *master_key, u8 *dest, u8 usecase)
+{
+	u8 temp_key[0x10] = {0};
+	const u8 *seed = NULL;
+	switch (usecase)
+	{
+	case 1:
+		seed = seal_key_masks[1];
+		break;
+
+	case 2:
+		seed = seal_key_masks[2];
+		break;
+
+	case 3:
+		seed = seal_key_masks[3];
+		break;
+
+	default:
+		// gfx_printf("Invalid usescase: %c\n", usecase);
+		break;
+	}
+
+	for (u32 i = 0; i < 0x10; i++)
+		temp_key[i] = aes_kek_generation_source[i] ^ seed[i];
+
+	_generate_kek(KEYSLOT_SWITCH_TEMPKEY, kek_source_x, master_key, temp_key);
+	se_aes_crypt_block_ecb(KEYSLOT_SWITCH_TEMPKEY, 0, dest, kek_source_y);
+}
+
+// Assumes key is in KEYSLOT_SWITCH_TEMPKEY.
+void ghash_calc(const u8 *plaintext, u32 plaintext_size, const u8 ctr[0x10], u8 *dest)
+{
+	/* J = GHASH(CTR); */
+	uint8_t j_block[0x10];
+	ghash(j_block, ctr, 0x10, NULL, false);
+
+	/* MAC = GHASH(PLAINTEXT) ^ ENCRYPT(J) */
+	/* Note: That MAC is calculated over plaintext_size is non-standard. */
+	/* It is supposed to be over the ciphertext. */
+	ghash(dest, plaintext, plaintext_size, j_block, true);
+}
+
+// Assumes key is in KEYSLOT_SWITCH_TEMPKEY.
+static bool decrypt_gcm_fields(
+	const u8 *ctr,
+	const u8 *ciphertext,
+	u32 data_size,
+	const u8 *mac,
+	u8 *out_plaintext
+)
+{
+	se_aes_crypt_ctr(
+		KEYSLOT_SWITCH_TEMPKEY,
+		out_plaintext,
+		data_size,
+		ciphertext,
+		data_size,
+		(void *)ctr
+	);
+
+	u8 calc_mac[0x10];
+	ghash_calc(out_plaintext, data_size, ctr, calc_mac);
+
+	return memcmp(calc_mac, mac, 0x10) == 0;
+}
+
+static void encrypt_gcm_fields(
+	u8 *ctr,
+	u8 *ciphertext,
+	u32 data_size,
+	u8 *mac,
+	u8 *plaintext,
+	u64 device_id
+)
+{
+	/* Device ID is always in last 8 bytes of plaintext */
+	write64be(plaintext, data_size - 0x8, device_id);
+
+	ghash_calc(plaintext, data_size, ctr, mac);
+
+	se_aes_crypt_ctr(
+		KEYSLOT_SWITCH_TEMPKEY,
+		ciphertext,
+		data_size,
+		plaintext,
+		data_size,
+		ctr
+	);
+}
+
+static bool _is_valid_gcm_block(const u8 *block, u32 block_size)
+{
+	const u8 *ctr = block;
+	const u8 *ciphertext = block + 0x10;
+
+	u32 plaintext_size = block_size - 0x20;
+	const u8 *encrypted_ghash = ciphertext + plaintext_size;
+
+	u8 *plaintext = malloc(plaintext_size);
+	if (!plaintext)
+		return false;
+
+	se_aes_crypt_ctr(
+		KEYSLOT_SWITCH_TEMPKEY,
+		plaintext,
+		plaintext_size,
+		ciphertext,
+		plaintext_size,
+		(void *)ctr
+	);
+
+	u8 calc_mac[0x10];
+	ghash_calc(plaintext, plaintext_size, ctr, calc_mac);
+
+	free(plaintext);
+
+	return memcmp(encrypted_ghash, calc_mac, 0x10) == 0;
+}
+
+void _prepare_eticket_key(u8 ks_dst, u8 *master_key)
+{
+	u8 the_key[0x10] = {0};
+	unseal_key(eticket_rsa_kekek_source, eticket_rsa_kek_source, master_key, the_key, 3);
+	se_aes_key_set(ks_dst, the_key, 0x10);
+}
+
+void _prepare_device_key(u8 ks_dst, u8 *master_key)
+{
+	u8 the_key[0x10] = {0};
+	unseal_key(ssl_rsa_kekek_source, es_kek_source_y, master_key, the_key, 1);
+	se_aes_key_set(ks_dst, the_key, 0x10);
+}
+
+void _prepare_gamecard_key(u8 ks_dst, u8 *master_key)
+{
+	u8 the_key[0x10] = {0};
+	unseal_key(lotus_kek_source_x, lotus_kek_source_y, master_key, the_key, 2);
+	se_aes_key_set(ks_dst, the_key, 0x10);
+}
+
+bool valid_extended_rsa_2048_eticket_key(u8 *prodinfo_buffer, u8 *master_key)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	_prepare_eticket_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return _is_valid_gcm_block(
+		cal0->rsa2048_eticket_key_iv,
+		sizeof(cal0->rsa2048_eticket_key_iv)
+		+ sizeof(cal0->rsa2048_eticket_key)
+		+ 0x10
+	);
+}
+
+bool valid_extended_ecc_b233_device_key(u8 *prodinfo_buffer, u8 *master_key)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	_prepare_device_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return _is_valid_gcm_block(
+		cal0->ext_ecc_b233_device_key,
+		sizeof(cal0->ext_ecc_b233_device_key)
+		+ 0x10
+	);
+}
+
+bool valid_extended_gamecard_key(u8 *prodinfo_buffer, u8 *master_key)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	_prepare_gamecard_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return _is_valid_gcm_block(
+		cal0->ext_gc_key,
+		sizeof(cal0->ext_gc_key)
+		+ 0x10
+	);
+}
+
+bool valid_ecc_b233_device_certificate(u8 *prodinfo_buffer)
+{
+	return has_valid_crc16(prodinfo_buffer, 0x0480, 0x190);
+}
+
+bool valid_rsa_2048_eticket_certificate(u8 *prodinfo_buffer)
+{
+	return has_valid_crc16(prodinfo_buffer, 0x2A90, 0x250);
+}
+
+void write_body_checksum(u8 *prodinfo_buffer)
+{
+	u32 body_size = *((u32 *)(prodinfo_buffer + 0x08));
+
+	se_calc_sha256_oneshot(prodinfo_buffer + 0x20, prodinfo_buffer + 0x40, body_size);
+}
+
+bool valid_cal0_signature(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	return prodinfo_size > 4 && prodinfo_buffer[0] == 'C' && prodinfo_buffer[1] == 'A' && prodinfo_buffer[2] == 'L' && prodinfo_buffer[3] == '0';
+}
+
+bool valid_body_checksum(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	// Check body size.
+	u32 body_size = *((u32 *)(prodinfo_buffer + 0x08));
+	if (prodinfo_size < body_size + 0x40)
+	{
+		return false;
+	}
+
+	// Check prodinfo hash.
+	u8 body_checksum[0x20] = {0};
+	se_calc_sha256_oneshot(body_checksum, prodinfo_buffer + 0x40, body_size);
+	int is_body_corrupt = memcmp(body_checksum, prodinfo_buffer + 0x20, 0x20);
+
+	return !is_body_corrupt;
+}
+
+void write_mac_addresses(u8 *prodinfo_buffer, u64 device_id)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	static const u8 nintendo_oui[3] = {0xA4, 0x38, 0xCC};
+
+	memcpy(cal0->wlan_mac, nintendo_oui, 3);
+	memcpy(cal0->wlan_mac + 3, &device_id, 3);
+
+	memcpy(cal0->bd_mac, nintendo_oui, 3);
+	memcpy(cal0->bd_mac + 3, &device_id, 3);
+}
+
+void write_serial_number(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+	static const char serial[] = "XAW10000000000";
+
+	memcpy(cal0->serial_number, serial, sizeof(serial) - 1);
+}
+
+void write_device_id_string_at_offset(u8 *prodinfo_buffer, const char *device_id_string, u32 offset)
+{
+	prodinfo_buffer[offset] = 'N';
+	prodinfo_buffer[offset + 1] = 'X';
+
+	memcpy(prodinfo_buffer + offset + 2, device_id_string, 0x10);
+
+	prodinfo_buffer[offset + 18] = '-';
+	prodinfo_buffer[offset + 19] = '0';
+}
+
+void write_ssl_certificate(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	cal0->ssl_cert_size = 0x05E9;
+}
+
+void write_random_number(u8 *prodinfo_buffer, u64 device_id)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	memset(cal0->random_number, 0, sizeof(cal0->random_number));
+
+	u64 key[2] = { device_id, device_id };
+	u8 ctr[0x10] = {0};
+
+	se_aes_key_set(KEYSLOT_SWITCH_TEMPKEY, key, 0x10);
+	se_aes_crypt_ctr(
+		KEYSLOT_SWITCH_TEMPKEY,
+		cal0->random_number,
+		sizeof(cal0->random_number),
+		cal0->random_number,
+		sizeof(cal0->random_number),
+		ctr
+	);
+}
+
+void write_config_id(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+	static const char cfg[] = "MP_00_01_00_00";
+
+	memcpy(cal0->cfg_id1, cfg, sizeof(cfg));
+}
+
+void write_wlan_country_codes(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	static const u8 cc[11] = {
+		0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x52,0x31,0x00
+	};
+
+	memcpy(cal0->wlan_cc, cc, sizeof(cc));
+}
+
+void write_header(u8 *prodinfo_buffer)
+{
+	unsigned char header[32] = {
+		'C', 'A', 'L', '0', 0x07, 0x00, 0x00, 0x00, 0x30, 0x3D, 0x00, 0x00,
+		0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x71, 0x0E};
+
+	memcpy(prodinfo_buffer, header, sizeof(header));
+
+	u32 size = 0x7FC0;
+	memcpy(prodinfo_buffer + 0x8, &size, 4);
+}
+
+void write_sensors_offset_scale(u8 *prodinfo_buffer)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+    static const u8 sensors_offset_scale[32] = {
+        0xFC, 0xFF, 0xFA, 0xFF, 0xC4, 0x00, 0x46, 0x06,
+        0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0x15, 0xF4,
+        0xFD, 0xFF, 0xDD, 0xFF, 0xF3, 0xFF, 0x1B, 0x13,
+        0xFF, 0x3F, 0xFF, 0x3F, 0xFF, 0x3F, 0x15, 0xF4
+    };
+
+    memcpy(cal0->acc_offset,  sensors_offset_scale + 0x00, sizeof(cal0->acc_offset));
+    memcpy(cal0->acc_scale,   sensors_offset_scale + 0x06, sizeof(cal0->acc_scale));
+    memcpy(cal0->gyro_offset, sensors_offset_scale + 0x0C, sizeof(cal0->gyro_offset));
+    memcpy(cal0->gyro_scale,  sensors_offset_scale + 0x12, sizeof(cal0->gyro_scale));
+}
+
+void write_battery_lot(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+	static const char lot[] = "BHACHZZADM402211310199";
+
+	memcpy(cal0->battery_lot, lot, sizeof(lot));
+}
+
+void write_speaker_calibration_value(u8 *prodinfo_buffer)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+        static const u8 speaker_calibration_value[sizeof(nx_emmc_cal0_spk_t)] = {
+        0x00, 0x03, 0x00, 0x5A, 0xED, 0x87, 0x00, 0x00,
+        0xC1, 0x61, 0x1E, 0xAF, 0x09, 0x5B, 0xC9, 0x60,
+        0x18, 0x8D, 0x00, 0x00, 0xDE, 0x2A, 0x0F, 0xDB,
+        0xFC, 0xB6, 0x00, 0x00, 0x08, 0x93, 0x01, 0xF3,
+        0x1F, 0xAA, 0x00, 0x00, 0x1F, 0xB4, 0x00, 0x4B,
+        0x1F, 0xB4, 0x08, 0x00, 0x08, 0x00, 0x00, 0xC1,
+        0x60, 0x41, 0x1F, 0x80, 0x04, 0x80, 0x6B, 0x30,
+        0x04, 0x04, 0x12, 0x12, 0x00, 0x00, 0x94, 0x94,
+        0x00, 0x00, 0xAA, 0xAA, 0x50, 0x00, 0x00, 0x80,
+        0x2F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+	memcpy(&cal0->spk_cal, speaker_calibration_value, sizeof(nx_emmc_cal0_spk_t));
+}
+
+void write_short_values(u8 *prodinfo_buffer, u32 display_id)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+    cal0->region_code = 1;
+
+    switch (fuse_read_hw_type())
+    {
+    case FUSE_NX_HW_TYPE_ICOSA: cal0->product_model = 1; break;
+    case FUSE_NX_HW_TYPE_IOWA:  cal0->product_model = 3; break;
+    case FUSE_NX_HW_TYPE_HOAG:  cal0->product_model = 4; break;
+    case FUSE_NX_HW_TYPE_AULA:  cal0->product_model = 6; break;
+    default:                   cal0->product_model = 1; break;
+    }
+
+    /* Exact byte representation from old layout */
+    cal0->lcd_bl_brightness_mapping[0] = 0x3F800000; /* 1.0f */
+    cal0->lcd_bl_brightness_mapping[1] = 0x00000000; /* 0.0f */
+    cal0->lcd_bl_brightness_mapping[2] = 0x3CA3D70A; /* ~0.02f */
+
+	cal0->lcd_vendor = ((display_id >> 8) &																			 0xFFFFFF);
+	// prodinfo_buffer[OFFSET_OF_BLOCK(UsbTypeCPowerSourceCircuitVersion)] = 1;
+	// prodinfo_buffer[OFFSET_OF_BLOCK(TouchIcVendorId)] = 1;
+}
+
+static inline u32 pack_rgba(const u8 c[4])
+{
+    return (u32)c[0]
+         | ((u32)c[1] << 8)
+         | ((u32)c[2] << 16)
+         | ((u32)c[3] << 24);
+}
+
+void write_console_colors(u8 *prodinfo_buffer, u64 device_id)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+    const u8 *id = (const u8 *)&device_id;
+
+    cal0->home_menu_scheme_main_color[0] = 1;
+
+    const u8 sub[4]   = {0x00, 0xFF, 0x00, 0xFF};
+    const u8 bezel[4]= {id[0], id[1], id[2], 0xFF};
+    const u8 main1[4]= {id[3], id[4], id[5], 0xFF};
+    const u8 main2[4]= {0xFF, 0x00, 0xFF, 0xFF};
+    const u8 main3[4]= {0xFF, 0xFF, 0x00, 0xFF};
+
+	cal0->home_menu_scheme_sub_color   = pack_rgba(sub);
+	cal0->home_menu_scheme_bezel_color = pack_rgba(bezel);
+	cal0->home_menu_scheme_main_color1 = pack_rgba(main1);
+	cal0->home_menu_scheme_main_color2 = pack_rgba(main2);
+	cal0->home_menu_scheme_main_color3 = pack_rgba(main3);
+}
+
+void write_all_crc(u8 *prodinfo_buffer, u32 prodinfo_size)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	/* Base CRCs */
+	CRC16_FIELD(cal0, cfg_id1);
+	CRC16_FIELD(cal0, wlan_cc);
+	CRC16_FIELD(cal0, wlan_mac);
+	CRC16_FIELD(cal0, bd_mac);
+	CRC16_FIELD(cal0, acc_offset);
+	CRC16_FIELD(cal0, acc_scale);
+	CRC16_FIELD(cal0, gyro_offset);
+	CRC16_FIELD(cal0, gyro_scale);
+	CRC16_FIELD(cal0, serial_number);
+
+	CRC16_RANGE(cal0, ecc_p256_device_key, crc16_pad10);
+	CRC16_RANGE(cal0, ecc_p256_device_cert, crc16_pad11);
+	CRC16_RANGE(cal0, ecc_p233_device_key, crc16_pad12);
+	CRC16_RANGE(cal0, ecc_p33_device_cert, crc16_pad13);
+
+	CRC16_RANGE(cal0, ecc_p256_ticket_key, crc16_pad14);
+	CRC16_RANGE(cal0, ecc_p256_ticket_cert, crc16_pad15);
+	CRC16_RANGE(cal0, ecc_p233_ticket_key, crc16_pad16);
+	CRC16_RANGE(cal0, ecc_p33_ticket_cert, crc16_pad17);
+
+	CRC16_RANGE(cal0, ssl_key_iv, ssl_key_crc);
+	CRC16_RANGE(cal0, gc_key, crc16_pad20);
+	CRC16_RANGE(cal0, rsa2048_eticket_key_iv, rsa2048_eticket_key_crc);
+
+	CRC16_FIELD(cal0, battery_lot);
+	CRC16_RANGE(cal0, spk_cal, crc16_pad24);
+	CRC16_FIELD(cal0, region_code);
+
+	CRC16_RANGE(cal0, amiibo_key, crc16_pad26);
+	CRC16_RANGE(cal0, amiibo_ecqv_cert, crc16_pad27);
+	CRC16_RANGE(cal0, amiibo_ecqdsa_cert, crc16_pad28);
+	CRC16_RANGE(cal0, amiibo_ecqv_bls_key, crc16_pad29);
+	CRC16_RANGE(cal0, amiibo_ecqv_bls_cert, crc16_pad30);
+	CRC16_RANGE(cal0, amiibo_ecqv_bls_root_cert, crc16_pad31);
+
+	CRC16_FIELD(cal0, product_model);
+	CRC16_FIELD(cal0, lcd_bl_brightness_mapping);
+
+	CRC16_RANGE(cal0, ext_ecc_b233_device_key, crc16_pad35);
+
+	/* Bonus CRCs */
+	CRC16_FIELD_IF_PRESENT(cal0, home_menu_scheme_sub_color, prodinfo_size);
+	CRC16_FIELD_IF_PRESENT(cal0, home_menu_scheme_bezel_color, prodinfo_size);
+	CRC16_FIELD_IF_PRESENT(cal0, home_menu_scheme_main_color1, prodinfo_size);
+	CRC16_FIELD_IF_PRESENT(cal0, home_menu_scheme_main_color2, prodinfo_size);
+	CRC16_FIELD_IF_PRESENT(cal0, home_menu_scheme_main_color3, prodinfo_size);
+	CRC16_FIELD_IF_PRESENT(cal0, color_model, prodinfo_size);
+}
+
+void write_all_sha256(u8 *prodinfo_buffer)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	/* RandomNumber */
+	SHA256_FIELD_DATA(
+		cal0,
+		random_number,
+		sizeof(cal0->random_number),
+		random_number_sha256
+	);
+
+	/* GameCardCertificate */
+	SHA256_FIELD_DATA(
+		cal0,
+		gc_cert,
+		sizeof(cal0->gc_cert),
+		gc_cert_sha256
+	);
+
+	/* SSL certificate */
+	se_calc_sha256_oneshot(
+		cal0->ssl_sha256,
+		cal0->ssl_cert,
+		cal0->ssl_cert_size
+	);
+}
+
+void import_gamecard_certificate(u8 *donor_prodinfo_buffer, u8 *prodinfo_buffer)
+{
+    nx_emmc_cal0_t *src = (nx_emmc_cal0_t *)donor_prodinfo_buffer;
+    nx_emmc_cal0_t *dst = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	memcpy(dst->gc_cert, src->gc_cert, sizeof(dst->gc_cert));
+}
+
+void import_amiiboo_certificates(u8 *donor_prodinfo_buffer, u8 *prodinfo_buffer)
+{
+    nx_emmc_cal0_t *src = (nx_emmc_cal0_t *)donor_prodinfo_buffer;
+    nx_emmc_cal0_t *dst = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+    memcpy(dst->amiibo_ecqv_cert, src->amiibo_ecqv_cert, sizeof(dst->amiibo_ecqv_cert));
+    memcpy(dst->amiibo_ecqdsa_cert, src->amiibo_ecqdsa_cert, sizeof(dst->amiibo_ecqdsa_cert));
+    memcpy(dst->amiibo_ecqv_bls_key, src->amiibo_ecqv_bls_key, sizeof(dst->amiibo_ecqv_bls_key));
+    memcpy(dst->amiibo_ecqv_bls_cert, src->amiibo_ecqv_bls_cert, sizeof(dst->amiibo_ecqv_bls_cert));
+    memcpy(dst->amiibo_ecqv_bls_root_cert, src->amiibo_ecqv_bls_root_cert, sizeof(dst->amiibo_ecqv_bls_root_cert));
+}
+
+bool decrypt_extended_device_key(
+    u8 *donor_prodinfo_buffer,
+    u8 extended_device_key[0x30],
+    u8 *master_key
+)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)donor_prodinfo_buffer;
+
+    _prepare_device_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return decrypt_gcm_fields(
+		cal0->ext_ecc_b233_device_key,            // IV
+		cal0->ext_ecc_b233_device_key + 0x10,     // ciphertext
+		0x30,
+		cal0->ext_ecc_b233_device_key + 0x40,     // MAC
+		extended_device_key
+	);
+}
+
+void encrypt_extended_device_key(
+    u8 *prodinfo_buffer,
+    u8 extended_device_key[0x30],
+    u64 device_id,
+    u8 *master_key
+)
+{
+    nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+    _prepare_device_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	encrypt_gcm_fields(
+		cal0->ext_ecc_b233_device_key,            // IV
+		cal0->ext_ecc_b233_device_key + 0x10,
+		0x30,
+		cal0->ext_ecc_b233_device_key + 0x40,
+		extended_device_key,
+		device_id
+	);
+}
+
+bool decrypt_extended_eticket_key(
+	u8 *donor_prodinfo_buffer,
+	u8 extended_eticket_key[0x220],
+	u8 *master_key
+)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)donor_prodinfo_buffer;
+
+	_prepare_eticket_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return decrypt_gcm_fields(
+		cal0->ext_ecc_rsa2048_eticket_key_iv,
+		cal0->ext_ecc_rsa2048_eticket_key,
+		sizeof(cal0->ext_ecc_rsa2048_eticket_key),
+		(u8 *)&cal0->ext_ecc_rsa2048_eticket_key_crc,
+		extended_eticket_key
+	);
+}
+
+void encrypt_extended_eticket_key(
+	u8 *prodinfo_buffer,
+	u8 extended_eticket_key[0x220],
+	u64 device_id,
+	u8 *master_key
+)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	_prepare_eticket_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	encrypt_gcm_fields(
+		cal0->ext_ecc_rsa2048_eticket_key_iv,
+		cal0->ext_ecc_rsa2048_eticket_key,
+		sizeof(cal0->ext_ecc_rsa2048_eticket_key),
+		(u8 *)&cal0->ext_ecc_rsa2048_eticket_key_crc,
+		extended_eticket_key,
+		device_id
+	);
+}
+
+bool decrypt_extended_gamecard_key(
+	u8 *donor_prodinfo_buffer,
+	u8 extended_gamecard_key[0x110],
+	u8 *master_key
+)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)donor_prodinfo_buffer;
+
+	_prepare_gamecard_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	return decrypt_gcm_fields(
+		cal0->gc_key,              /* CTR */
+		cal0->gc_key + 0x10,       /* ciphertext starts after CTR */
+		0x110,
+		cal0->gc_key + 0x10 + 0x110,
+		extended_gamecard_key
+	);
+}
+
+void encrypt_extended_gamecard_key(
+	u8 *prodinfo_buffer,
+	u8 extended_gamecard_key[0x110],
+	u64 device_id,
+	u8 *master_key
+)
+{
+	nx_emmc_cal0_t *cal0 = (nx_emmc_cal0_t *)prodinfo_buffer;
+
+	_prepare_gamecard_key(KEYSLOT_SWITCH_TEMPKEY, master_key);
+
+	encrypt_gcm_fields(
+		cal0->gc_key,
+		cal0->gc_key + 0x10,
+		0x110,
+		cal0->gc_key + 0x10 + 0x110,
+		extended_gamecard_key,
+		device_id
+	);
+}

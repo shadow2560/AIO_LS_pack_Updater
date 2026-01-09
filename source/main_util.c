@@ -433,11 +433,67 @@ bool is_emummc() {
 	}
 }
 
+/*
+typedef enum {
+		EMUMMC_TYPE_NONE      = 0,
+    EMUMMC_TYPE_PARTITION = 1,
+    EMUMMC_TYPE_FILE      = 2,
+} EmummcType;
+
+typedef struct {
+    u32 type;
+    u32 reserved;
+    u64 reserved2;
+} EmummcBaseConfig;
+
+typedef struct {
+    u64 start_sector;
+    u64 sector_count;
+} EmummcPartitionConfig;
+
+void smcAmsGetEmunandConfig(EmummcPaths* out)
+{
+    SecmonArgs args;
+    memset(&args, 0, sizeof(args));
+    memset(out, 0, sizeof(*out));
+
+    u8 user_page[0x1000] __attribute__((aligned(0x1000)));
+    memset(user_page, 0, sizeof(user_page));
+
+    args.X[0] = 0xF0000404;   // SmcGetEmummcConfig
+    args.X[1] = 0;            // EmummcMmc_Nand
+    args.X[2] = (u64)user_page;
+
+    svcCallSecureMonitor(&args);
+
+    const u8 *inline_buf = (const u8 *)&args.X[1];
+    const EmummcBaseConfig *base =
+        (const EmummcBaseConfig *)inline_buf;
+
+    out->type = base->type;
+    out->start_sector = 0;
+
+    if (base->type == EMUMMC_TYPE_PARTITION) {
+        const EmummcPartitionConfig *part =
+            (const EmummcPartitionConfig *)(inline_buf + sizeof(EmummcBaseConfig));
+        out->start_sector = part->start_sector;
+    }
+
+    memcpy(out->path,
+           user_page,
+           sizeof(out->path));
+
+    memcpy(out->nintendo,
+           user_page + sizeof(out->path),
+           sizeof(out->nintendo));
+}
+*/
+
 void smcAmsGetEmunandConfig(EmummcPaths* out_paths) {
 	SecmonArgs args = {};
-	args.X[0] = 0xF0000404; /* smcAmsGetEmunandConfig */
-	args.X[1] = 0; /* EXO_EMUMMC_MMC_NAND*/
-	args.X[2] = (u64)out_paths; /* out path */
+	args.X[0] = 0xF0000404; // smcAmsGetEmunandConfig
+	args.X[1] = 0; // EXO_EMUMMC_MMC_NAND
+	args.X[2] = (u64)out_paths; // out path
 	svcCallSecureMonitor(&args);
 }
 
@@ -568,4 +624,22 @@ bool internet_is_connected() {
 	}
 	nifmExit();
 	return false;
+}
+
+int create_empty_file(const char *path) {
+	struct stat st;
+	if (stat(path, &st) == 0) {
+		if (S_ISDIR(st.st_mode)) {
+			if (remove_directory(path) != 0) {
+				return -1;
+			}
+		}
+	}
+	FILE *f = fopen(path, "w");
+	if (!f) {
+		return -1;
+	}
+	fclose(f);
+	debug_log_write("Fichier vide \"%s\" créé.\n", path);
+	return 0;
 }

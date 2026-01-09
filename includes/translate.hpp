@@ -200,7 +200,7 @@ extern translation_map language_vars;
 	{"lng_db_patched_model_warning", (std::string) "Attention: Modèle patché détecté, Vous pourriez brûler des Efuses ou rendre la console  inutilisable."}, \
 	{"lng_db_update_validation", (std::string) "Validation de la mise à jour, cela peut prendre du temps..."}, \
 	{"lng_db_update_validation_failed_error", (std::string) "Echec de la validation de la mise à jour."}, \
-	{"lng_db_ask_special_dg", (std::string) "Attention, le firmware actuel est au moins le firmware 21.0.0 et vous tentez d'effectuer un downgrade sous un firmware inférieur, ceci posera des soucis si vous ne supprimez pas ensuite la sauvegarde \"system:/save/8000000000000073\" (via le payload DowngradeFixer par exemple).\nSouhaitez-vous vraiment effectuer le downgrade?"}, \
+	{"lng_db_ask_special_dg", (std::string) "Attention, le firmware actuel est au moins le firmware 21.0.0 et vous tentez d'effectuer un downgrade sous un firmware inférieur, ceci peut poser des soucis si la sauvegarde \"system:/save/8000000000000073\" n'est pas supprimée.\nLa suppression va être tentée après le redémarrage de la console, si cela n'a pas fonctionné vous pouvez tenter via le payload DowngradeFixer par exemple.\nSouhaitez-vous vraiment effectuer le downgrade?"}, \
 	{"lng_db_ask_exfat_driver_install", (std::string) "Souhaitez-vous installer le driver EXFAT (recommandé)?"}, \
 	{"lng_db_ask_fat32_if_exfat_not_supported", (std::string) "Ce firmware  ne supporte pas l'EXFAT, souhaitez-vous n'utiliser que le FAT32?"}, \
 	{"lng_db_update_canceled", (std::string) "Mise à jour annulée."}, \

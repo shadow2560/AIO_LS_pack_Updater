@@ -494,7 +494,6 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	}
 	// debug_log_write("%s\n", subfolder_in_zip);
 	// debug_log_write("%ld\n\n", strlen(subfolder_in_zip));
-	bool detected_payload_bin = false;
 	char filename_inzip[FS_MAX_PATH] = {0};
 	// char dirname_on_sd[FS_MAX_PATH] = {0};
 	char filename_on_sd[FS_MAX_PATH] = {0};
@@ -682,15 +681,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			}
 		}
 
-		if (strcmp(filename_on_sd, "payload.bin") == 0){
-			detected_payload_bin = true;
-			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
-
-			printf("\033[0;33m");
-			printf(language_vars["lng_install_pack_extract_file_protected"].c_str(), filename_on_sd);
-			printf("\033[0;37m\n");
-			consoleUpdate(&logs_console);
-		} else if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
+		if (strcmp(filename_on_sd, "switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") == 0 || strcmp(filename_on_sd, "atmosphere/package3") == 0 || strcmp(filename_on_sd, "atmosphere/stratosphere.romfs") == 0){
 			outfile = fopen(strcat(filename_on_sd, ".temp"), "wb");
 
 			printf("\033[0;33m");
@@ -822,10 +813,5 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 
 	unzClose(zfile);
 	free((char*) atmo_bootlogo_dir);
-	if (detected_payload_bin == false) rename("payload.bin", "payload.bin.temp");
-	// remove(output);
-	remove("payload.bin");
-	custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "payload.bin");
-
 	return 0;
 }

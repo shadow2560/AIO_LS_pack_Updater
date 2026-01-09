@@ -196,6 +196,7 @@ const char* translation_vars_list[] =
 	"lng_db_patched_model_warning",
 	"lng_db_update_validation",
 	"lng_db_update_validation_failed_error",
+	"lng_db_ask_special_dg",
 	"lng_db_ask_exfat_driver_install",
 	"lng_db_ask_fat32_if_exfat_not_supported",
 	"lng_db_update_canceled",

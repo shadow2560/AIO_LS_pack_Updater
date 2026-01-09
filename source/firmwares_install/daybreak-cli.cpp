@@ -624,6 +624,12 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
 	if (need_clean_21_dg == true) {
 		debug_log_write("Suppression nécessaire du fichier proglématique lors du downgrade d'un firmware 21.0.0+ vers un firmware inférieur.\n");
+		mkdir("/LockSmith-RCM", 0777);
+		if (is_emummc) {
+			create_empty_file("/LockSmith-RCM/fix_dg_emunand");
+		} else {
+			create_empty_file("/LockSmith-RCM/fix_dg_sysnand");
+		}
 	}
 	DaybreakAppExit();
 	return true;

@@ -73,6 +73,8 @@ void rebootAms_rcm()
 	fread(g_reboot_payload, 1, sizeof(g_reboot_payload), f);
 	fclose(f);
 
+	create_empty_file("/switch/AIO_LS_pack_Updater/called_via_AIO_LS_pack_Updater");
+
 	reboot_to_payload();
 	spsmInitialize();
 	socketExit();

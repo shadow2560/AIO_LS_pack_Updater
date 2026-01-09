@@ -88,7 +88,7 @@ void refreshScreen(int cursor) {
 		printf("\x1B[31m");
 		printf(language_vars["lng_title_beta"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
-	if (!debug_enabled) {
+	if (debug_enabled) {
 		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
@@ -170,7 +170,7 @@ void help_menu() {
 		printf("\x1B[31m");
 		printf(language_vars["lng_title_beta"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
 	}
-	if (!debug_enabled) {
+	if (debug_enabled) {
 		printf(" - Debug");
 	}
 	printf("\x1B[37m\n\n");
@@ -1009,6 +1009,7 @@ void force_reboot() {
 		rename("/payload.bin", "/payload.bin.temp");
 		custom_cp((char*) "romfs:/payload/ams_rcm.bin", (char*) "/payload.bin");
 	}
+	create_empty_file("/switch/AIO_LS_pack_Updater/called_via_AIO_LS_pack_Updater");
 	appExit();
 	if (R_FAILED(appletRequestToReboot())) {
 		spsmInitialize();
@@ -1307,6 +1308,7 @@ void debug_write_console_infos() {
 		debug_log_write("Console en sysnand.\n");
 	} else {
 		debug_log_write("Console en emunand de type %s.\n", emummc_type);
+		// debug_log_write("Secteur de démarrage de l'emunand %llu\n", emummc_paths.start_sector);
 		if (emummc_paths.path[0] != '\0') {
 			debug_log_write("Dossier associé à l'emunand: %s\n", emummc_paths.path);
 		}
@@ -1966,9 +1968,7 @@ int main(int argc, char **argv) {
 	} else {
 		debug_log_write("Homebrew hors mode applet.\n\n");
 	}
-	if (!debug_enabled) {
-		debug_write_config_infos();
-	}
+	debug_write_config_infos();
 
 	u64 kDown = 0;
 	u64 kHeld = 0;
@@ -2031,11 +2031,9 @@ int main(int argc, char **argv) {
 	get_fusee_gelee_exploit();
 	get_device_id();
 	get_serial_number();
-	set_emummc_values();
+	// set_emummc_values();
 	get_hekate_autoboot_status();
-	if (!debug_enabled) {
 		debug_write_console_infos();
-	}
 	remove(TEMP_FILE);
 
 	// set auto-update of the console off if it's not already done (FW 2.0.0+)
@@ -2386,7 +2384,7 @@ int main(int argc, char **argv) {
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 						printDisplay("\033[0;37m\n");
 						sleep(5);
-						simple_reboot();
+						aply_reboot();
 					}
 				} else {
 					debug_log_write("Annulation de l'installation du firmware.\n\n");
@@ -3124,11 +3122,11 @@ int main(int argc, char **argv) {
 					}
 								
 					nsExit();
-					if (is_emummc()) {
-						remove_directory(emummc_paths.nintendo);
-					} else {
-						remove_directory("Nintendo");
-					}
+					// if (is_emummc()) {
+						// remove_directory(emummc_paths.nintendo);
+					// } else {
+						// remove_directory("Nintendo");
+					// }
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 					printDisplay("\033[0;37m\n");

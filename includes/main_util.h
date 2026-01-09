@@ -8,6 +8,15 @@ extern "C" {
 
 #include <minizip/unzip.h>
 
+/*
+typedef struct {
+    char path[0x80];
+    char nintendo[0x80];
+	u64  start_sector;
+	u32  type;
+} EmummcPaths;
+*/
+
 typedef struct {
     char path[0x80];
     char nintendo[0x80];
@@ -93,6 +102,7 @@ bool module_is_running(u64 module);
 void close_module(u64 module);
 SetSysFirmwareVersion int_get_fw_version();
 bool internet_is_connected();
+int create_empty_file(const char *path);
 
 #ifdef __cplusplus
 }
