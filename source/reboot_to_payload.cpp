@@ -59,8 +59,8 @@ static void reboot_to_payload(void) {
 
 void rebootAms_rcm()
 {
-	chdir("romfs:/");
-	FILE *f = fopen("payload/ams_rcm.bin", "rb");
+	// chdir("romfs:/");
+	FILE *f = fopen("romfs:/payload/ams_rcm.bin", "rb");
 
 	if (f == NULL) {
 		debug_log_write("Erreur durant le redémarrage sur le payload.\n");
