@@ -18,7 +18,8 @@ bool beta_mode = false;
 PrintConsole menu_console;
 PrintConsole logs_console;
 
-char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
+char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/releases/latest/download/Switch_AIO_LS_pack.zip";
+// char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
 char pack_sha256_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/sha256_pack.txt";
 char pack_changelog_url[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/changelog.html";
 char CFW_URL_beta[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/archive/refs/heads/main.zip";
