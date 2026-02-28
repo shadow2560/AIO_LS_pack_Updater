@@ -149,241 +149,7 @@ static void run_auto_action(const auto_action_t *a)
 	f_unlink(a->path);
 }
 
-// This is a safe and unused DRAM region for our payloads.
-#define RELOC_META_OFF      0x7C
-#define PATCHED_RELOC_SZ    0x94
-#define PATCHED_RELOC_STACK 0x40007000
-#define PATCHED_RELOC_ENTRY 0x40010000
-#define EXT_PAYLOAD_ADDR    0xC0000000
-#define RCM_PAYLOAD_ADDR    (EXT_PAYLOAD_ADDR + ALIGN(PATCHED_RELOC_SZ, 0x10))
-#define COREBOOT_END_ADDR   0xD0000000
-#define COREBOOT_VER_OFF    0x41
-#define CBFS_DRAM_EN_ADDR   0x4003e000
-#define  CBFS_DRAM_MAGIC    0x4452414D // "DRAM"
-
-static void *coreboot_addr;
-
-void reloc_patcher(u32 payload_dst, u32 payload_src, u32 payload_size)
-{
-	memcpy((u8 *)payload_src, (u8 *)IPL_LOAD_ADDR, PATCHED_RELOC_SZ);
-
-	reloc_meta_t *relocator = (reloc_meta_t *)(payload_src + RELOC_META_OFF);
-
-	relocator->start = payload_dst - ALIGN(PATCHED_RELOC_SZ, 0x10);
-	relocator->stack = PATCHED_RELOC_STACK;
-	relocator->end   = payload_dst + payload_size;
-	relocator->ep    = payload_dst;
-
-	if (payload_size == 0x7000)
-	{
-		memcpy((u8 *)(payload_src + ALIGN(PATCHED_RELOC_SZ, 0x10)), coreboot_addr, 0x7000); //Bootblock
-		*(vu32 *)CBFS_DRAM_EN_ADDR = CBFS_DRAM_MAGIC;
-	}
-}
-
-int launch_payload(char *path, bool clear_screen)
-{
-	if (clear_screen)
-		gfx_clear_grey(0x1B);
-	gfx_con_setpos(0, 0);
-	if (!path)
-		return 1;
-
-	if (sd_mount())
-	{
-		FIL fp;
-		if (f_open(&fp, path, FA_READ))
-		{
-			gfx_con.mute = false;
-			EPRINTFARGS("Payload file is missing!\n(%s)", path);
-
-			goto out;
-		}
-
-		// Read and copy the payload to our chosen address
-		void *buf;
-		u32 size = f_size(&fp);
-
-		if (size < 0x30000)
-			buf = (void *)RCM_PAYLOAD_ADDR;
-		else
-		{
-			coreboot_addr = (void *)(COREBOOT_END_ADDR - size);
-			buf = coreboot_addr;
-			if (h_cfg.t210b01)
-			{
-				f_close(&fp);
-
-				gfx_con.mute = false;
-				EPRINTF("Coreboot not allowed on Mariko!");
-
-				goto out;
-			}
-		}
-
-		if (f_read(&fp, buf, size, NULL))
-		{
-			f_close(&fp);
-
-			goto out;
-		}
-
-		f_close(&fp);
-
-		sd_end();
-
-		if (size < 0x30000)
-		{
-			reloc_patcher(PATCHED_RELOC_ENTRY, EXT_PAYLOAD_ADDR, ALIGN(size, 0x10));
-
-			hw_deinit(false, byte_swap_32(*(u32 *)(buf + size - sizeof(u32))));
-		}
-		else
-		{
-			reloc_patcher(PATCHED_RELOC_ENTRY, EXT_PAYLOAD_ADDR, 0x7000);
-
-			// Get coreboot seamless display magic.
-			u32 magic = 0;
-			char *magic_ptr = buf + COREBOOT_VER_OFF;
-			memcpy(&magic, magic_ptr + strlen(magic_ptr) - 4, 4);
-			hw_deinit(true, magic);
-		}
-
-		// Some cards (Sandisk U1), do not like a fast power cycle. Wait min 100ms.
-		sdmmc_storage_init_wait_sd();
-
-		void (*ext_payload_ptr)() = (void *)EXT_PAYLOAD_ADDR;
-
-		// Launch our payload.
-		(*ext_payload_ptr)();
-	}
-
-out:
-	sd_end();
-	return 1;
-}
-
-/*
-void launch_tools()
-{
-	const u8 max_entries = 61;
-
-	dirlist_t *filelist = NULL;
-	char *file_sec = NULL;
-	char *dir = NULL;
-	ment_t *ments = NULL;
-
-	gfx_clear_grey(0x1B);
-	gfx_con_setpos(0, 0);
-
-	ments = malloc(sizeof(ment_t) * (max_entries + 3));
-	if (!ments)
-	{
-		EPRINTF("Out of memory (ments)\n");
-		btn_wait();
-		return;
-	}
-
-	if (!sd_mount())
-		goto out;
-
-	dir = (char*)malloc(256);
-	if (!dir)
-	{
-		EPRINTF("Out of memory (dir)\n");
-		goto out;
-	}
-
-	memcpy(dir, "sd:/bootloader/payloads", 24);
-
-	filelist = dirlist(dir, NULL, 0);
-	if (!filelist)
-		goto out;
-
-	u32 i = 0;
-	u32 i_off = 2;
-	u32 color_idx = 0;
-
-	ments[0].type = MENT_BACK;
-	ments[0].caption = "Back";
-	ments[0].enabled = 1;
-	ments[0].color = colors[(color_idx++) % 6];
-
-	ments[1].type = MENT_CHGLINE;
-	ments[1].enabled = 0;
-	ments[1].color = colors[(color_idx++) % 6];
-
-	if (!f_stat("sd:/atmosphere/reboot_payload.bin", NULL))
-	{
-		if (i_off < max_entries + 2)
-		{
-			ments[i_off].type = INI_CHOICE;
-			ments[i_off].caption = "reboot_payload.bin";
-			ments[i_off].data = "sd:/atmosphere/reboot_payload.bin";
-			ments[i_off].color = COLOR_GREEN;
-			ments[i_off].enabled = 1;
-			i_off++;
-		}
-	}
-
-	while (filelist->name[i] && (i + i_off) < (max_entries + 2))
-	{
-		ments[i + i_off].type = INI_CHOICE;
-		ments[i + i_off].caption = filelist->name[i];
-		ments[i + i_off].data = filelist->name[i];
-		ments[i + i_off].color = COLOR_WHITE;
-		ments[i + i_off].enabled = 1;
-		i++;
-	}
-
-	if (i == 0 && i_off == 2)
-	{
-		EPRINTF("No payloads or modules found.");
-		goto out;
-	}
-
-	memset(&ments[i + i_off], 0, sizeof(ment_t));
-
-	menu_t menu = {
-		.ents = ments,
-		.caption = "Choose a file to launch",
-		.x = 0,
-		.y = 0
-	};
-
-	const char *sel = tui_do_menu(&menu);
-	if (!sel)
-		goto out;
-
-	file_sec = bdk_strdup(sel);
-	if (!file_sec) {
-		EPRINTF("Out of memory (file_sec)\n");
-		goto out;
-	}
-
-	if (memcmp(file_sec, "sd:/", 4) != 0) {
-		s_printf(dir, "sd:/bootloader/payloads/%s", file_sec);
-	} else {
-		s_printf(dir, "%s", file_sec);
-	}
-
-	launch_payload(dir, true);
-	EPRINTF("Failed to launch payload.");
-
-out:
-	sd_end();
-
-	if (file_sec) free(file_sec);
-	if (filelist) free(filelist);
-	if (dir) free(dir);
-	if (ments) free(ments);
-
-	btn_wait();
-}
-*/
-
-void launch_tools()
-{
+void launch_tools() {
 	u8 max_entries = 61;
 	dirlist_t *filelist = NULL;
 	char *file_sec = NULL;
@@ -394,8 +160,7 @@ void launch_tools()
 	gfx_clear_grey(0x1B);
 	gfx_con_setpos(0, 0);
 
-	if (sd_mount())
-	{
+	if (sd_mount()) {
 		dir = (char *)malloc(256);
 
 		memcpy(dir, "sd:/bootloader/payloads", 24);
@@ -405,20 +170,16 @@ void launch_tools()
 		u32 i = 0;
 		u32 i_off = 2;
 
-		if (filelist)
-		{
+		if (filelist) {
 			// Build configuration menu.
-			u32 color_idx = 0;
-
 			ments[0].type = MENT_BACK;
 			ments[0].caption = "Back";
 			ments[0].enabled = 1;
-			ments[0].color = colors[(color_idx++) % 6];
+			ments[0].color = COLOR_TURQUOISE;
 			ments[1].type = MENT_CHGLINE;
-			ments[1].color = colors[(color_idx++) % 6];
+			ments[1].color = COLOR_WHITE;
 			ments[1].enabled = 0;
-			if (!f_stat("sd:/atmosphere/reboot_payload.bin", NULL))
-			{
+			if (!f_stat("sd:/atmosphere/reboot_payload.bin", NULL)) {
 				ments[i_off].type = INI_CHOICE;
 				ments[i_off].caption = "reboot_payload.bin";
 				ments[i_off].color = COLOR_GREEN;
@@ -427,8 +188,7 @@ void launch_tools()
 				i_off++;
 			}
 
-			while (true)
-			{
+			while (true) {
 				if (i > max_entries || !filelist->name[i])
 					break;
 				ments[i + i_off].type = INI_CHOICE;
@@ -441,15 +201,13 @@ void launch_tools()
 			}
 		}
 
-		if (i > 0)
-		{
+		if (i > 0) {
 			memset(&ments[i + i_off], 0, sizeof(ment_t));
 			menu_t menu = { ments, "Choose a file to launch", 0, 0 };
 
 			file_sec = (char *)tui_do_menu(&menu);
 
-			if (!file_sec)
-			{
+			if (!file_sec) {
 				free(ments);
 				free(dir);
 				free(filelist);
@@ -457,27 +215,21 @@ void launch_tools()
 
 				return;
 			}
-		}
-		else
+		} else
 			EPRINTF("No payloads or modules found.");
 
 		free(ments);
 		free(filelist);
-	}
-	else
-	{
+	} else {
 		free(ments);
 		goto out;
 	}
 
-	if (file_sec)
-	{
-		if (memcmp("sd:/", file_sec, 4) != 0)
-		{
+	if (file_sec) {
+		if (memcmp("sd:/", file_sec, 4) != 0) {
 			memcpy(dir + strlen(dir), "/", 2);
 			memcpy(dir + strlen(dir), file_sec, strlen(file_sec) + 1);
-		}
-		else
+		} else
 			memcpy(dir, file_sec, strlen(file_sec) + 1);
 
 		launch_payload(dir, true);
@@ -1155,21 +907,7 @@ check_physical_nand();
 init_payload();
 
 	if (called_from_config_files || called_from_AIO_LS_Pack_Updater) {
-		// If the console is a patched or Mariko unit
-		if (h_cfg.t210b01 || h_cfg.rcm_patched) {
-			power_set_state(POWER_OFF_REBOOT);
-		} else {
-			if (f_stat("payload.bin", NULL) == FR_OK)
-				launch_payload("payload.bin", false);
-
-			if (f_stat("bootloader/update.bin", NULL) == FR_OK)
-				launch_payload("bootloader/update.bin", false);
-
-			if (f_stat("atmosphere/reboot_payload.bin", NULL) == FR_OK)
-				launch_payload("atmosphere/reboot_payload.bin", false);
-
-			EPRINTF("Failed to launch payload.");
-		}
+		auto_reboot();
 	} else {
 		while (true) {
 			tui_do_menu(&menu_top);

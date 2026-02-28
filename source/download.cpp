@@ -27,6 +27,41 @@ bool dl_speed_displayed = false;
 float dl_speed = 0;
 double dlold;
 
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ntwrk_struct_t *s = (ntwrk_struct_t *)userp;
+    const size_t realsize = size * nmemb;
+
+    if (!s || !s->out || !s->data || s->data_size == 0) {
+        return 0;
+    }
+
+    // Si le bloc entrant est plus gros que le buffer, on flush d'abord ce qu'on a,
+    // puis on écrit directement le contenu dans le fichier.
+    if (realsize >= s->data_size) {
+        if (s->offset) {
+            fwrite(s->data, 1, s->offset, s->out);
+            s->offset = 0;
+        }
+        fwrite(contents, 1, realsize, s->out);
+        return realsize;
+    }
+
+    // Si ça ne rentre pas, flush
+    if (s->offset + realsize > s->data_size) {
+        fwrite(s->data, 1, s->offset, s->out);
+        s->offset = 0;
+    }
+
+    memcpy(s->data + s->offset, contents, realsize);
+    s->offset += realsize;
+
+    // si tu tiens au \0, assure-toi d'avoir alloué data_size+1
+    s->data[s->offset] = 0;
+
+    return realsize;
+}
+
+/*
 static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files, void *userp) {
 	ntwrk_struct_t *data_struct = (ntwrk_struct_t *)userp;
 	size_t realsize = size * num_files;
@@ -41,10 +76,14 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t num_files,
 	data_struct->data[data_struct->offset] = 0;
 	return realsize;
 }
+*/
 
 static size_t WriteMemoryCallback2(void *contents, size_t size, size_t nmemb, void *userp) {
 	size_t realsize = size * nmemb;
 	MemoryStruct_t *mem = (MemoryStruct_t *)userp;
+
+	if (!mem || !contents) return 0;
+	if (realsize == 0) return 0;
 
 	char *ptr = (char *) realloc(mem->memory, mem->size + realsize + 1);
 	if(!ptr) {
@@ -143,7 +182,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			}
 
 			ntwrk_struct_t chunk = {0};
-			chunk.data = (u_int8_t*) malloc(_1MO);
+			chunk.data = (u_int8_t*) malloc(_1MO + 1);
 			chunk.data_size = _1MO;
 			chunk.out = fp;
 

@@ -5,9 +5,12 @@
 #include <string>
 
 struct translation_map_comparator {
-	bool operator()(const char* left, const char* right) const {
-		return ((left != nullptr) && (right != nullptr) && (strcmp(left, right) < 0));
-	}
+    bool operator()(const char* left, const char* right) const {
+        if (left == right) return false;   // mêmes pointeurs (ou tous deux null)
+        if (!left) return true;            // nullptr est "plus petit"
+        if (!right) return false;
+        return strcmp(left, right) < 0;
+    }
 };
 
 typedef std::map<const char*, std::string, translation_map_comparator> translation_map;

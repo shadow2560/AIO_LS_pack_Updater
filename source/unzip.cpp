@@ -145,10 +145,10 @@ void fnc_clean_modules() {
 			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
 				continue;
 			}
-			char temp_exefs_path[50] = "";
-			strcat(strcat(strcat(temp_exefs_path, "atmosphere/contents/"), ent->d_name), "/exefs.nsp");
-			char temp_module_path[40] = "";
-			strcat(strcat(temp_module_path, "atmosphere/contents/"), ent->d_name);
+			char temp_exefs_path[FS_MAX_PATH];
+			snprintf(temp_exefs_path, sizeof(temp_exefs_path), "atmosphere/contents/%s/exefs.nsp", ent->d_name);
+			char temp_module_path[FS_MAX_PATH];
+			snprintf(temp_module_path, sizeof(temp_module_path), "atmosphere/contents/%s", ent->d_name);
 			u64 module_id = 0;
 			FILE* f=fopen(temp_exefs_path, "r");
 			if (f != NULL) {
@@ -213,11 +213,18 @@ void fnc_clean_theme() {
 	printf(language_vars["lng_clean_theme_begin"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
+	removeDir_on_sd("/atmosphere/contents/0100000000001000");
+	removeDir_on_sd("/atmosphere/contents/0100000000001013");
+	removeDir_on_sd("/atmosphere/contents/0100000000001007"); //Player select
+	removeDir_on_sd("/atmosphere/contents/0100000000000811"); //Custom font
+	removeDir_on_sd("/atmosphere/contents/0100000000000039"); //needed to enable custom font
+	/*
 	remove_directory("atmosphere/contents/0100000000001000");
 	remove_directory("atmosphere/contents/0100000000001013");
 	remove_directory("atmosphere/contents/0100000000001007"); //Player select
 	remove_directory("atmosphere/contents/0100000000000811"); //Custom font
 	remove_directory("atmosphere/contents/0100000000000039"); //needed to enable custom font
+	*/
 	// End full theme deletion
 }
 

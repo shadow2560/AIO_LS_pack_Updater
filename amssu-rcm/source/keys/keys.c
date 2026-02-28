@@ -823,7 +823,7 @@ void dump_keys(bool no_display) {
 }
 
 bool prepare_bis_keys(bool from_file, key_storage_t *keys_out) {
-	minerva_change_freq(FREQ_1600);
+	// minerva_change_freq(FREQ_1600);
 
 	if (!check_keyslot_access()) {
 		return false;

@@ -79,29 +79,11 @@ static inline u16 swap16(u16 v)
 	return (v >> 8) | (v << 8);
 }
 
-static void debug_dump_hex(const char *label, const u8 *data, u32 len)
-{
-	debug_log_write("%s (%d bytes):\n", label, len);
-
-	for (u32 i = 0; i < len; i++)
-	{
-		debug_log_write("%02X", data[i]);
-		if ((i & 0x0F) == 0x0F)
-			debug_log_write("\n");
-	}
-
-	debug_log_write("\n");
-}
-
 bool cal0_get_ssl_rsa_key(const nx_emmc_cal0_t *cal0, const void **out_key, u32 *out_key_size, const void **out_iv, u32 *out_generation) {
 	const u32 ext_key_size = sizeof(cal0->ext_ssl_key_iv) + sizeof(cal0->ext_ssl_key);
 	const u32 ext_key_crc_size = ext_key_size + sizeof(cal0->ext_ssl_key_ver) + sizeof(cal0->crc16_pad39);
 	const u32 key_size = sizeof(cal0->ssl_key_iv) + sizeof(cal0->ssl_key);
 	const u32 key_crc_size = key_size + sizeof(cal0->crc16_pad18);
-
-// debug_log_write("cal0_get_ssl_rsa_key: \next_ssl_key_crc: 0x%04X\next_ssl_key_crc_calc: 0x%04X\nssl_key_crc: 0x%04X\nssl_key_crc_calc: 0x%04X\n\n", (u32)cal0->ext_ssl_key_crc, (u32)crc16_calc(cal0->ext_ssl_key_iv, ext_key_crc_size), (u32)cal0->ssl_key_crc, (u32)crc16_calc(cal0->ssl_key_iv, key_crc_size));
-// debug_dump_hex("ext_ssl_key", cal0->ext_ssl_key_iv, sizeof(cal0->ext_ssl_key_iv) + sizeof(cal0->ext_ssl_key));
-// debug_dump_hex("ssl_key", cal0->ssl_key_iv, sizeof(cal0->ssl_key_iv) + sizeof(cal0->ssl_key));
 
 	if (cal0->ext_ssl_key_crc == crc16_calc(cal0->ext_ssl_key_iv, ext_key_crc_size)) {
 		*out_key = cal0->ext_ssl_key;
@@ -127,10 +109,6 @@ bool cal0_get_eticket_rsa_key(const nx_emmc_cal0_t *cal0, const void **out_key, 
 	const u32 ext_key_crc_size = ext_key_size + sizeof(cal0->ext_ecc_rsa2048_eticket_key_ver) + sizeof(cal0->crc16_pad38);
 	const u32 key_size = sizeof(cal0->rsa2048_eticket_key_iv) + sizeof(cal0->rsa2048_eticket_key);
 	const u32 key_crc_size = key_size + sizeof(cal0->crc16_pad21);
-
-// debug_log_write("cal0_get_eticket_rsa_key: \next_ecc_rsa2048_eticket_key_crc: %04X\next_ecc_rsa2048_eticket_key_crc: %04X\nrsa2048_eticket_key_crc: %04X\nrsa2048_eticket_key_crc_calc: %04X\n\n", swap16(cal0->ext_ecc_rsa2048_eticket_key_crc), swap16(crc16_calc(cal0->ext_ecc_rsa2048_eticket_key_iv, ext_key_crc_size)), swap16(cal0->rsa2048_eticket_key_crc), swap16(crc16_calc(cal0->rsa2048_eticket_key_iv, key_crc_size)));
-// debug_dump_hex("ext_ecc_rsa2048_eticket_key", cal0->ext_ecc_rsa2048_eticket_key_iv, sizeof(cal0->ext_ecc_rsa2048_eticket_key_iv) + sizeof(cal0->ext_ecc_rsa2048_eticket_key));
-// debug_dump_hex("rsa2048_eticket_key", cal0->rsa2048_eticket_key_iv, sizeof(cal0->rsa2048_eticket_key_iv) + sizeof(cal0->rsa2048_eticket_key));
 
 	if (cal0->ext_ecc_rsa2048_eticket_key_crc == crc16_calc(cal0->ext_ecc_rsa2048_eticket_key_iv, ext_key_crc_size)) {
 		*out_key = cal0->ext_ecc_rsa2048_eticket_key;

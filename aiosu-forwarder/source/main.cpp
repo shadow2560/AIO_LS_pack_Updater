@@ -20,7 +20,7 @@ int removeDir(const char* path)
 }
 
 int main(int argc, char **argv) {
-	std::filesystem::create_directory(PATH);
+	std::filesystem::create_directories(PATH);
 	if (argc == 2) {
 		if(std::filesystem::exists(argv[1])) {
 			std::filesystem::rename(std::string(argv[1]), FULL_PATH);

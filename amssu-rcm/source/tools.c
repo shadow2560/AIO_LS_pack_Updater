@@ -8,6 +8,7 @@
 #include "keys/keys.h"
 #include <libs/fatfs/ff.h>
 #include <mem/heap.h>
+#include <soc/hw_init.h>
 #include <soc/timer.h>
 #include "storage/emummc.h"
 #include <storage/emmc.h>
@@ -301,35 +302,6 @@ void debug_log_write_impl(const char *text, ...) {
 	f_write(&debug_log_file, buffer, strlen(buffer), &bw);
 	// f_sync(&debug_log_file);
 	f_close(&debug_log_file);
-}
-
-void test_total_heap() {
-	size_t total_test = 0;
-	while (1) {
-		void *p = malloc(1024 * 1024); // 1MB
-		if (!p) break;
-		total_test++;
-	}
-	debug_log_write("Max heap ~ %u MB\n", total_test);
-}
-
-void debug_dump_gpt(link_t *gpt) {
-	// emmc_part_t *p;
-
-	debug_log_write("==== GPT partition table ====\n");
-
-	LIST_FOREACH_ENTRY(emmc_part_t, p, gpt, link)
-	{
-		debug_log_write(
-			"Part: name='%s' lba_start=%d lba_end=%d sectors=%d\n",
-			p->name,
-			(u32)p->lba_start,
-			(u32)p->lba_end,
-			(u32)(p->lba_end - p->lba_start + 1)
-		);
-	}
-
-	debug_log_write("==== END GPT ====\n");
 }
 
 static bool part_is_encrypted(emmc_part_t *part) {
@@ -773,238 +745,6 @@ ui_spinner_clear();
 	unmount_nand_part(&gpt, is_boot, use_bis, true, false);
 	return return_value;
 }
-
-/*
-bool flash_part_from_sd_file(const char *sd_filepath, const char *part_name, bool src_encrypted) {
-	// const u32 boot_part_size_bytes = (u64)emmc_storage.ext_csd.boot_mult << 17; // boot size from ext_csd
-	bool is_boot = false;
-	bool use_bis = false;
-	u64 part_size_bytes = 0;
-	FRESULT fr;
-	FIL fp;
-	emmc_part_t part;
-	u64 filesize;
-	u8 *buff = NULL;
-
-bool return_value = false;
-
-	sd_mount();
-
-	log_printf(LOG_INFO, LOG_MSG_FLASH_PARTITION_BEGIN, sd_filepath, part_name);
-	debug_log_write(g_log_messages[LOG_MSG_FLASH_PARTITION_BEGIN], sd_filepath, part_name);
-	debug_log_write("\n");
-
-	fr = f_open(&fp, sd_filepath, FA_READ);
-	if (fr != FR_OK) {
-		log_printf(LOG_ERR, LOG_MSG_ERR_OPEN_FILE, sd_filepath);
-		debug_log_write(g_log_messages[LOG_MSG_ERR_OPEN_FILE], sd_filepath);
-		debug_log_write("\n");
-		return return_value;
-	}
-
-	filesize = f_size(&fp);
-	if (filesize == 0) {
-		log_printf(LOG_ERR, LOG_MSG_ERR_EMPTY_FILE);
-		debug_log_write(g_log_messages[LOG_MSG_ERR_EMPTY_FILE]);
-		debug_log_write("\n");
-		f_close(&fp);
-		return return_value;
-	}
-
-	LIST_INIT(gpt);
-	bool test_part;
-	if (src_encrypted) {
-		test_part = mount_nand_part(&gpt, part_name, true, true, false, false, &part_size_bytes, &is_boot, &use_bis, &part);
-	} else {
-		test_part = mount_nand_part(&gpt, part_name, true, true, false, true, &part_size_bytes, &is_boot, &use_bis, &part);
-	}
-	if (!test_part) {
-		f_close(&fp);
-		return return_value;
-	}
-
-	if (filesize > part_size_bytes) {
-		log_printf(LOG_ERR, LOG_MSG_FLASH_PARTITION_FILE_TO_BIG);
-		debug_log_write(g_log_messages[LOG_MSG_FLASH_PARTITION_FILE_TO_BIG]);
-		debug_log_write("\n");
-		goto cleanup;
-	}
-
-	// For safety: require sector-aligned input (avoid implicit padding issues when writing encrypted partitions)
-	if ((filesize % EMMC_BLOCKSIZE) != 0) {
-		log_printf(LOG_ERR, LOG_MSG_FLASH_PARTITION_FILE_NOT_ALLIGNED);
-		debug_log_write(g_log_messages[LOG_MSG_FLASH_PARTITION_FILE_NOT_ALLIGNED]);
-		debug_log_write("\n");
-		goto cleanup;
-	}
-
-	buff = malloc(COPY_BUF_SIZE);
-	if (!buff) {
-		log_printf(LOG_ERR, LOG_MSG_malloc_error);
-		goto cleanup;
-	}
-
-	u32 lba_start = 0;
-	// u32 lba_end = 0;
-	if (is_boot) {
-		// lba_end = (boot_part_size_bytes / EMMC_BLOCKSIZE) - 1;
-	} else {
-		if (use_bis) {
-			// lba_end = part.lba_end - part.lba_start;
-		} else {
-			lba_start = part.lba_start;
-			// lba_end = part.lba_end;
-		}
-	}
-	u32 curLba = lba_start;
-	// u32 totalSectorsDest = lba_end - lba_start + 1;
-	u64 totalSizeSrc = f_size(&fp);
-	u32 totalSectorsSrc = totalSizeSrc / EMMC_BLOCKSIZE;
-
-	ui_spinner_begin();
-	while (totalSectorsSrc > 0){
-		ui_spinner_draw(1);
-		u32 num = MIN(totalSectorsSrc, COPY_BUF_SIZE / EMMC_BLOCKSIZE);
-
-		if ((f_read(&fp, buff, num * EMMC_BLOCKSIZE, NULL))){
-			log_printf(LOG_ERR, LOG_MSG_ERR_FILE_READ);
-			goto cleanup;
-			break;
-		}
-
-		int writeRes = 0;
-		if (use_bis && src_encrypted) {
-			writeRes = !nx_emmc_bis_write(curLba, num, buff);
-		} else  {
-			writeRes = emummc_storage_write(curLba, num, buff);
-		}
-
-		if (!writeRes){
-			log_printf(LOG_ERR, LOG_MSG_FLASH_PARTITION_ERR_PARTITION_WRITE);
-			goto cleanup;
-			break;
-		}
-
-		curLba += num;
-		totalSectorsSrc -= num;
-	}
-
-	return_value = true;
-	log_printf(LOG_OK, LOG_MSG_FLASH_PARTITION_SUCCESS);
-	debug_log_write(g_log_messages[LOG_MSG_FLASH_PARTITION_SUCCESS]);
-	debug_log_write("\n");
-
-cleanup:
-ui_spinner_clear();
-	if (buff) free(buff);
-	f_close(&fp);
-
-	unmount_nand_part(&gpt, is_boot, use_bis, true, false);
-	return return_value;
-}
-
-bool dump_part_to_sd_file(const char *sd_filepath, const char *part_name, bool dst_encrypted) {
-	bool is_boot = false;
-	bool use_bis = false;
-	u64 part_size_bytes = 0;
-	FRESULT fr;
-	FIL fp;
-	emmc_part_t part;
-	u8 *buff = NULL;
-	bool return_value = false;
-
-	sd_mount();
-
-	log_printf(LOG_INFO, LOG_MSG_DUMP_PARTITION_BEGIN, part_name, sd_filepath);
-	debug_log_write(g_log_messages[LOG_MSG_DUMP_PARTITION_BEGIN], part_name, sd_filepath);
-	debug_log_write("\n");
-
-	LIST_INIT(gpt);
-	bool ok;
-	if (dst_encrypted) {
-		ok = mount_nand_part(&gpt, part_name, true, true, false, false, &part_size_bytes, &is_boot, &use_bis, &part);
-	} else {
-		ok = mount_nand_part(&gpt, part_name, true, true, false, true, &part_size_bytes, &is_boot, &use_bis, &part);
-	}
-
-	if (!ok)
-		return false;
-
-	if ((part_size_bytes % EMMC_BLOCKSIZE) != 0) {
-		log_printf(LOG_ERR, LOG_MSG_DUMP_PARTITION_NOT_ALLIGNED);
-		goto cleanup;
-	}
-
-	if (!sd_has_enough_space(part_size_bytes)) {
-		log_printf(LOG_ERR, LOG_MSG_dump_PARTITION_FILE_TO_BIG);
-		goto cleanup;
-	}
-
-	char dirpath[256];
-	s_printf(dirpath, "%s", sd_filepath);
-	char *last_slash = strrchr(dirpath, '/');
-	if (last_slash) {
-		*last_slash = 0;
-		mkdir_recursive(dirpath);
-	}
-
-	fr = f_open(&fp, sd_filepath, FA_WRITE | FA_CREATE_ALWAYS);
-	if (fr != FR_OK) {
-		log_printf(LOG_ERR, LOG_MSG_ERR_OPEN_FILE, sd_filepath);
-		goto cleanup;
-	}
-
-	buff = malloc(COPY_BUF_SIZE);
-	if (!buff) {
-		log_printf(LOG_ERR, LOG_MSG_malloc_error);
-		goto cleanup;
-	}
-
-	u32 lba_start = is_boot ? 0 : (use_bis ? 0 : part.lba_start);
-	u32 curLba = lba_start;
-	u64 remaining = part_size_bytes / EMMC_BLOCKSIZE;
-
-	ui_spinner_begin();
-	while (remaining > 0) {
-		ui_spinner_draw(1);
-		u32 num = MIN(remaining, COPY_BUF_SIZE / EMMC_BLOCKSIZE);
-
-		int readRes;
-		if (use_bis && dst_encrypted) {
-			readRes = nx_emmc_bis_read(curLba, num, buff);
-		} else {
-			readRes = emummc_storage_read(curLba, num, buff);
-		}
-
-		if (!readRes) {
-			log_printf(LOG_ERR, LOG_MSG_ERR_FILE_READ);
-			goto cleanup;
-		}
-
-		UINT bw;
-		fr = f_write(&fp, buff, num * EMMC_BLOCKSIZE, &bw);
-		if (fr != FR_OK || bw != num * EMMC_BLOCKSIZE) {
-			log_printf(LOG_ERR, LOG_MSG_DUMP_PARTITION_ERR_PARTITION_WRITE);
-			goto cleanup;
-		}
-
-		curLba += num;
-		remaining -= num;
-	}
-
-	return_value = true;
-	log_printf(LOG_OK, LOG_MSG_DUMP_PARTITION_SUCCESS);
-	debug_log_write(g_log_messages[LOG_MSG_DUMP_PARTITION_SUCCESS]);
-	debug_log_write("\n");
-
-cleanup:
-	ui_spinner_clear();
-	if (buff) free(buff);
-	f_close(&fp);
-	unmount_nand_part(&gpt, is_boot, use_bis, true, false);
-	return return_value;
-}
-*/
 
 bool f_transfer_from_nands(const char *file_path, bool on_system_part) {
 	if (menu_on_sysnand) {
@@ -1535,4 +1275,114 @@ int save_fb_to_bmp(const char* filename)
 	timer = get_tmr_ms() + 2000;
 
 	return res;
+}
+
+static void *coreboot_addr;
+
+static void reloc_patcher(u32 payload_dst, u32 payload_src, u32 payload_size) {
+	memcpy((u8 *)payload_src, (u8 *)IPL_LOAD_ADDR, PATCHED_RELOC_SZ);
+
+	reloc_meta_t *relocator = (reloc_meta_t *)(payload_src + RELOC_META_OFF);
+
+	relocator->start = payload_dst - ALIGN(PATCHED_RELOC_SZ, 0x10);
+	relocator->stack = PATCHED_RELOC_STACK;
+	relocator->end   = payload_dst + payload_size;
+	relocator->ep    = payload_dst;
+
+	if (payload_size == 0x7000) {
+		memcpy((u8 *)(payload_src + ALIGN(PATCHED_RELOC_SZ, 0x10)), coreboot_addr, 0x7000); //Bootblock
+		*(vu32 *)CBFS_DRAM_EN_ADDR = CBFS_DRAM_MAGIC;
+	}
+}
+
+int launch_payload(char *path, bool clear_screen) {
+	if (clear_screen)
+		gfx_clear_grey(0x1B);
+	gfx_con_setpos(0, 0);
+	if (!path)
+		return 1;
+
+	if (sd_mount()) {
+		FIL fp;
+		if (f_open(&fp, path, FA_READ)) {
+			gfx_con.mute = false;
+			EPRINTFARGS("Payload file is missing!\n(%s)", path);
+
+			goto out;
+		}
+
+		// Read and copy the payload to our chosen address
+		void *buf;
+		u32 size = f_size(&fp);
+
+		if (size < 0x30000)
+			buf = (void *)RCM_PAYLOAD_ADDR;
+		else {
+			coreboot_addr = (void *)(COREBOOT_END_ADDR - size);
+			buf = coreboot_addr;
+			if (h_cfg.t210b01) {
+				f_close(&fp);
+
+				gfx_con.mute = false;
+				EPRINTF("Coreboot not allowed on Mariko!");
+
+				goto out;
+			}
+		}
+
+		if (f_read(&fp, buf, size, NULL)) {
+			f_close(&fp);
+
+			goto out;
+		}
+
+		f_close(&fp);
+
+		sd_end();
+
+		if (size < 0x30000) {
+			reloc_patcher(PATCHED_RELOC_ENTRY, EXT_PAYLOAD_ADDR, ALIGN(size, 0x10));
+
+			hw_deinit(false, byte_swap_32(*(u32 *)(buf + size - sizeof(u32))));
+		} else {
+			reloc_patcher(PATCHED_RELOC_ENTRY, EXT_PAYLOAD_ADDR, 0x7000);
+
+			// Get coreboot seamless display magic.
+			u32 magic = 0;
+			char *magic_ptr = buf + COREBOOT_VER_OFF;
+			memcpy(&magic, magic_ptr + strlen(magic_ptr) - 4, 4);
+			hw_deinit(true, magic);
+		}
+
+		// Some cards (Sandisk U1), do not like a fast power cycle. Wait min 100ms.
+		sdmmc_storage_init_wait_sd();
+
+		void (*ext_payload_ptr)() = (void *)EXT_PAYLOAD_ADDR;
+
+		// Launch our payload.
+		(*ext_payload_ptr)();
+	}
+
+out:
+	sd_end();
+	return 1;
+}
+
+void auto_reboot() {
+		sd_mount();
+		// If the console is a patched or Mariko unit
+		if (h_cfg.t210b01 || h_cfg.rcm_patched) {
+			power_set_state(POWER_OFF_REBOOT);
+		} else {
+			if (f_stat("payload.bin", NULL) == FR_OK)
+				launch_payload("payload.bin", false);
+
+			if (f_stat("bootloader/update.bin", NULL) == FR_OK)
+				launch_payload("bootloader/update.bin", false);
+
+			if (f_stat("atmosphere/reboot_payload.bin", NULL) == FR_OK)
+				launch_payload("atmosphere/reboot_payload.bin", false);
+
+			EPRINTF("Failed to launch payload.");
+		}
 }

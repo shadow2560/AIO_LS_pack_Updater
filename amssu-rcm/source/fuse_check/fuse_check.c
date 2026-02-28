@@ -51,7 +51,7 @@ static const fuse_info_t fuse_info[] = {
 	{17,0,18,1,19,1},
 	{19,0,19,1,20,1},
 	{20,0,20,5,21,1},
-	{21,0,21,1,22,1},
+	{21,0,21,2,22,1},
 };
 
 #define FUSE_INFO_COUNT (sizeof(fuse_info) / sizeof(fuse_info[0]))
@@ -65,6 +65,7 @@ typedef struct {
 } nca_map_t;
 
 static const nca_map_t nca_db[] = {
+	{21, 2, 0, "ac1ef488027ac5d9222d74393f03507f.nca"},
 	{21, 1, 0, "738da79326689ef4b72f702693bfc48a.nca"},
 	{21, 0, 1, "e7273dd5b560d0ba282fc64206fecb56.nca"},
 	{21, 0, 0, "4b0130c8b9d2174a6574f6247655acc0.nca"},

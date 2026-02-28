@@ -1541,9 +1541,9 @@ while ((de = readdir(dr)) != nullptr)
 	std::sort(iniFiles.begin(), iniFiles.end());
 	if (!iniFiles.empty()) {
 		// get boot entries from ini folder files
-		char file[FS_MAX_PATH] = "/bootloader/ini/";
 		for (auto const &iniFile : iniFiles) {
-			strcat(file, iniFile.c_str());
+			char file[FS_MAX_PATH];
+			snprintf(file, sizeof(file), "/bootloader/ini/%s", iniFile.c_str());
 			parseIniFile(file, &iniData,  false);
 		}
 	}
@@ -1916,30 +1916,19 @@ int main(int argc, char **argv) {
 		debug_log_start();
 		debug_already_started = true;
 	}
-	int first_char_slash_argv_0 = 0;
-	for (size_t i = 0; i < strlen(argv[0]); i++) {
-		if (argv[0][i] == '/') {
-			break;
-		}
-		first_char_slash_argv_0++;
-	}
-	char* arg0_substring = substr(argv[0], first_char_slash_argv_0, strlen(argv[0]));;
-	if (strcmp(arg0_substring, "/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
-		free(arg0_substring);
-		if (!custom_cp((char*) "romfs:/nro/aiosu-forwarder.nro", (char*) "/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
-			debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
+	if (strcmp(argv[0], (char*)"/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
+		if (!custom_cp((char*)"romfs:/nro/aiosu-forwarder.nro", (char*)"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
+			debug_log_write("Erreur de copie du forwarder.\n\n");
 			appExit();
 			return 0;
-		} else {
-			debug_log_write("Reconfiguration de l'application OK.\n\n");
-			char temp_app_nro_path[2000] = "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"";
-			strcat(strcat(strcat(temp_app_nro_path, " \""), argv[0]), "\"");
-			appExit();
-			envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", temp_app_nro_path);
-			return 0;
 		}
+		debug_log_write("Reconfiguration de l'application OK.\n\n");
+		char cmd[2048];
+		snprintf(cmd, sizeof(cmd), "\"%s\" \"%s\"", (char*)"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", argv[0]);
+		appExit();
+		envSetNextLoad((char*)"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", cmd);
+		return 0;
 	}
-	free(arg0_substring);
 	language_vars = set_translation_strings();
 	menu_init();
 

@@ -83,6 +83,7 @@ void to_uppercase(char *str);
 bool strcmp_ignore_case(const char *s1, const char *s2);
 bool custom_cp(char *filein, char *fileout);
 bool copy_directory_recursive(const char *source, const char *destination, bool include_source);
+Result removeDir_on_sd(const char* path);
 int remove_directory(const char *path);
 char * substr(char *s, int x, int y);
 u32 ParseHexInteger(const char *s);

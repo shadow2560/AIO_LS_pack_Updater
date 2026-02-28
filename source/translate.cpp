@@ -282,6 +282,62 @@ const char* translation_vars_list[] =
 	"lng_dl_curl_init_error"
 };
 
+static std::string unescape_c_like(const char* in) {
+	if (!in) return std::string();
+
+	std::string out;
+	out.reserve(strlen(in));
+
+	for (const unsigned char* p = (const unsigned char*)in; *p; ++p) {
+		if (*p != '\\') {
+			out.push_back((char)*p);
+			continue;
+		}
+
+		++p;
+		if (!*p) {
+			out.push_back('\\');
+			break;
+		}
+
+		switch (*p) {
+			case 'n':  out.push_back('\n'); break;
+			case 'r':  out.push_back('\r'); break;
+			case 't':  out.push_back('\t'); break;
+			case '\\': out.push_back('\\'); break;
+			case '"':  out.push_back('"');  break;
+			case '\'': out.push_back('\''); break;
+
+			/*
+			case 'x': {
+				auto hex = [](unsigned char c) -> int {
+					if (c >= '0' && c <= '9') return c - '0';
+					if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+					if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+					return -1;
+				};
+				int h1 = hex((unsigned char)p[1]);
+				int h2 = hex((unsigned char)p[2]);
+				if (h1 >= 0 && h2 >= 0) {
+					out.push_back((char)((h1 << 4) | h2));
+					p += 2;
+				} else {
+					out.push_back('\\');
+					out.push_back('x');
+				}
+				break;
+			}
+			*/
+
+			default:
+				out.push_back('\\');
+				out.push_back((char)*p);
+				break;
+		}
+	}
+	return out;
+}
+
 static int translation_handler(void* config, const char * section, const char * name, const char * value, int lineno)
 {
 	// config instance for filling in the values.
@@ -296,7 +352,7 @@ static int translation_handler(void* config, const char * section, const char * 
 	for (size_t i=0; i < sizeof(translation_vars_list)/sizeof(translation_vars_list[0]); i++) {
 		if(MATCH("language", translation_vars_list[i])){
 			if (value != 0) {
-				pconfig->insert({translation_vars_list[i], (std::string) value});
+				pconfig->insert({translation_vars_list[i], unescape_c_like(value)});
 			} else {
 				pconfig->insert({translation_vars_list[i], (std::string) ""});
 			}

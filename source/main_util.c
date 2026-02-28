@@ -245,6 +245,48 @@ bool copy_directory_recursive(const char *source, const char *destination, bool 
 	return true;
 }
 
+#include <switch.h>
+#include <string.h>
+#include <stdio.h>
+
+static bool to_sd_fs_path(const char *in, char *out, size_t out_sz) {
+	if (!in || !out || out_sz < 2) return false;
+
+	const char *p = in;
+	if (strncmp(p, "sdmc:/", 6) == 0) {
+		p += 5;
+	}
+
+	if (*p != '/') {
+		int n = snprintf(out, out_sz, "/%s", p);
+		return (n > 0 && (size_t)n < out_sz);
+	} else {
+		int n = snprintf(out, out_sz, "%s", p);
+		return (n > 0 && (size_t)n < out_sz);
+	}
+}
+
+Result removeDir_on_sd(const char* path)
+{
+	debug_log_write("Suppression du dossier \"%s\".\n", path);
+    char fs_path[FS_MAX_PATH];
+	if (!to_sd_fs_path(path, fs_path, sizeof(fs_path))) {
+		return MAKERESULT(Module_Libnx, LibnxError_BadInput);
+	}
+	Result ret = 0;
+	FsFileSystem *fs = fsdevGetDeviceFileSystem("sdmc");
+	if (!fs) {
+		debug_log_write("Erreur: filesystem sdmc non monté.\n");
+		return MAKERESULT(Module_Libnx, LibnxError_NotInitialized);
+	}
+	ret = fsFsDeleteDirectoryRecursively(fs, fs_path);
+	if (R_FAILED(ret)) {
+		debug_log_write("fsFsDeleteDirectoryRecursively rc=0x%08X\n", ret);
+		return ret;
+	}
+	return 0;
+}
+
 int remove_directory(const char *path) {
 	debug_log_write("Suppression du dossier \"%s\".\n", path);
    DIR *d = opendir(path);
@@ -260,7 +302,7 @@ int remove_directory(const char *path) {
 		  char *buf;
 		  size_t len;
 
-		  /* Skip the names "." and ".." as we don't want to recurse on them. */
+		  // Skip the names "." and ".." as we don't want to recurse on them.
 		  if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
 			 continue;
 
@@ -437,56 +479,56 @@ bool is_emummc() {
 /*
 typedef enum {
 		EMUMMC_TYPE_NONE      = 0,
-    EMUMMC_TYPE_PARTITION = 1,
-    EMUMMC_TYPE_FILE      = 2,
+	EMUMMC_TYPE_PARTITION = 1,
+	EMUMMC_TYPE_FILE      = 2,
 } EmummcType;
 
 typedef struct {
-    u32 type;
-    u32 reserved;
-    u64 reserved2;
+	u32 type;
+	u32 reserved;
+	u64 reserved2;
 } EmummcBaseConfig;
 
 typedef struct {
-    u64 start_sector;
-    u64 sector_count;
+	u64 start_sector;
+	u64 sector_count;
 } EmummcPartitionConfig;
 
 void smcAmsGetEmunandConfig(EmummcPaths* out)
 {
-    SecmonArgs args;
-    memset(&args, 0, sizeof(args));
-    memset(out, 0, sizeof(*out));
+	SecmonArgs args;
+	memset(&args, 0, sizeof(args));
+	memset(out, 0, sizeof(*out));
 
-    u8 user_page[0x1000] __attribute__((aligned(0x1000)));
-    memset(user_page, 0, sizeof(user_page));
+	u8 user_page[0x1000] __attribute__((aligned(0x1000)));
+	memset(user_page, 0, sizeof(user_page));
 
-    args.X[0] = 0xF0000404;   // SmcGetEmummcConfig
-    args.X[1] = 0;            // EmummcMmc_Nand
-    args.X[2] = (u64)user_page;
+	args.X[0] = 0xF0000404;   // SmcGetEmummcConfig
+	args.X[1] = 0;            // EmummcMmc_Nand
+	args.X[2] = (u64)user_page;
 
-    svcCallSecureMonitor(&args);
+	svcCallSecureMonitor(&args);
 
-    const u8 *inline_buf = (const u8 *)&args.X[1];
-    const EmummcBaseConfig *base =
-        (const EmummcBaseConfig *)inline_buf;
+	const u8 *inline_buf = (const u8 *)&args.X[1];
+	const EmummcBaseConfig *base =
+		(const EmummcBaseConfig *)inline_buf;
 
-    out->type = base->type;
-    out->start_sector = 0;
+	out->type = base->type;
+	out->start_sector = 0;
 
-    if (base->type == EMUMMC_TYPE_PARTITION) {
-        const EmummcPartitionConfig *part =
-            (const EmummcPartitionConfig *)(inline_buf + sizeof(EmummcBaseConfig));
-        out->start_sector = part->start_sector;
-    }
+	if (base->type == EMUMMC_TYPE_PARTITION) {
+		const EmummcPartitionConfig *part =
+			(const EmummcPartitionConfig *)(inline_buf + sizeof(EmummcBaseConfig));
+		out->start_sector = part->start_sector;
+	}
 
-    memcpy(out->path,
-           user_page,
-           sizeof(out->path));
+	memcpy(out->path,
+		   user_page,
+		   sizeof(out->path));
 
-    memcpy(out->nintendo,
-           user_page + sizeof(out->path),
-           sizeof(out->nintendo));
+	memcpy(out->nintendo,
+		   user_page + sizeof(out->path),
+		   sizeof(out->nintendo));
 }
 */
 

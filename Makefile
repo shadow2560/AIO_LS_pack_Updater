@@ -40,7 +40,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.11.08
+APP_VERSION := 	7.12.01
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -221,11 +221,11 @@ clean:
 	@if [ -f "$(LIBNX)/Makefile" ]; then $(MAKE) -C $(LIBNX) clean; fi
 	@rm -fr $(CURDIR)/libnx/include $(CURDIR)/libnx/lib
 	@rm -fr $(CURDIR)/libnx/default_icon.jpg $(CURDIR)/libnx/switch.ld $(CURDIR)/libnx/switch.specs $(CURDIR)/libnx/switch_rules $(CURDIR)/libnx/.before_build $(CURDIR)/aiosu-forwarder/.before_build $(CURDIR)/amssu-rcm/.before_build
-	ifeq ($(strip $(APP_JSON)),)
-		@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
-	else
-		@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf
-	endif
+ifeq ($(strip $(APP_JSON)),)
+	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+else
+	@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf
+endif
 
 
 #---------------------------------------------------------------------------------

@@ -30,6 +30,7 @@ Result _amssuInitialize(void) {
 void _amssuCleanup(void) {
     serviceClose(&g_amssuSrv);
     tmemClose(&g_tmem);
+    memset(&g_tmem, 0, sizeof(g_tmem));
 }
 
 Service *amssuGetServiceSession(void) {
@@ -85,6 +86,7 @@ Result amssuSetupUpdate(void *buffer, size_t size, const char *path, bool exfat)
     );
     if (R_FAILED((rc))) {
         tmemClose(&g_tmem);
+        memset(&g_tmem, 0, sizeof(g_tmem));
     }
 
     return rc;
@@ -118,6 +120,7 @@ Result amssuSetupUpdateWithVariation(void *buffer, size_t size, const char *path
     );
     if (R_FAILED((rc))) {
         tmemClose(&g_tmem);
+        memset(&g_tmem, 0, sizeof(g_tmem));
     }
 
     return rc;
