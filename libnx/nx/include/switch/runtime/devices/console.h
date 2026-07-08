@@ -107,6 +107,11 @@ struct PrintConsole
 	u16 bg;                  ///< Background color
 	int flags;               ///< Reverse/bright flags
 
+	// Base (default) background used when ANSI '49' (Default background) is requested.
+	// This lets apps (like FTXUI) reset to a theme-defined background instead of palette black.
+	u16 baseBg;              ///< Base/default background color
+	bool baseBgCustom;       ///< Whether baseBg is a custom RGB color
+
 	bool consoleInitialised; ///< True if the console is initialized
 };
 
@@ -190,3 +195,13 @@ void consoleDebugInit(debugDevice device);
 
 /// Clears the screan by using printf("\x1b[2J");
 void consoleClear(void);
+
+/**
+ * @brief Sets the console background color (RGB, alpha ignored) and marks it as custom.
+ * @param console Pointer to the console to update (NULL uses current console)
+ * @param r Red component in 0..255
+ * @param g Green component in 0..255
+ * @param b Blue component in 0..255
+ * @remark After changing the background color, call consoleClear() to repaint the full screen.
+ */
+void consoleSetBackgroundColorRgb(PrintConsole* console, u8 r, u8 g, u8 b);

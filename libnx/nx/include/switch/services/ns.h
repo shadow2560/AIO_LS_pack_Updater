@@ -313,6 +313,20 @@ Result nsGetDocumentInterface(Service* srv_out);
 Result nsGetApplicationControlData(NsApplicationControlSource source, u64 application_id, NsApplicationControlData* buffer, size_t size, u64* actual_size);
 
 /**
+ * @brief Gets the \ref NsApplicationControlData for the specified application.
+ * @note Only available on [19.0.0+].
+ * @param[in] source Source, official sw uses ::NsApplicationControlSource_Storage.
+ * @param[in] application_id ApplicationId.
+ * @param[out] buffer \ref NsApplicationControlData
+ * @param[in] size Size of the buffer.
+ * @param[in] flag1 Default is 0. 1 retrieves 174x174 icon instead of 256x256. 0xFF uses an unknown alternative path.
+ * @param[in] acd_idx Default is 0. 1 tries to get NsApplicationControlData for Switch 2 Edition.
+ * @param[out] actual_size Actual output size.
+ * @param[out] unk Returned with size, always 0.
+ */
+Result nsGetApplicationControlData2(NsApplicationControlSource source, u64 application_id, NsApplicationControlData* buffer, size_t size, u8 flag1, u8 acd_idx, u64* actual_size, u32* unk);
+
+/**
  * @brief GetApplicationDesiredLanguage. Selects a \ref NacpLanguageEntry to use from the specified \ref NacpStruct.
  * @note Uses \ref nsGetReadOnlyApplicationControlDataInterface on [5.1.0+], otherwise IApplicationManagerInterface is used.
  * @param[in] nacp \ref NacpStruct
@@ -641,6 +655,20 @@ Result nsRequestDownloadApplicationControlData(AsyncResult *a, u64 application_i
  * @param[in] size 0x1000-byte aligned buffer size for TransferMemory. This must be at least: count*sizeof(\ref NacpLanguageEntry) + count*sizeof(u64) + count*sizeof(\ref NsApplicationControlData).
  */
 Result nsListApplicationTitle(AsyncValue *a, NsApplicationControlSource source, const u64 *application_ids, s32 count, void* buffer, size_t size);
+
+/**
+ * @brief ListApplicationTitle2. Returns \ref NacpLanguageEntry matching currently set system language for each specified ApplicationId.
+ * @note The data available with \ref asyncValueGet is a s32 for the offset within the buffer where the output data is located, \ref asyncValueGetSize returns the total byte-size of the data located here. The data located here is the \ref NacpLanguageEntry for each specified ApplicationId.
+ * @note Only available on [20.0.0+].
+ * @note NacpLanguageEntry is decompressed when necessary only on [21.0.0+].
+ * @param[out] a \ref AsyncValue
+ * @param[in] source Source, official sw uses ::NsApplicationControlSource_Storage.
+ * @param[in] application_ids Input array of ApplicationIds.
+ * @param[in] count Size of the application_ids array in entries.
+ * @param buffer 0x1000-byte aligned buffer for TransferMemory. This buffer must not be accessed until the async operation finishes.
+ * @param[in] size 0x1000-byte aligned buffer size for TransferMemory. This must be at least: count*sizeof(\ref NacpLanguageEntry) + count*sizeof(u64) + sizeof(\ref NsApplicationControlData).
+ */
+Result nsListApplicationTitle2(AsyncValue *a, NsApplicationControlSource source, const u64 *application_ids, s32 count, void* buffer, size_t size);
 
 /**
  * @brief ListApplicationIcon

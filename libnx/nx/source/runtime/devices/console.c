@@ -93,8 +93,10 @@ static PrintConsole defaultConsole =
 	45,		//window height
 	3,		//tab size
 	7,		// foreground color
-	0,		// background color
-	0,		// flags
+	RGB565_FROM_RGB8(27,26,27),		// background color (custom dark)
+	CONSOLE_BG_CUSTOM,		// flags (use custom BG)
+	RGB565_FROM_RGB8(27,26,27),		// base/default background
+	true,	// baseBgCustom
 	false	//console initialized
 };
 
@@ -353,9 +355,13 @@ static void consoleSetColorState(int code)
 		escapeSeq.state = ESC_BUILDING_FORMAT_BG;
 		escapeSeq.colorArgCount = 0;
 		break;
-	case 49: // reset background color
-		escapeSeq.color.flags &= ~CONSOLE_BG_CUSTOM;
-		escapeSeq.color.bg = 0;
+	case 49: // reset background color to base theme
+		if (currentConsole->baseBgCustom) {
+			escapeSeq.color.flags |= CONSOLE_BG_CUSTOM;
+		} else {
+			escapeSeq.color.flags &= ~CONSOLE_BG_CUSTOM;
+		}
+		escapeSeq.color.bg = currentConsole->baseBg;
 		break;
 	case 90 ... 97: // bright foreground
 		escapeSeq.color.flags &= ~CONSOLE_COLOR_FAINT;
@@ -755,6 +761,18 @@ void consoleSetFont(PrintConsole* console, ConsoleFont* font) {
 
 	console->font = *font;
 
+}
+
+//---------------------------------------------------------------------------------
+void consoleSetBackgroundColorRgb(PrintConsole* console, u8 r, u8 g, u8 b) {
+//---------------------------------------------------------------------------------
+	if(!console) console = currentConsole;
+	u16 color = RGB565_FROM_RGB8(r, g, b);
+	console->bg = color;
+	console->flags |= CONSOLE_BG_CUSTOM;
+	// Also set the base/default background so ANSI '49' (Default) uses this theme.
+	console->baseBg = color;
+	console->baseBgCustom = true;
 }
 
 //---------------------------------------------------------------------------------
