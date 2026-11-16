@@ -166,6 +166,12 @@ static std::string build_firmware_recap_speech(bool aggressiveClean, bool cleanM
 	return text;
 }
 
+static std::string build_pack_update_speech() {
+	char message[512];
+	snprintf(message, sizeof(message), language_vars["lng_pack_have_update"].c_str(), pack_version, last_pack_version);
+	return std::string(message);
+}
+
 static void speak_formatted_message(const char* format, va_list args, const std::string& choices = "") {
 	va_list length_args;
 	va_copy(length_args, args);
@@ -2356,11 +2362,14 @@ int main(int argc, char **argv) {
 			printDisplay("\n\n");
 			if (!isApplet()) {
 				if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
+					set_next_question_speech_context(build_pack_update_speech());
 					pack_update_found_install=ask_question_with_changelog_choice((char*) language_vars["lng_ask_pack_have_update"].c_str());
 				} else {
+					set_next_question_speech_context(build_pack_update_speech());
 					pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 				}
 			} else {
+				set_next_question_speech_context(build_pack_update_speech());
 				pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 			}
 			logs_console_clear();
@@ -2372,7 +2381,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	if (!pack_update_found_install)
-		announce_main_menu_return(cursor);
+		announce_main_menu_return(cursor, true);
 
 	// Loop for the menu
 	bool hekate_autoboot_enable_combot_disable = false;
@@ -3533,7 +3542,6 @@ int main(int argc, char **argv) {
 			remove(TEMP_FILE);
 			cursor = 0;
 			refreshScreen(cursor, false);
-			announce_main_menu_return(cursor);
 			if (auto_update_app(false)) {
 				return 0;
 			}
@@ -3547,11 +3555,14 @@ int main(int argc, char **argv) {
 					printDisplay("\n\n");
 					if (isApplet()) {
 						if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
+							set_next_question_speech_context(build_pack_update_speech());
 							pack_update_found_install=ask_question_with_changelog_choice((char*) language_vars["lng_ask_pack_have_update"].c_str());
 						} else {
+							set_next_question_speech_context(build_pack_update_speech());
 							pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 						}
 					} else {
+						set_next_question_speech_context(build_pack_update_speech());
 						pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 					}
 					logs_console_clear();
@@ -3562,6 +3573,8 @@ int main(int argc, char **argv) {
 					}
 				}
 			}
+			if (!pack_update_found_install)
+				announce_main_menu_return(cursor, true);
 
 		// exit...
 		} else if (kDown & HidNpadButton_Plus) {
