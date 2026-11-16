@@ -28,3 +28,4 @@ build_cmake*
 /libnx/*.d
 /libnx/*.bz2
 /libnx/.before_build
+*.bak

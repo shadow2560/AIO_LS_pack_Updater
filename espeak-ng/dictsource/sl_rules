@@ -1,0 +1,232 @@
+
+// Spelling-to-phoneme rules for Slovenian
+// This file is UTF-8 encoded
+
+.L01 b d g j l m n v z ž   // voiced consonants
+
+.L03 a e
+.L04 l v
+
+.L05 m l n r j v
+.L06 g d z b ž dž
+.L07 p t s š č k f h c
+
+.group a
+        a        a:
+        a (X$w_alt3+  'a
+
+        a (č_    'a:
+        a (j_    'a:
+        a (l_    'a:
+        
+
+.group b
+        b        b
+        b (L07   p
+        b (_     p
+
+.group c
+        c        ts
+
+.group č
+        č        tS
+
+.group ć
+        ć        tS;
+        
+.group d
+        d        d
+        dz       dz
+        dž       dZ
+        d (L07   t
+        d (_     t
+        dž (_    tS
+
+.group e
+        e        e:
+        e (X$w_alt3+  'E
+        
+        ee       i:
+    _n) ee       E:E
+    _r) ee       E:E
+   _pr) ee       E:E
+
+        e (X$w_alt4 @
+     @) e (n_    E#
+    @C) e (r_    E#
+
+     _) e (r     E:
+
+
+.group f
+        f        f
+
+
+.group g
+        g        g
+        g (L07   k
+        g (_     k
+
+.group h
+        h        x
+     i) h        h
+        h (F     h   // before voiceless consonant
+
+
+.group i
+        i        i:
+        i (X$w_alt3+  'i
+        i (A     j
+        
+        i (l_    'i:
+
+.group j
+        j        j
+
+
+.group k
+        k        k
+        k (L06   g
+
+
+.group l
+        l        l
+        l (K     w
+     K) l (K     @l
+     K) l (rK    l
+     K) l (_     u
+     @) l (_     w
+        lj       l^
+        lj (A    lj
+        lj (i    l^
+
+
+.group m
+        m        m
+        m (g     N
+        m (k     N
+     K) m (K     m@-  // unstressed
+     K) m (r     m
+
+
+.group n
+        n        n
+        n (g     N
+        n (k     N
+
+     K) n (K     n@-  // unstressed
+     K) n (r     n
+        nj       n^
+        nj (A    nj
+        nj (i    n^
+
+
+.group o
+        o        o:
+        o (X$w_alt3+  'O
+        
+        o (Co    O:
+        o (CCo   O:
+        o (L04+  o:
+
+        o (č_    'o:
+        o (j_    'o:
+        o (l_    'o:
+        o (oč    o:
+
+        
+.group p
+        p        p
+        p (L06   b
+
+
+.group q
+        q        k
+        qu       kv
+
+
+.group r
+        r        R
+        rr       R
+
+     K) r (K     @R
+
+
+.group s
+        s        s
+        sch      S
+        s (L06   z
+
+
+.group š
+        š        S
+        š (L06   Z
+
+
+.group t
+        t        t
+   Krs) t (_     _|t
+        t (L06   d
+
+
+.group u
+        u        u:
+        u (X$w_alt3+  'u
+
+        u (A     w
+     A) u (K     w
+     C) ue (C    u:    // German names
+     j) u (čeno  'u:
+
+
+.group v
+        v        v
+        v (-A+   v    // preposition 'v' before a vowel
+     A) v (K     w
+     K) v (K     %u
+        v (r+    v
+   L01) v (A     v#
+
+
+.group w
+        w        w
+
+
+.group x
+        x        ks
+
+
+.group y
+        y        j
+     K) y (K     i
+
+
+.group z
+        z        z
+        z (L07   s
+        z (_     s
+
+
+.group ž
+        ž        Z
+        ž (L07   S
+        ž (_     S
+
+
+.group
+	á	'a:
+	é	'e:
+	ê	'E:
+	è	'E
+	í	'i:
+	ó	'o:
+	ô	'O:
+	ò	'O
+	ú	'u:
+        đ        dZ
+        ř        R^
+        ä        E:
+        ö        @:
+        ü        y:
+        ß        _^_DE
+

@@ -4,6 +4,7 @@
 #include <dirent.h> // mkdir
 #include <switch.h>
 #include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <time.h>
 
@@ -14,7 +15,7 @@
 #include "contents_install/util/util.hpp"
 
 #include "main_util.h"
-#include "translate.hpp"
+#include "hb_translate.hpp"
 #include "download.hpp"
 #include "ini_hekate_configs_parse.h"
 #include "90dns_setter.hpp"
@@ -25,6 +26,7 @@
 #include "main_config.h"
 #include "web_launch.h"
 #include "ntp.hpp"
+#include "screenreader/ScreenReader.hpp"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -70,6 +72,10 @@ autoconfig_configuration autoconfig_config;
 
 PadState pad;
 
+extern "C" void screenreader_poll_input(void) {
+	ScreenReader::PollInput(&pad);
+}
+
 /* ConsoleFont custom_font;
 custom_font->gfx=;
 custom_font->asciiOffset=;
@@ -78,8 +84,8 @@ custom_font->tileWidth=;
 custom_font->tileHeight=;
 */
 
-void refreshScreen(int cursor) {
-	consoleSelect(&menu_console);
+void refreshScreen(int cursor, bool announceSelection = true) {
+	select_console(&menu_console);
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
@@ -112,6 +118,8 @@ void refreshScreen(int cursor) {
 			} else {
 				printf("\n\x1B[31m%s\x1B[37m\n\n", OPTION_LIST[i]);
 			}
+			if (announceSelection)
+				ScreenReader::SpeakContext("", (std::string)OPTION_LIST[i], language_vars["lng_screenreader_main_menu_help"], cursor + 1, CURSOR_LIST_MAX + 1);
 		} else {
 			if (i == CURSOR_LIST_MAX) {
 				printf("%s", OPTION_LIST[i]);
@@ -131,15 +139,103 @@ void printDisplay(const char *text, ...) {
 	consoleUpdate(&logs_console);
 }
 
+static std::string nextQuestionSpeechContext;
+
+static void set_next_question_speech_context(const std::string& context) {
+	nextQuestionSpeechContext = context;
+}
+
+static void append_speech_line(std::string& text, const std::string& line) {
+	if (line.empty())
+		return;
+	if (!text.empty()) {
+		const char last = text[text.size() - 1];
+		if (last == '.' || last == '!' || last == '?' || last == ':' || last == ';')
+			text += " ";
+		else
+			text += ". ";
+	}
+	text += line;
+}
+
+static std::string build_firmware_recap_speech(bool aggressiveClean, bool cleanModules) {
+	std::string text;
+	append_speech_line(text, language_vars["lng_install_pack_recap_begin"]);
+	append_speech_line(text, language_vars[aggressiveClean ? "lng_install_pack_recap_agressive_clean" : "lng_install_pack_recap_not_agressive_clean"]);
+	append_speech_line(text, language_vars[cleanModules ? "lng_install_pack_recap_clean_modules" : "lng_install_pack_recap_not_clean_modules"]);
+	return text;
+}
+
+static void speak_formatted_message(const char* format, va_list args, const std::string& choices = "") {
+	va_list length_args;
+	va_copy(length_args, args);
+	const int speech_length = vsnprintf(NULL, 0, format, length_args);
+	va_end(length_args);
+	if (speech_length <= 0) {
+		nextQuestionSpeechContext.clear();
+		return;
+	}
+
+	std::string speech_text(static_cast<size_t>(speech_length) + 1, '\0');
+	va_list format_args;
+	va_copy(format_args, args);
+	vsnprintf(&speech_text[0], speech_text.size(), format, format_args);
+	va_end(format_args);
+	speech_text.resize(static_cast<size_t>(speech_length));
+	if (!nextQuestionSpeechContext.empty()) {
+		std::string contextualText = nextQuestionSpeechContext;
+		append_speech_line(contextualText, speech_text);
+		speech_text.swap(contextualText);
+		nextQuestionSpeechContext.clear();
+	}
+	if (!choices.empty())
+		speech_text += ". " + choices;
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_question"], speech_text, "");
+}
+
+static std::string format_screenreader_choices(const char* key, const char* first,
+	const char* second, const char* third = NULL) {
+	char message[512];
+	if (third)
+		snprintf(message, sizeof(message), language_vars[key].c_str(), first, second, third);
+	else
+		snprintf(message, sizeof(message), language_vars[key].c_str(), first, second);
+	return std::string(message);
+}
+
+static void announce_main_menu_return(int cursor, bool interruptCurrent = false) {
+	if (cursor < 0 || cursor > CURSOR_LIST_MAX)
+		return;
+	if (interruptCurrent) {
+		ScreenReader::SpeakContext(language_vars["lng_screenreader_context_main_menu"],
+			(std::string)OPTION_LIST[cursor], language_vars["lng_screenreader_main_menu_help"],
+			cursor + 1, CURSOR_LIST_MAX + 1);
+	} else {
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_main_menu"],
+			(std::string)OPTION_LIST[cursor], language_vars["lng_screenreader_main_menu_help"],
+			cursor + 1, CURSOR_LIST_MAX + 1);
+	}
+}
+
+static void speak_operation_message(const std::string& message, bool waitForSpeech = false) {
+	if (waitForSpeech) {
+		ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+			message, "", -1, -1, true);
+	} else {
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			message, "");
+	}
+}
+
 void set_consoles_default_size() {
 	PrintConsole* temp;
 	consoleSetWindow(&menu_console, 0, 0, 80, 26);
 	consoleSetWindow(&logs_console, 0, 27, 80, 18);
-	temp = consoleSelect(&menu_console);
+	temp = select_console(&menu_console);
 	consoleClear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	consoleClear();
-	consoleSelect(temp);
+	select_console(temp);
 	consoleUpdate(&menu_console);
 	consoleUpdate(&logs_console);
 		//  logs_console.windowWidth = 80;
@@ -154,7 +250,7 @@ void fullscreen_menu() {
 	// logs_console.windowHeight = 0;
 	// logs_console.windowX = 0;
 	// logs_console.windowY = 0;
-	consoleSelect(&menu_console);
+	select_console(&menu_console);
 	consoleSetWindow(&menu_console, 0, 0, 80, 43);
 	consoleClear();
 	consoleUpdate(&menu_console);
@@ -163,49 +259,93 @@ void fullscreen_menu() {
 
 void help_menu() {
 	fullscreen_menu();
-	if (!beta_mode) {
-		printf("\x1B[36m");
-		printf(language_vars["lng_title"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
-	} else {
-		printf("\x1B[31m");
-		printf(language_vars["lng_title_beta"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
-	}
-	if (debug_enabled) {
-		printf(" - Debug");
-	}
-	printf("\x1B[37m\n\n");
-	printf(language_vars["lng_move_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_a_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_minus_menu_switch"].c_str());
-	printf("\n\n");
-	printf(language_vars["lng_x_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_y_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_ls_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_l_r_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_zl_zr_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_l_zl_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_r_zr_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_l_zr_menu"].c_str());
-	printf("\n");
-	printf(language_vars["lng_r_zl_menu"].c_str());
-	printf("\n\n");
-	printf(language_vars["lng_plus_menu"].c_str());
-	printf("\n\n");
-	printf(language_vars["lng_press_b_to_go_back"].c_str());
-	consoleUpdate(&menu_console);
+	int helpPage = 0;
+	bool horizontalStickEngaged = false;
+	auto renderHelpPage = [&]() {
+		select_console(&menu_console);
+		consoleClear();
+		if (!beta_mode) {
+			printf("\x1B[36m");
+			printf(language_vars["lng_title"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
+		} else {
+			printf("\x1B[31m");
+			printf(language_vars["lng_title_beta"].c_str(), APP_TITLE, APP_VERSION, APP_AUTHOR);
+		}
+		if (debug_enabled)
+			printf(" - Debug");
+		printf("\x1B[37m\n\n");
+		if (helpPage == 0) {
+			printf("%s\n\n", language_vars["lng_help_page_general"].c_str());
+			printf("%s\n", language_vars["lng_move_menu"].c_str());
+			printf("%s\n", language_vars["lng_a_menu"].c_str());
+			printf("%s\n\n", language_vars["lng_minus_menu_switch"].c_str());
+			printf("%s\n", language_vars["lng_x_menu"].c_str());
+			printf("%s\n", language_vars["lng_y_menu"].c_str());
+			printf("%s\n", language_vars["lng_ls_menu"].c_str());
+			printf("%s\n", language_vars["lng_l_r_menu"].c_str());
+			printf("%s\n", language_vars["lng_zl_zr_menu"].c_str());
+			printf("%s\n", language_vars["lng_l_zl_menu"].c_str());
+			printf("%s\n", language_vars["lng_r_zr_menu"].c_str());
+			printf("%s\n", language_vars["lng_l_zr_menu"].c_str());
+			printf("%s\n", language_vars["lng_r_zl_menu"].c_str());
+		} else {
+			printf("%s\n\n", language_vars["lng_help_page_screenreader"].c_str());
+			fputs(language_vars["lng_screenreader_help"].c_str(), stdout);
+			printf("\n");
+		}
+		printf("\n%s\n", language_vars["lng_help_switch_screens"].c_str());
+		printf("%s\n\n", language_vars["lng_plus_menu"].c_str());
+		printf("%s", language_vars["lng_press_b_to_go_back"].c_str());
+		consoleUpdate(&menu_console);
+	};
+	renderHelpPage();
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_help"],
+		language_vars["lng_help_page_general"], "", -1, -1, true);
+	ScreenReader::ReadConsole(&menu_console, 2);
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		const u64 buttonsHeld = padGetButtons(&pad);
+		const u64 helpModifiers = HidNpadButton_L | HidNpadButton_R |
+			HidNpadButton_ZL | HidNpadButton_ZR;
+		int helpDirection = 0;
+		const u64 dpadHorizontal = kDown & (HidNpadButton_Left | HidNpadButton_Right);
+		if (!(buttonsHeld & helpModifiers) &&
+			(dpadHorizontal == HidNpadButton_Left || dpadHorizontal == HidNpadButton_Right)) {
+			helpDirection = dpadHorizontal == HidNpadButton_Right ? 1 : -1;
+			kDown &= ~(HidNpadButton_Left | HidNpadButton_Right);
+		}
+		else {
+			const HidAnalogStickState leftStick = padGetStickPos(&pad, 0);
+			const HidAnalogStickState rightStick = padGetStickPos(&pad, 1);
+			const int leftDirection = leftStick.x > 16000 ? 1 : leftStick.x < -16000 ? -1 : 0;
+			const int rightDirection = rightStick.x > 16000 ? 1 : rightStick.x < -16000 ? -1 : 0;
+			const bool horizontalStickActive = leftDirection != 0 || rightDirection != 0;
+			if (!horizontalStickActive)
+				horizontalStickEngaged = false;
+			else if (!horizontalStickEngaged) {
+				horizontalStickEngaged = true;
+				if (!(buttonsHeld & helpModifiers)) {
+					if (leftDirection == 0 || rightDirection == 0 || leftDirection == rightDirection)
+						helpDirection = leftDirection != 0 ? leftDirection : rightDirection;
+				}
+			}
+		}
+		if (helpDirection != 0) {
+			const int nextPage = helpDirection > 0 ? 1 : 0;
+			if (nextPage != helpPage) {
+				helpPage = nextPage;
+				renderHelpPage();
+				ScreenReader::SpeakContext(language_vars["lng_screenreader_context_help"],
+					language_vars[helpPage == 0 ? "lng_help_page_general" : "lng_help_page_screenreader"],
+					"", -1, -1, true);
+				ScreenReader::ReadConsole(&menu_console, 2);
+			}
+		}
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			break;
 		}
 	}
@@ -243,7 +383,9 @@ int appInit() {
 	*/
 	consoleInit(&logs_console);
 	set_consoles_default_size();
-	consoleSelect(&menu_console);
+	consoleEnableTextBuffer(&menu_console);
+	consoleEnableTextBuffer(&logs_console);
+	select_console(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
 	socketInitializeDefault();
@@ -260,14 +402,17 @@ appletSetAutoSleepDisabled(true);
 }
 
 void logs_console_clear() {
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	consoleClear();
 	consoleUpdate(&logs_console);
-	consoleSelect(&menu_console);
+	select_console(&menu_console);
 }
 
 void appExit() {
+	ScreenReader::SpeakAndWait(language_vars["lng_screenreader_app_close"], false);
+	ScreenReader::Shutdown();
 	debug_log_write("Fermeture de l'application.\n\n-----------------------------\n\n");
+	debug_log_stop();
 	
 	// appletEndBlockingHomeButton();
 	appletSetAutoSleepDisabled(false);
@@ -304,7 +449,7 @@ void get_version_pack() {
 void get_last_version_pack() {
 	FILE *pack_version_file;
 	bool res;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	if (!beta_mode) {
 		res = downloadInMemory(pack_version_url, &file_dl_in_memory, OFF, false);
 	} else {
@@ -314,7 +459,7 @@ void get_last_version_pack() {
 		logs_console_clear();
 		pack_version_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_version_file == NULL) {
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
 			free(file_dl_in_memory.memory);
 			file_dl_in_memory.size = 0;
 			return;
@@ -336,7 +481,7 @@ void get_last_version_pack() {
 		free(file_dl_in_memory.memory);
 		file_dl_in_memory.size = 0;
 	}
-	consoleSelect(&menu_console);
+	select_console(&menu_console);
 }
 
 void get_last_sha256_custom_files_pack() {
@@ -401,7 +546,7 @@ void get_last_sha256_pack() {
 	}
 
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 
 	pack_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 	if (pack_sha256_file == NULL) {
@@ -447,7 +592,7 @@ void get_last_sha256_app() {
 	}
 
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 
 	app_sha256_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 	if (app_sha256_file == NULL) {
@@ -478,7 +623,7 @@ void get_last_version_app() {
 	strcpy(last_app_version, APP_VERSION);
 	FILE *pack_version_file;
 	bool res;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	if (!beta_mode) {
 		res = downloadInMemory(app_version_url, &file_dl_in_memory, OFF, false);
 	} else {
@@ -488,7 +633,7 @@ void get_last_version_app() {
 		logs_console_clear();
 		pack_version_file = fmemopen(file_dl_in_memory.memory, file_dl_in_memory.size, "r");
 		if (pack_version_file == NULL) {
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
 			free(file_dl_in_memory.memory);
 			file_dl_in_memory.size = 0;
 			return;
@@ -510,7 +655,7 @@ void get_last_version_app() {
 		free(file_dl_in_memory.memory);
 		file_dl_in_memory.size = 0;
 	}
-	consoleSelect(&menu_console);
+	select_console(&menu_console);
 }
 
 void get_fw_version() {
@@ -621,27 +766,41 @@ void get_serial_number() {
 }
 
 void pause_homebrew() {
-	consoleSelect(&logs_console);
-	printf("%s\n", language_vars["lng_press_any_key_to_continue"].c_str());
+	select_console(&logs_console);
+	const std::string pauseMessage = language_vars["lng_press_any_key_to_continue"];
+	printf("%s\n", pauseMessage.c_str());
 	consoleUpdate(&logs_console);
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_pause"], pauseMessage, "");
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		const u64 pressedButtons = kDown;
+		const bool readerWasEnabled = ScreenReader::IsEnabled();
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
+		if (readerWasEnabled && (pressedButtons & (HidNpadButton_ZR | HidNpadButton_ZL | HidNpadButton_L | HidNpadButton_R)))
+			continue;
 		if (kDown != 0) {
 			break;
 		}
 	}
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 }
 
 bool ask_question(char *question_text, ...) {
 	bool rc;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	va_list v;
 	va_start(v, question_text);
+	va_list speech_args;
+	va_copy(speech_args, v);
 	vfprintf(stdout, question_text, v);
 	va_end(v);
+	speak_formatted_message(question_text, speech_args,
+		format_screenreader_choices("lng_screenreader_choice_yes_no",
+			language_vars["lng_yes"].c_str(), language_vars["lng_no"].c_str()));
+	va_end(speech_args);
 	printf("\n");
 	printf("	[A]: ");
 	printf(language_vars["lng_yes"].c_str());
@@ -652,26 +811,37 @@ bool ask_question(char *question_text, ...) {
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown & HidNpadButton_A) {
+			ScreenReader::Interrupt();
 			rc = true;
 			break;
 		} else if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			rc = false;
 			break;
 		}
 	}
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	return rc;
 }
 
 bool ask_question_with_changelog_choice(char *question_text, ...) {
 	bool rc;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	va_list v;
 	va_start(v, question_text);
+	va_list speech_args;
+	va_copy(speech_args, v);
 	vfprintf(stdout, question_text, v);
 	va_end(v);
+	speak_formatted_message(question_text, speech_args,
+		format_screenreader_choices("lng_screenreader_choice_yes_no_changelog",
+			language_vars["lng_yes"].c_str(), language_vars["lng_no"].c_str(),
+			language_vars["lng_display_changelog_choice"].c_str()));
+	va_end(speech_args);
 	printf("\n");
 	printf("	[A]: ");
 	printf(language_vars["lng_yes"].c_str());
@@ -685,13 +855,18 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown & HidNpadButton_A) {
+			ScreenReader::Interrupt();
 			rc = true;
 			break;
 		} else if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			rc = false;
 			break;
 		} else if (kDown & HidNpadButton_X) {
+			ScreenReader::Interrupt();
 			debug_log_write("Affichage du changelog.\n");
 			if (!internet_is_connected()) {
 				debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n");
@@ -722,24 +897,31 @@ bool ask_question_with_changelog_choice(char *question_text, ...) {
 		}
 	}
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	return rc;
 }
 
 u64 ask_question_2(char *question_text, ...) {
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	va_list v;
 	va_start(v, question_text);
+	va_list speech_args;
+	va_copy(speech_args, v);
 	vfprintf(stdout, question_text, v);
 	va_end(v);
+	speak_formatted_message(question_text, speech_args);
+	va_end(speech_args);
 	printf("\n");
 	consoleUpdate(&logs_console);
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown!= 0) {
+			ScreenReader::Interrupt();
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			return kDown;
 		}
 	}
@@ -747,12 +929,18 @@ u64 ask_question_2(char *question_text, ...) {
 
 bool protected_ask_question(char *question_text, ...) {
 	bool rc;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	printf("\x1B[31m");
 	va_list v;
 	va_start(v, question_text);
+	va_list speech_args;
+	va_copy(speech_args, v);
 	vfprintf(stdout, question_text, v);
 	va_end(v);
+	speak_formatted_message(question_text, speech_args,
+		format_screenreader_choices("lng_screenreader_choice_protected_yes_no",
+			language_vars["lng_yes"].c_str(), language_vars["lng_no"].c_str()));
+	va_end(speech_args);
 	printf("\x1B[37m");
 	printf("\n");
 	printf("	[L+R+LT+RT+A]: ");
@@ -764,17 +952,21 @@ bool protected_ask_question(char *question_text, ...) {
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		u64 kHeld = padGetButtons(&pad);
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZL && kHeld & HidNpadButton_ZR && kHeld & HidNpadButton_A) {
+			ScreenReader::Interrupt();
 			rc = true;
 			break;
 		} else if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			rc = false;
 			break;
 		}
 	}
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	return rc;
 }
 
@@ -782,12 +974,18 @@ bool konami_code_protected_ask_question(char *question_text, ...) {
 	bool rc;
 	HidNpadButton konami_code[] = {HidNpadButton_Up, HidNpadButton_Up, HidNpadButton_Down, HidNpadButton_Down, HidNpadButton_Left, HidNpadButton_Right, HidNpadButton_Left, HidNpadButton_Right, HidNpadButton_B, HidNpadButton_A};
 	int test_code = 0;
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	printf("\x1B[31m");
 	va_list v;
 	va_start(v, question_text);
+	va_list speech_args;
+	va_copy(speech_args, v);
 	vfprintf(stdout, question_text, v);
 	va_end(v);
+	speak_formatted_message(question_text, speech_args,
+		format_screenreader_choices("lng_screenreader_choice_konami_yes_no",
+			language_vars["lng_yes"].c_str(), language_vars["lng_no"].c_str()));
+	va_end(speech_args);
 	printf("\x1B[37m");
 	printf("\n");
 	printf("	[Konami Code]: ");
@@ -799,11 +997,14 @@ bool konami_code_protected_ask_question(char *question_text, ...) {
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown & HidNpadButton_StickLLeft || kDown & HidNpadButton_StickLRight || kDown & HidNpadButton_StickLUp || kDown & HidNpadButton_StickLDown || kDown & HidNpadButton_StickRLeft || kDown & HidNpadButton_StickRRight || kDown & HidNpadButton_StickRUp || kDown & HidNpadButton_StickRDown || kDown == 0) {
 			continue;
 		}
 		if (kDown == konami_code[test_code]) {
 			if (test_code+1 == sizeof (konami_code) / sizeof(HidNpadButton)) {
+				ScreenReader::Interrupt();
 				rc = true;
 			} else {
 				test_code++;
@@ -811,6 +1012,7 @@ bool konami_code_protected_ask_question(char *question_text, ...) {
 			}
 			break;
 		} else if (kDown & HidNpadButton_X) {
+			ScreenReader::Interrupt();
 			rc = false;
 			break;
 		} else {
@@ -818,7 +1020,7 @@ bool konami_code_protected_ask_question(char *question_text, ...) {
 		}
 	}
 	logs_console_clear();
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	return rc;
 }
 
@@ -898,10 +1100,15 @@ void display_infos(int cursor) {
 	printf("\n\n");
 	printf(language_vars["lng_press_b_to_go_back"].c_str());
 	consoleUpdate(&menu_console);
+	ScreenReader::ReadConsole(&menu_console, 0, -1,
+		language_vars["lng_screenreader_context_information"]);
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 		if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			break;
 		}
 	}
@@ -912,11 +1119,13 @@ void display_infos(int cursor) {
 
 void record_infos() {
 	debug_log_write("Ecriture des informations dans le fichier d'informations.\n");
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	FILE *log_infos;
 	log_infos = fopen("switch/AIO_LS_pack_Updater/console_infos.log", "w");
 	if ( log_infos == NULL ) {
 		printf(language_vars["lng_record_infos_log_not_open_error"].c_str());
+		ScreenReader::SpeakContext(language_vars["lng_screenreader_context_information"],
+			language_vars["lng_record_infos_log_not_open_error"], "", -1, -1, true);
 		printf("\n");
 		consoleUpdate(&logs_console);
 		return;
@@ -997,6 +1206,8 @@ void record_infos() {
 	// fprintf(log_infos, "%s", language_vars["lng_title"].c_str());
 	printf(language_vars["lng_record_infos_success"].c_str());
 	consoleUpdate(&logs_console);
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_information"],
+		language_vars["lng_record_infos_success"], "", -1, -1, true);
 	fclose(log_infos);
 }
 
@@ -1038,9 +1249,11 @@ void aply_reboot() {
 void switch_app_mode() {
 	if (!beta_mode) {
 		debug_log_write("Switch de l'application en mode Beta.\n");
+		ScreenReader::SpeakAndWait(language_vars["lng_screenreader_beta_switch"], false);
 		beta_mode = true;
 	} else {
 		debug_log_write("Switch de l'application en mode normal.\n");
+		ScreenReader::SpeakAndWait(language_vars["lng_screenreader_normal_switch"], false);
 		beta_mode = false;
 	}
 }
@@ -1066,6 +1279,7 @@ bool install_hbmenu() {
 					printDisplay(language_vars["lng_hbmenu_install_uninstall_error"].c_str());
 					printDisplay("\033[0;37m\n\n");
 					inst::util::deinitInstallServices();
+					ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 					return false;
 				} else {
 		debug_log_write("Désinstallation du HBMenu OK.\n");
@@ -1106,12 +1320,14 @@ bool install_hbmenu() {
 		printDisplay("\033[0;32m");
 		printDisplay(language_vars["lng_hbmenu_install_success"].c_str());
 		printDisplay("\033[0;37m\n");
+		ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 		return true;
 	} else {
 		debug_log_write("Erreur d'installation du HBMenu.\n\n");
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_hbmenu_install_error"].c_str());
 		printDisplay("\033[0;37m\n");
+		ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 		return false;
 	}
 }
@@ -1136,6 +1352,7 @@ bool install_app_fwd() {
 				printDisplay(language_vars["lng_hbmenu_install_uninstall_error"].c_str());
 				printDisplay("\033[0;37m\n\n");
 				inst::util::deinitInstallServices();
+				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 				return false;
 			} else {
 	debug_log_write("Désinstallation du forwarder du homebrew OK.\n");
@@ -1154,12 +1371,14 @@ bool install_app_fwd() {
 		printDisplay("\033[0;32m");
 		printDisplay(language_vars["lng_app_fwd_install_success"].c_str());
 		printDisplay("\033[0;37m\n");
+		ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 		return true;
 	} else {
 		debug_log_write("Erreur d'installation du forwarder du homebrew.\n\n");
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_app_fwd_install_error"].c_str());
 		printDisplay("\033[0;37m\n");
+		ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 		return false;
 	}
 }
@@ -1219,12 +1438,14 @@ bool fnc_install_firmware() {
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"].c_str());
 				printDisplay("\033[0;37m\n");
+				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 				return true;
 			} else {
 				debug_log_write("Erreur d'installation du firmware.\n\n");
 				printDisplay("\033[0;31m\n");
 				printDisplay(language_vars["lng_install_firmware_end_error"].c_str());
 				printDisplay("\033[0;37m\n");
+				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 				return false;
 			}
 		} else {
@@ -1233,12 +1454,14 @@ bool fnc_install_firmware() {
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"].c_str());
 				printDisplay("\033[0;37m\n");
+				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 				return true;
 			} else {
 				debug_log_write("Erreur d'installation du firmware.\n\n");
 				printDisplay("\033[0;31m\n");
 				printDisplay(language_vars["lng_install_firmware_end_error"].c_str());
 				printDisplay("\033[0;37m\n");
+				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 				return false;
 			}
 		}
@@ -1247,6 +1470,7 @@ bool fnc_install_firmware() {
 		printDisplay("\033[0;31m");
 		printDisplay(language_vars["lng_install_firmware_error_folder_not_found"].c_str());
 		printDisplay("\033[0;37m\n");
+		ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
 		return false;
 	}
 	return false;
@@ -1401,12 +1625,13 @@ bool auto_update_app(bool update_app) {
 	}
 	if (update_app) {
 		debug_log_write("Mise à jour de l'application.\n");
-		consoleSelect(&logs_console);
+		select_console(&logs_console);
 		mkdir(APP_PATH, 0777);
 		if (get_sd_size_left() <= 10000000) {
 			debug_log_write("Pas assez d'espace sur la SD.\n\n");
 			printDisplay("\033[0;31m");
 			printDisplay(language_vars["lng_error_not_enough_space_on_sd"].c_str());
+					speak_operation_message(language_vars["lng_error_not_enough_space_on_sd"]);
 			printDisplay("\033[0;37m\n");
 		} else {
 			get_last_sha256_app();
@@ -1433,11 +1658,12 @@ bool auto_update_app(bool update_app) {
 						debug_log_write("Erreur de téléchargement de l'application, installation annulée.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_install_app_download_app_error"].c_str());
+					speak_operation_message(language_vars["lng_install_app_download_app_error"]);
 						printDisplay("\033[0;37m\n");
 						install_app = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
 						if (!install_app) {
 							remove(TEMP_FILE);
-							consoleSelect(&menu_console);
+							select_console(&menu_console);
 							return false;
 						}
 					}
@@ -1446,15 +1672,18 @@ bool auto_update_app(bool update_app) {
 					debug_log_write("Erreur de copie de Aiosu-forwarder.\n\n");
 					printDisplay("\033[0;31m");;
 					printDisplay(language_vars["lng_error_copy_file"].c_str());
+					speak_operation_message(language_vars["lng_error_copy_file"]);
 					printDisplay("\033[0;37m");;
 					remove(TEMP_FILE);
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					return false;
 				} else {
 					debug_log_write("Mise à jour de l'application OK.\n\n");
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 					printDisplay("\033[0;37m\n");
+					ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+						language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 					sleep(5);
 					appExit();
 					envSetNextLoad("/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro", "\"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro\"");
@@ -1464,17 +1693,18 @@ bool auto_update_app(bool update_app) {
 				debug_log_write("Erreur de téléchargement de l'application.\n\n");
 				printDisplay("\033[0;31m");
 				printDisplay(language_vars["lng_install_app_download_app_error"].c_str());
+					speak_operation_message(language_vars["lng_install_app_download_app_error"]);
 				printDisplay("\033[0;37m\n");
 				remove(TEMP_FILE);
 			}
 		}
-		consoleSelect(&menu_console);
+		select_console(&menu_console);
 	}
 	return false;
 }
 
 void hekate_config_menu_refreshScreen(int hekate_config_choice_cursor, const IniData* iniData) {
-	consoleSelect(&menu_console);
+	select_console(&menu_console);
 	consoleClear();
 	if (!beta_mode) {
 		printf("\x1B[36m");
@@ -1502,11 +1732,16 @@ void hekate_config_menu_refreshScreen(int hekate_config_choice_cursor, const Ini
 	}
 	if (iniData->numSections <= 0) {
 		printf(language_vars["lng_hekate_config_choice_no_configs_found"].c_str());
+			ScreenReader::SpeakContext(language_vars["lng_screenreader_context_hekate_config"],
+				language_vars["lng_hekate_config_choice_no_configs_found"], "", -1, -1, true);
 	}
 	for (int i = min_display_config; i < max_display_config; i++) {
 		Section* section = &(iniData->sections[i]);
 		if (hekate_config_choice_cursor == i) {
 			printf("\x1B[31m%s\x1B[37m\n", section->section);
+			ScreenReader::SpeakContext("", (std::string)section->section,
+				language_vars["lng_screenreader_nav_menus_help"], hekate_config_choice_cursor + 1,
+				(int)iniData->numSections);
 		} else {
 			printf("%s\n", section->section);
 		}
@@ -1557,6 +1792,8 @@ while ((de = readdir(dr)) != nullptr)
 			removeSection(&iniData, i);
 		}
 	}
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_hekate_config"],
+		language_vars["lng_hekate_config_choice_menu_title"], "", -1, -1, true);
 	hekate_config_menu_refreshScreen(hekate_selected_config_index[0], &iniData);
 	bool time_calculate = false;
 	int install_pack_hekate_autoboot_choice_time_local = 0;
@@ -1577,6 +1814,8 @@ while ((de = readdir(dr)) != nullptr)
 	while(1) {
 		padUpdate(&pad);
 		u64 kDown = padGetButtonsDown(&pad);
+		ScreenReader::HandleInput(&pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive()) continue;
 
 		if (iniData.numSections > 0) {
 			// move cursor down...
@@ -1598,6 +1837,8 @@ while ((de = readdir(dr)) != nullptr)
 			}
 
 			else if (kDown & HidNpadButton_A || (time_calculate && passed_time > install_pack_hekate_autoboot_choice_time_local)) {
+				if (kDown & HidNpadButton_A)
+					ScreenReader::Interrupt();
 				time_calculate = false;
 				if (iniData.sections[hekate_selected_config_index[0]].is_main_config) {
 					hekate_selected_config_index[0]++;
@@ -1610,6 +1851,7 @@ while ((de = readdir(dr)) != nullptr)
 			}
 
 			else if (kDown & HidNpadButton_B) {
+				ScreenReader::Interrupt();
 				time_calculate = false;
 				hekate_selected_config_index[0] = -1;
 				hekate_selected_config_index[1] = -1;
@@ -1617,6 +1859,8 @@ while ((de = readdir(dr)) != nullptr)
 			}
 		}  else {
 			if (kDown & HidNpadButton_B || (time_calculate && passed_time > install_pack_hekate_autoboot_choice_time_local)) {
+				if (kDown & HidNpadButton_B)
+					ScreenReader::Interrupt();
 				time_calculate = false;
 				hekate_selected_config_index[0] = -2;
 				hekate_selected_config_index[1] = -2;
@@ -1640,10 +1884,12 @@ while ((de = readdir(dr)) != nullptr)
 }
 
 void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
-	consoleSelect(&logs_console);
+	select_console(&logs_console);
 	if (hekate_autoboot_lineno == -1  ||  hekate_autoboot_config_lineno == -1) {
 		debug_log_write("Paramètre autoboot de Hekate inexistant.\n\n");
 		printDisplay(language_vars["lng_no_hekate_autoboot_config_set_error"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_no_hekate_autoboot_config_set_error"], "");
 		return;
 	}
 	char autoboot_param[21] = "autoboot=";
@@ -1654,13 +1900,15 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	if (enable) {
 		if (bootentry[0] <= 0) {
 			autoboot_config_index = hekate_config_choice_menu(false);
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 		} else {
 			autoboot_config_index  = bootentry;
 		}
 		if (autoboot_config_index[0] < 0) {
 			debug_log_write("Configuration de l'autoboot de Hekate interrompu par l'utilisateur.\n\n");
 			printDisplay(language_vars["lng_hekate_autoboot_config_canceled"].c_str());
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+				language_vars["lng_hekate_autoboot_config_canceled"], "");
 			return;
 		} else {
 			sprintf(autoboot_index_str, "%d", autoboot_config_index[0]);
@@ -1679,18 +1927,24 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	if (hekate_autoboot != 0 && !enable) {
 		debug_log_write("Paramètre autoboot de Hekate déjà configuré.\n\n");
 		printDisplay(language_vars["lng_hekate_param_already_set"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_param_already_set"], "");
 		return;
 	}
 	FILE* hekate_in=fopen("/bootloader/hekate_ipl.ini", "r");
 	if (hekate_in == NULL) {
 		debug_log_write("Erreur de lecture du fichier de config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_error_config_file_read"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_error_config_file_read"], "");
 		return;
 	}
 	FILE* hekate_out=fopen("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", "w");
 	if (hekate_out == NULL) {
 		debug_log_write("Erreur d'écriture du fichier temporaire de la config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_error_temp_file_write"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_error_temp_file_write"], "");
 		return;
 	}
 	char buffer[1000];
@@ -1722,6 +1976,8 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	if (!custom_cp((char*) "/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini", (char*) "/bootloader/hekate_ipl.ini")) {
 		debug_log_write("Erreur de copie de la nouvelle config de Hekate.\n\n");
 		printDisplay(language_vars["lng_hekate_replace_config_error"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_replace_config_error"], "");
 		return;
 	} else {
 		remove("/switch/AIO_LS_pack_Updater/hekate_ipl_temp.ini");
@@ -1729,9 +1985,13 @@ void update_hekate_autoboot_param(bool enable, int bootentry[2]) {
 	if (enable) {
 		debug_log_write("Paramètre autoboot de Hekate activé.\n\n");
 		printDisplay(language_vars["lng_hekate_autoboot_enabled_success"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_autoboot_enabled_success"], "");
 	} else {
 		debug_log_write("Paramètre autoboot de Hekate désactivé.\n\n");
 		printDisplay(language_vars["lng_hekate_autoboot_disabled_success"].c_str());
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_hekate_autoboot_disabled_success"], "");
 	}
 	get_hekate_autoboot_status();
 }
@@ -1776,7 +2036,7 @@ void update_app_autoconfig_params() {
 	if (beta_launch) {
 		printDisplay(language_vars["lng_autoconfig_recap_beta_launch"].c_str());
 	} else {
-		printDisplay(language_vars["lng_autoconfig_recap_not_beta_launch"].c_str());
+		printDisplay(language_vars["lng_autoconfig_recap_not_not_beta_launch"].c_str());
 	}
 	printDisplay("\n");
 	if (update_firmware) {
@@ -1834,6 +2094,24 @@ void update_app_autoconfig_params() {
 		printDisplay(language_vars["lng_install_pack_recap_not_install_app_fwd"].c_str());
 	}
 	printDisplay("\n");
+	std::string autoconfigRecapSpeech;
+	append_speech_line(autoconfigRecapSpeech, language_vars["lng_autoconfig_recap_begin"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[full_app_control ? "lng_autoconfig_recap_full_app_control" : "lng_autoconfig_recap_not_full_app_control"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[beta_launch ? "lng_autoconfig_recap_beta_launch" : "lng_autoconfig_recap_not_not_beta_launch"]);
+	if (update_firmware) {
+		append_speech_line(autoconfigRecapSpeech, language_vars["lng_install_pack_recap_firmware_install"]);
+	} else {
+		append_speech_line(autoconfigRecapSpeech, language_vars["lng_install_pack_recap_not_install_firmware"]);
+		append_speech_line(autoconfigRecapSpeech, language_vars[clean_theme ? "lng_install_pack_recap_clean_theme" : "lng_install_pack_recap_not_clean_theme"]);
+	}
+	append_speech_line(autoconfigRecapSpeech, language_vars[agressive_clean ? "lng_install_pack_recap_agressive_clean" : "lng_install_pack_recap_not_agressive_clean"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[clean_modules ? "lng_install_pack_recap_clean_modules" : "lng_install_pack_recap_not_clean_modules"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[keep_files ? "lng_install_pack_recap_keep_files" : "lng_install_pack_recap_not_keep_files"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[hekate_autoboot_enable ? "lng_install_pack_recap_enable_hekate_autoboot" : "lng_install_pack_recap_not_enable_hekate_autoboot"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[clean_logos ? "lng_install_pack_recap_clean_logos" : "lng_install_pack_recap_not_clean_logos"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[install_hbmenu_choice ? "lng_install_pack_recap_install_hbmenu" : "lng_install_pack_recap_not_install_hbmenu"]);
+	append_speech_line(autoconfigRecapSpeech, language_vars[install_app_fwd_choice ? "lng_install_pack_recap_install_app_fwd" : "lng_install_pack_recap_not_install_app_fwd"]);
+	set_next_question_speech_context(autoconfigRecapSpeech);
 	bool validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"].c_str());
 	if (validate_choice) {
 		FILE* config = fopen("/switch/AIO_LS_pack_Updater/autoconfig.ini", "w");
@@ -1916,7 +2194,7 @@ int main(int argc, char **argv) {
 		debug_log_start();
 		debug_already_started = true;
 	}
-	if (strcmp(argv[0], (char*)"/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
+	if (strcmp(argv[0], (char*)"/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0 && strcmp(argv[0], (char*)"sdmc:/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
 		if (!custom_cp((char*)"romfs:/nro/aiosu-forwarder.nro", (char*)"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
 			debug_log_write("Erreur de copie du forwarder.\n\n");
 			appExit();
@@ -1931,6 +2209,20 @@ int main(int argc, char **argv) {
 	}
 	language_vars = set_translation_strings();
 	menu_init();
+	padInitializeDefault(&pad);
+	ScreenReader::RegisterConsole(&menu_console, language_vars["lng_screenreader_console_menu"]);
+	ScreenReader::RegisterConsole(&logs_console, language_vars["lng_screenreader_console_logs"]);
+	debug_log_write("Initialisation de la revue d'écran.\n");
+
+	if (ScreenReader::Initialize()) {
+		debug_log_write("Initialisation de la revue d'écran réussie.\n");
+		ScreenReader::SetCustomLanguageSelectionEnabled(is_custom_translation_loaded());
+		ScreenReader::SetLanguage(get_translation_language());
+		const bool screenReaderEnabled = ScreenReader::IsEnabled();
+		ScreenReader::Enable(screenReaderEnabled);
+	} else {
+		debug_log_write("La revue d'écran n'a pas pu être initialisée.\n");
+	}
 
 	strcpy(pack_version, language_vars["lng_unknown_1"].c_str());
 	strcpy(last_pack_version, language_vars["lng_unknown_1"].c_str());
@@ -1941,7 +2233,6 @@ int main(int argc, char **argv) {
 	strcpy(emummc_type, language_vars["lng_unknown_0"].c_str());
 	strcpy(fusee_gelee_patch, language_vars["lng_unknown_0"].c_str());
 	strcpy(console_model, language_vars["lng_unknown_0"].c_str());
-	padInitializeDefault(&pad);
 
 	// change directory to root (defaults to /switch/)
 	chdir(ROOT);
@@ -1967,7 +2258,7 @@ int main(int argc, char **argv) {
 	if (autoconfig_enabled) {
 		if (autoconfig_config.c1.use_all_app_functions != 1) {
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			time_t start_time;
 			time_t cur_time;
 			double dif = 0;
@@ -1977,7 +2268,10 @@ int main(int argc, char **argv) {
 			while(dif <= wait_time) {
 				padUpdate(&pad);
 				kDown = padGetButtonsDown(&pad);
+			ScreenReader::HandleInput(&pad, kDown);
+			if (ScreenReader::IsVirtualReviewActive()) continue;
 				if (kDown & HidNpadButton_A) {
+					ScreenReader::Interrupt();
 					debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
 					remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
 					get_autoconfig();
@@ -1986,13 +2280,13 @@ int main(int argc, char **argv) {
 					pause_homebrew();
 					logs_console_clear();
 					kDown = 0;
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				}
 				time(&cur_time);
 				dif = difftime(cur_time, start_time);
 			}
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
 			kDown = 0;
 		}
 	}
@@ -2046,7 +2340,7 @@ int main(int argc, char **argv) {
 	}
 
 	// main menu
-	refreshScreen(cursor);
+	refreshScreen(cursor, false);
 
 	if (auto_update_app(false)) {
 		return 0;
@@ -2057,7 +2351,7 @@ int main(int argc, char **argv) {
 	if (pack_update_found) {
 		if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			printDisplay(language_vars["lng_pack_have_update"].c_str(), pack_version, last_pack_version);
 			printDisplay("\n\n");
 			if (!isApplet()) {
@@ -2070,13 +2364,15 @@ int main(int argc, char **argv) {
 				pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 			}
 			logs_console_clear();
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
 			if (pack_update_found_install) {
 				cursor = UP_CFW;
 				kDown = HidNpadButton_A;
 			}
 		}
 	}
+	if (!pack_update_found_install)
+		announce_main_menu_return(cursor);
 
 	// Loop for the menu
 	bool hekate_autoboot_enable_combot_disable = false;
@@ -2088,7 +2384,10 @@ int main(int argc, char **argv) {
 		if ((!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) && !pack_update_found_install) {
 			padUpdate(&pad);
 			kDown = padGetButtonsDown(&pad);
+			ScreenReader::HandleInput(&pad, kDown);
 			kHeld = padGetButtons(&pad);
+			if (ScreenReader::IsVirtualReviewActive()) continue;
+
 		}
 
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_R) {
@@ -2102,29 +2401,31 @@ int main(int argc, char **argv) {
 		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZR && !hekate_autoboot_enable_combot_disable) {
 			debug_log_write("Activation de l'auto-boot de Hekate.\n");
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"].c_str());
 			printDisplay("\n");
 			update_hekate_autoboot_param(true, hekate_autoboot_chosen);
-			refreshScreen(cursor);
+			refreshScreen(cursor, false);
+			announce_main_menu_return(cursor);
 			//  hekate_autoboot_enable_combot_disable = true;
 			hekate_autoboot_disable_combot_disable = false;
 		}
 		if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZL && !hekate_autoboot_disable_combot_disable) {
 			debug_log_write("Désactivation de l'auto-boot de Hekate.\n");
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			printDisplay(language_vars["lng_install_pack_configuring_hekate_autoboot"].c_str());
 			printDisplay("\n");
 			update_hekate_autoboot_param(false, hekate_autoboot_chosen);
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
+			announce_main_menu_return(cursor);
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = true;
 		}
 		if (kHeld & HidNpadButton_R && kHeld & HidNpadButton_ZL) {
 			debug_log_write("Activation de l'auto-configuration du homebrew.\n");
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 			update_app_autoconfig_params();
 			get_autoconfig();
 				if (autoconfig_enabled) {
@@ -2141,7 +2442,8 @@ int main(int argc, char **argv) {
 					appExit();
 					return 0;
 				}
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
+			announce_main_menu_return(cursor);
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
 		}
@@ -2149,11 +2451,12 @@ int main(int argc, char **argv) {
 			if (kHeld & HidNpadButton_L && kHeld & HidNpadButton_ZR) {
 				debug_log_write("Désactivation de l'auto-configuration du homebrew.\n");
 				logs_console_clear();
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				remove("/switch/AIO_LS_pack_Updater/autoconfig.ini");
 				get_autoconfig();
 				printDisplay(language_vars["lng_autoconfig_disabled"].c_str());
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
+				announce_main_menu_return(cursor);
 				hekate_autoboot_enable_combot_disable = false;
 				hekate_autoboot_disable_combot_disable = false;
 			}
@@ -2182,23 +2485,27 @@ int main(int argc, char **argv) {
 		}
 
 		else if (kDown & HidNpadButton_StickR) {
+			ScreenReader::Interrupt();
 			logs_console_clear();
 			help_menu();
-			refreshScreen(cursor);
+			refreshScreen(cursor, false);
+			announce_main_menu_return(cursor, true);
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
 		}
 
 	else if (kDown & HidNpadButton_StickL) {
+			ScreenReader::Interrupt();
 			debug_log_write("Affichage du changelog.\n");
 			logs_console_clear();
-			consoleSelect(&logs_console);
+			select_console(&logs_console);
 				if (!internet_is_connected()) {
 					printf("\n\033[0;31m");
 					printf(language_vars["lng_error_no_internet_connection_for_function"].c_str());
+					speak_operation_message(language_vars["lng_error_no_internet_connection_for_function"]);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					debug_log_write("Erreur: Aucune connexion à internet pour afficher le changelog.\n\n");
 				} else {
 				if (!isApplet()) {
@@ -2228,11 +2535,14 @@ int main(int argc, char **argv) {
 			}
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
-			consoleSelect(&menu_console);
+			select_console(&menu_console);
+			announce_main_menu_return(cursor);
 		}
 
 		else if (kDown & HidNpadButton_A)
 		{
+			if (ScreenReader::IsEnabled())
+				ScreenReader::Interrupt();
 			logs_console_clear();
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
@@ -2242,7 +2552,7 @@ int main(int argc, char **argv) {
 			{
 				force_firmware_install:
 				debug_log_write("Installation d'un firmware.\n");
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (verify_update((char* )APP_VERSION, last_app_version)) {
 					bool need_update_app = false;
 					debug_log_write("Le homebrew doit être mis à jour.\n");
@@ -2262,47 +2572,52 @@ int main(int argc, char **argv) {
 				if (GetChargerType() == 0 && get_battery_charge() < 10) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_10"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_10"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 20) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_20"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_20"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					printDisplay("\n");
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					break;
 				}
 				bool update_firmware2 = false;
@@ -2335,7 +2650,10 @@ int main(int argc, char **argv) {
 							printDisplay("\n");
 						}
 						printDisplay("\n");
+						set_next_question_speech_context(build_firmware_recap_speech(agressive_clean2, clean_modules_2));
 						update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"].c_str());
+						if (!update_firmware2)
+							announce_main_menu_return(cursor, true);
 					}
 				} else {
 					agressive_clean2 = ask_question((char*) language_vars["lng_ask_agressive_clean"].c_str());
@@ -2357,7 +2675,10 @@ int main(int argc, char **argv) {
 						printDisplay("\n");
 					}
 					printDisplay("\n");
+					set_next_question_speech_context(build_firmware_recap_speech(agressive_clean2, clean_modules_2));
 					update_firmware2 = ask_question((char*) language_vars["lng_ask_update_firmware"].c_str());
+					if (!update_firmware2)
+						announce_main_menu_return(cursor, true);
 				}
 				if (update_firmware2) {
 					if (fnc_install_firmware()) {
@@ -2372,6 +2693,8 @@ int main(int argc, char **argv) {
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 						printDisplay("\033[0;37m\n");
+						ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+							language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 						sleep(5);
 						aply_reboot();
 					}
@@ -2381,7 +2704,7 @@ int main(int argc, char **argv) {
 				if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 					goto exit_homebrew;
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 			case UP_CFW:
@@ -2391,13 +2714,14 @@ int main(int argc, char **argv) {
 				} else {
 					debug_log_write("Installation du pack avec les parammètres de configurations automatiques.\n");
 				}
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (!internet_is_connected()) {
 					printf("\n\033[0;31m");
 					printf(language_vars["lng_error_no_internet_connection_for_function"].c_str());
+					speak_operation_message(language_vars["lng_error_no_internet_connection_for_function"]);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour le pack.\n\n");
 					break;
 				}
@@ -2421,46 +2745,51 @@ int main(int argc, char **argv) {
 				if (GetChargerType() == 0 && get_battery_charge() < 20) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_20"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_20"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 1 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 2 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == 3 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				} else if (GetChargerType() == -1 && get_battery_charge() < 30) {
 					debug_log_write("Erreur, batterie pas assez chargée.\n\n");
 					printDisplay(language_vars["lng_battery_error_30"].c_str());
+					speak_operation_message(language_vars["lng_battery_error_30"], autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1);
 					if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 						goto exit_homebrew;
 					}
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				}
@@ -2468,7 +2797,7 @@ int main(int argc, char **argv) {
 				bool update_exfat_question = true;
 				update_exfat_question = ask_question((char*) language_vars["lng_ask_sd_exfat"].c_str());
 				if (update_exfat_question) {
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					pack_update_found_install = false;
 					break;
 				}
@@ -2602,6 +2931,14 @@ int main(int argc, char **argv) {
 							printDisplay("\n");
 						}
 						printDisplay("\n");
+						std::string firmwareOnlyRecapSpeech;
+						append_speech_line(firmwareOnlyRecapSpeech, language_vars["lng_install_pack_recap_begin"]);
+						char firmwareOnlyPackVersionSpeech[512];
+						snprintf(firmwareOnlyPackVersionSpeech, sizeof(firmwareOnlyPackVersionSpeech), language_vars["lng_pack_have_no_update"].c_str(), pack_version, last_pack_version);
+						append_speech_line(firmwareOnlyRecapSpeech, firmwareOnlyPackVersionSpeech);
+						append_speech_line(firmwareOnlyRecapSpeech, language_vars[agressive_clean ? "lng_install_pack_recap_agressive_clean" : "lng_install_pack_recap_not_agressive_clean"]);
+						append_speech_line(firmwareOnlyRecapSpeech, language_vars[clean_modules ? "lng_install_pack_recap_clean_modules" : "lng_install_pack_recap_not_clean_modules"]);
+						set_next_question_speech_context(firmwareOnlyRecapSpeech);
 						bool autoconfig_ask_firmware_update=ask_question((char*) language_vars["lng_ask_update_firmware_only"].c_str());
 						if (autoconfig_ask_firmware_update) {
 							goto force_firmware_install;
@@ -2677,6 +3014,25 @@ int main(int argc, char **argv) {
 					printDisplay(language_vars["lng_install_pack_recap_not_install_app_fwd"].c_str());
 				}
 				printDisplay("\n");
+				std::string packRecapSpeech;
+				append_speech_line(packRecapSpeech, language_vars["lng_install_pack_recap_begin"]);
+				char packVersionSpeech[512];
+				snprintf(packVersionSpeech, sizeof(packVersionSpeech), language_vars[pack_update_found ? "lng_pack_have_update" : "lng_pack_have_no_update"].c_str(), pack_version, last_pack_version);
+				append_speech_line(packRecapSpeech, packVersionSpeech);
+				if (update_firmware) {
+					append_speech_line(packRecapSpeech, language_vars["lng_install_pack_recap_firmware_install"]);
+				} else {
+					append_speech_line(packRecapSpeech, language_vars["lng_install_pack_recap_not_install_firmware"]);
+					append_speech_line(packRecapSpeech, language_vars[clean_theme ? "lng_install_pack_recap_clean_theme" : "lng_install_pack_recap_not_clean_theme"]);
+				}
+				append_speech_line(packRecapSpeech, language_vars[agressive_clean ? "lng_install_pack_recap_agressive_clean" : "lng_install_pack_recap_not_agressive_clean"]);
+				append_speech_line(packRecapSpeech, language_vars[clean_modules ? "lng_install_pack_recap_clean_modules" : "lng_install_pack_recap_not_clean_modules"]);
+				append_speech_line(packRecapSpeech, language_vars[keep_files ? "lng_install_pack_recap_keep_files" : "lng_install_pack_recap_not_keep_files"]);
+				append_speech_line(packRecapSpeech, language_vars[hekate_autoboot_enable ? "lng_install_pack_recap_enable_hekate_autoboot" : "lng_install_pack_recap_not_enable_hekate_autoboot"]);
+				append_speech_line(packRecapSpeech, language_vars[clean_logos ? "lng_install_pack_recap_clean_logos" : "lng_install_pack_recap_not_clean_logos"]);
+				append_speech_line(packRecapSpeech, language_vars[install_hbmenu_choice ? "lng_install_pack_recap_install_hbmenu" : "lng_install_pack_recap_not_install_hbmenu"]);
+				append_speech_line(packRecapSpeech, language_vars[install_app_fwd_choice ? "lng_install_pack_recap_install_app_fwd" : "lng_install_pack_recap_not_install_app_fwd"]);
+				set_next_question_speech_context(packRecapSpeech);
 				bool validate_choice = false;
 				if (!isApplet()) {
 					if ((!beta_mode && strcmp(pack_changelog_url, "") != 0) || (beta_mode && strcmp(pack_changelog_url_beta, "") != 0)) {
@@ -2687,6 +3043,8 @@ int main(int argc, char **argv) {
 				} else {
 					validate_choice = ask_question((char*) language_vars["lng_ask_validate_choices"].c_str());
 				}
+				if (!validate_choice && !(autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1))
+					announce_main_menu_return(cursor, true);
 				if (validate_choice) {
 					debug_log_write("\nRécapitulatif des paramètres d'installation du pack:.\n");
 						if (update_firmware) {
@@ -2752,6 +3110,7 @@ int main(int argc, char **argv) {
 						debug_log_write("Pas assez d'espace sur la SD.\n\n");
 						printDisplay("\033[0;31m");
 						printDisplay(language_vars["lng_error_not_enough_space_on_sd"].c_str());
+					speak_operation_message(language_vars["lng_error_not_enough_space_on_sd"]);
 						printDisplay("\033[0;37m\n");
 					} else {
 						get_last_sha256_pack();
@@ -2780,11 +3139,12 @@ int main(int argc, char **argv) {
 									debug_log_write("Erreur de téléchargement du pack, installation annulée\n\n.");
 									printDisplay("\033[0;31m");
 									printDisplay(language_vars["lng_install_pack_download_pack_error"].c_str());
+					speak_operation_message(language_vars["lng_install_pack_download_pack_error"]);
 									printDisplay("\033[0;37m\n");
 									unzip_pack = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
 									if (!unzip_pack) {
 										remove(TEMP_FILE);
-										consoleSelect(&menu_console);
+										select_console(&menu_console);
 										if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 											goto exit_homebrew;
 										}
@@ -2842,6 +3202,7 @@ int main(int argc, char **argv) {
 											if (strcmp_ignore_case(custom_files_pack_sha256, dl_custom_files_pack_sha256) != true) {
 												printDisplay("\033[0;31m");
 												printDisplay(language_vars["lng_install_custom_files_pack_download_error"].c_str());
+					speak_operation_message(language_vars["lng_install_custom_files_pack_download_error"]);
 												printDisplay("\033[0;37m\n");
 												unzip_custom_pack = ask_question((char*) language_vars["lng_ask_force_error_with_sha256"].c_str());
 												if (!unzip_custom_pack) {
@@ -2880,8 +3241,8 @@ int main(int argc, char **argv) {
 									int* temp_hekate_autoboot_chosen;
 									while(1) {
 										temp_hekate_autoboot_chosen = hekate_config_choice_menu(true);
-										refreshScreen(cursor);
-										consoleSelect(&logs_console);
+									refreshScreen(cursor, false);
+										select_console(&logs_console);
 										if (temp_hekate_autoboot_chosen[0] == -2) {
 											debug_log_write("Aucune configuration de Hekate trouvée, désactivation de l'autoboot de Hekate forcée.");
 											update_hekate_autoboot_param(false, hekate_autoboot_chosen);
@@ -2911,6 +3272,8 @@ int main(int argc, char **argv) {
 								printDisplay("\033[0;32m\n");
 								printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 								printDisplay("\033[0;37m\n");
+								ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+									language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 								sleep(5);
 								aply_reboot();
 							} else {
@@ -2921,6 +3284,7 @@ int main(int argc, char **argv) {
 							debug_log_write("Erreur de téléchargement du pack.\n\n");
 							printDisplay("\033[0;31m");
 							printDisplay(language_vars["lng_install_pack_download_pack_error"].c_str());
+					speak_operation_message(language_vars["lng_install_pack_download_pack_error"]);
 							printDisplay("\033[0;37m\n");
 							remove(TEMP_FILE);
 						}
@@ -2935,7 +3299,7 @@ int main(int argc, char **argv) {
 			if (autoconfig_enabled && autoconfig_config.c1.use_all_app_functions != 1) {
 				goto exit_homebrew;
 			}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				pack_update_found_install = false;
 				break;
 			}
@@ -2943,12 +3307,13 @@ int main(int argc, char **argv) {
 			case UP_APP:
 			{
 				if (!internet_is_connected()) {
-					consoleSelect(&logs_console);
+					select_console(&logs_console);
 					printf("\n\033[0;31m");
 					printf(language_vars["lng_error_no_internet_connection_for_function"].c_str());
+					speak_operation_message(language_vars["lng_error_no_internet_connection_for_function"]);
 					printf("\033[0;37m\n");
 					consoleUpdate(&logs_console);
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					debug_log_write("Erreur: Aucune connexion à internet pour mettre à jour l'application.\n\n");
 					break;;
 				}
@@ -2961,12 +3326,14 @@ int main(int argc, char **argv) {
 			case UP_90DNS:
 			{
 				debug_log_write("Mise en place de 90DNS.\n");
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (set_90dns()) {
 						debug_log_write("Application de 90DNS OK.\n\n");
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 					printDisplay("\033[0;37m\n");
+					ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+						language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 					sleep(5);
 					simple_reboot();
 				} else {
@@ -2975,20 +3342,21 @@ int main(int argc, char **argv) {
 						printDisplay(language_vars["lng_dns_end_install_error"].c_str());
 						printDisplay("\033[0;37m\n");
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_ATMO_PROTECT_CONFIGS:
 			{
 				debug_log_write("Mise en place des protections d'Atmosphere.\n");
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				printDisplay(language_vars["lng_protect_console_begin"].c_str());
 				printDisplay("\n");
 				if (get_sd_size_left() <= 100000) {
 					debug_log_write("Pas assez d'espace sur la SD.\n\n");
 					printDisplay("\033[0;31m");
 					printDisplay(language_vars["lng_error_not_enough_space_on_sd"].c_str());
+					speak_operation_message(language_vars["lng_error_not_enough_space_on_sd"]);
 					printDisplay("\033[0;37m\n");
 				} else {
 					mkdir((char*) "/atmosphere", 0777);
@@ -3006,38 +3374,41 @@ int main(int argc, char **argv) {
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 						printDisplay("\033[0;37m\n");
+						ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+							language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 						sleep(5);
 						simple_reboot();
 					} else {
 						debug_log_write("Erreur durant l'application des protections.\n\n");
 						printDisplay("\033[0;31m\n");
 						printDisplay(language_vars["lng_protect_console_error"].c_str());
+					speak_operation_message(language_vars["lng_protect_console_error"]);
 						printDisplay("\033[0;37m\n");
 					}
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_HBMENU_INSTALL:
 			{
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				install_hbmenu();
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_APP_INSTALL:
 			{
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				install_app_fwd();
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_PARENTAL_RESET:
 			{
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_parental_reset"].c_str())) {
 					debug_log_write("Réinitialisation du Contrôle parental.\n");
 					printf(language_vars["lng_reset_parental_begin"].c_str());
@@ -3058,18 +3429,19 @@ int main(int argc, char **argv) {
 					}
 					pctlExit();
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_SYNC_TIME:
 			{
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (ask_question((char*) language_vars["lng_ask_validate_choices_for_sync_time"].c_str())) {
 					debug_log_write("Synchronisation de l'heure.\n");
 					if (!internet_is_connected()) {
 						debug_log_write("Erreur: Aucune connexion à internet pour synchroniser l'heure.\n");
 						printDisplay(language_vars["lng_error_no_internet_connection_for_function"].c_str());
+					speak_operation_message(language_vars["lng_error_no_internet_connection_for_function"]);
 					} else {
 						printDisplay(language_vars["lng_sync_time_begin"].c_str());
 						printDisplay("\n");
@@ -3082,13 +3454,13 @@ int main(int argc, char **argv) {
 						}
 					}
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 
 			case UP_RESET:
 			{
-				consoleSelect(&logs_console);
+				select_console(&logs_console);
 				if (protected_ask_question((char*) language_vars["lng_ask_validate_choices_for_reset"].c_str())) {
 					debug_log_write("Réinitialisation du système.\n\n");
 					nsInitialize();
@@ -3098,14 +3470,14 @@ int main(int argc, char **argv) {
 								printf(language_vars["lng_db_install_process_reset_to_factory_error"].c_str(), rc);
 								debug_log_write("Réinitialisation échouée.\n\n");
 								nsExit();
-								consoleSelect(&menu_console);
+								select_console(&menu_console);
 								break;
 							}
 						} else {
 							printf(language_vars["lng_db_install_process_reset_to_factory_for_refurbishment_error"].c_str(), rc);
 							debug_log_write("Réinitialisation d'usine échouée.\n\n");
 							nsExit();
-							consoleSelect(&menu_console);
+							select_console(&menu_console);
 							break;
 						}
 					}
@@ -3119,28 +3491,38 @@ int main(int argc, char **argv) {
 					printDisplay("\033[0;32m\n");
 					printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
 					printDisplay("\033[0;37m\n");
+					ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+						language_vars["lng_success_reboot_in_five_seconds"], "", -1, -1, true);
 					sleep(5);
 					simple_reboot();
 				}
-				consoleSelect(&menu_console);
+				select_console(&menu_console);
 				break;
 			}
 			}
+			select_console(&menu_console);
+			announce_main_menu_return(cursor);
 
 		} else if (kDown & HidNpadButton_X) {
+			ScreenReader::Interrupt();
 			logs_console_clear();
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
 			display_infos(cursor);
-			refreshScreen(cursor);
+			refreshScreen(cursor, false);
+			announce_main_menu_return(cursor, true);
 
 		} else if (kDown & HidNpadButton_Y) {
+			ScreenReader::Interrupt();
 			logs_console_clear();
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
 			record_infos();
+			select_console(&menu_console);
+			announce_main_menu_return(cursor);
 
 		} else if (kDown & HidNpadButton_Minus) {
+			ScreenReader::Interrupt();
 			logs_console_clear();
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
@@ -3150,7 +3532,8 @@ int main(int argc, char **argv) {
 			debug_log_write("Dernière version du pack: %s\n\n", last_pack_version);
 			remove(TEMP_FILE);
 			cursor = 0;
-			refreshScreen(cursor);
+			refreshScreen(cursor, false);
+			announce_main_menu_return(cursor);
 			if (auto_update_app(false)) {
 				return 0;
 			}
@@ -3159,7 +3542,7 @@ int main(int argc, char **argv) {
 			if (pack_update_found) {
 				if (!autoconfig_enabled || autoconfig_config.c1.use_all_app_functions == 1) {
 					logs_console_clear();
-					consoleSelect(&logs_console);
+					select_console(&logs_console);
 					printDisplay(language_vars["lng_pack_have_update"].c_str(), pack_version, last_pack_version);
 					printDisplay("\n\n");
 					if (isApplet()) {
@@ -3172,7 +3555,7 @@ int main(int argc, char **argv) {
 						pack_update_found_install=ask_question((char*) language_vars["lng_ask_pack_have_update"].c_str());
 					}
 					logs_console_clear();
-					consoleSelect(&menu_console);
+					select_console(&menu_console);
 					if (pack_update_found_install) {
 						cursor = UP_CFW;
 						kDown = HidNpadButton_A;

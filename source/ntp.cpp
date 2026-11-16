@@ -16,6 +16,10 @@
 
 #include "main_util.h"
 #include "ntp.hpp"
+#include "hb_translate.hpp"
+#include "screenreader/ScreenReader.hpp"
+
+extern PadState pad;
 
 typedef std::vector<std::pair<std::string, std::string>> vector_pair;
 
@@ -262,6 +266,8 @@ std::vector<std::string> serverNames;
 	}
 
 bool launch_sync_time() {
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		language_vars["lng_screenreader_sync_started"], "");
 	nifmInitialize(NifmServiceType_User);
 	timeInitialize();
 	smInitialize();
@@ -276,6 +282,7 @@ bool launch_sync_time() {
 		time_t time_diff = 31;
 		timeGetCurrentTime(TimeType_UserSystemClock, (u64*)&currentConsoleTime);
 		for (size_t i = 0; i < serverAddresses.size(); ++i) {
+			ScreenReader::PollInput(&pad);
 			currentServer = i;
 			if (getOffset(&time_diff)) {
 				if (time_diff >= 30) {
@@ -298,6 +305,9 @@ bool launch_sync_time() {
 	nifmExit();
 	timeExit();
 	smExit();
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		success ? language_vars["lng_screenreader_sync_success"] :
+		language_vars["lng_screenreader_sync_fallback"], "");
 
 	return success;
 }

@@ -25,8 +25,9 @@
 
 #include "ams_su.h"
 #include "daybreak-cli.hpp"
+#include "../screenreader/ScreenReader.hpp"
 #include "../main_util.h"
-#include "../translate.hpp"
+#include "../hb_translate.hpp"
 
 const char app_version[] = "2.1.2";
 
@@ -72,12 +73,18 @@ bool need_clean_21_dg = false;
 bool ask_dg = false;
 
 void custom_pause() {
-	printf(language_vars["lng_db_pause"].c_str());
+	const std::string pauseMessage = language_vars["lng_db_pause"];
+	printf("%s", pauseMessage.c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
+	ScreenReader::ReadConsole(&logs_console, 0, -1,
+		language_vars["lng_screenreader_context_daybreak"], pauseMessage);
 	while(1) {
 		padUpdate(&daybreak_pad);
 		u64 kDown = padGetButtonsDown(&daybreak_pad);
+		ScreenReader::HandleInput(&daybreak_pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive())
+			continue;
 		if (kDown & HidNpadButton_A) {
 			break;
 		}
@@ -136,6 +143,10 @@ void DaybreakAppExit() {
 
 bool daybreak_ask_question(char *question_text) {
 	bool rc;
+	char spokenChoices[256];
+	snprintf(spokenChoices, sizeof(spokenChoices),
+		language_vars["lng_screenreader_choice_yes_no"].c_str(),
+		language_vars["lng_yes"].c_str(), language_vars["lng_no"].c_str());
 	printf("%s\n", question_text);
 	printf("	[A]: ");
 	printf(language_vars["lng_yes"].c_str());
@@ -143,9 +154,14 @@ bool daybreak_ask_question(char *question_text) {
 	printf(language_vars["lng_no"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_question"],
+		std::string(question_text) + ". " + spokenChoices, "");
 	while(1) {
 		padUpdate(&daybreak_pad);
 		u64 kDown = padGetButtonsDown(&daybreak_pad);
+		ScreenReader::HandleInput(&daybreak_pad, kDown);
+		if (ScreenReader::IsVirtualReviewActive())
+			continue;
 		if (kDown & HidNpadButton_A) {
 			rc = true;
 			break;
@@ -303,6 +319,7 @@ void MarkForReboot() {
 }
 
 Result TransitionUpdateState() {
+	ScreenReader::PollInput(&daybreak_pad);
 	Result rc = 0;
 	if (m_install_state == InstallState::NeedsSetup) {
 		/* Setup the update. */
@@ -316,6 +333,8 @@ Result TransitionUpdateState() {
 		/* Log setup completion. */
 		printf(language_vars["lng_db_install_process_setup_success"].c_str());
 		printf("\n");
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+			language_vars["lng_db_install_process_setup_success"], "");
 		m_install_state = InstallState::NeedsPrepare;
 	} else if (m_install_state == InstallState::NeedsPrepare) {
 		/* Request update preparation. */
@@ -329,6 +348,8 @@ Result TransitionUpdateState() {
 		/* Log awaiting prepare. */
 		printf(language_vars["lng_db_install_process_preparing"].c_str());
 		printf("\n");
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+			language_vars["lng_db_install_process_preparing"], "");
 		m_install_state = InstallState::AwaitingPrepare;
 	} else if (m_install_state == InstallState::AwaitingPrepare) {
 		/* Check if preparation has a result. */
@@ -362,6 +383,8 @@ Result TransitionUpdateState() {
 			printf("\n");
 			printf(language_vars["lng_db_install_process_applying_update"].c_str());
 			printf("\n");
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+				language_vars["lng_db_install_process_applying_update"], "");
 			m_install_state = InstallState::NeedsApply;
 			return rc;
 		}
@@ -398,6 +421,8 @@ Result TransitionUpdateState() {
 			/* Log success. */
 			printf(language_vars["lng_db_install_process_success"].c_str());
 			printf("\n");
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+				language_vars["lng_db_install_process_success"], "");
 
 			if (g_reset_to_factory) {
 				if (R_FAILED(rc = nsResetToFactorySettingsForRefurbishment())) {
@@ -434,6 +459,9 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 	printf(language_vars["lng_db_title"].c_str(), app_version);
 	printf("\n");
 	consoleUpdate(&logs_console);
+	char daybreakTitle[128];
+	snprintf(daybreakTitle, sizeof(daybreakTitle), language_vars["lng_db_title"].c_str(), app_version);
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"], daybreakTitle, "");
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 	padInitializeDefault(&daybreak_pad);
 	if (!DaybreakInitializeMenu()) {
@@ -488,11 +516,16 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_update_validation"].c_str());
 		printf("\n");
 		consoleUpdate(&logs_console);
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+			language_vars["lng_db_update_validation"], "");
 	}
 	/* Perform validation if it hasn't been done already. */
 	if (m_has_info && m_has_drawn && !m_has_validated) {
 		ValidateUpdate();
 	}
+	if (m_has_validated)
+		ScreenReader::ReadConsole(&logs_console, 0, -1,
+			language_vars["lng_screenreader_context_daybreak"], "", true);
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
 		if (need_clean_21_dg == true && ask_dg == false) {
@@ -595,6 +628,8 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		printf(language_vars["lng_db_install_update_begin"].c_str());
 		printf("\n");
 		consoleUpdate(&logs_console);
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
+			language_vars["lng_db_install_update_begin"], "");
 		m_install_state = InstallState::NeedsSetup;
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);

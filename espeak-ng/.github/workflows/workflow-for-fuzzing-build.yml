@@ -1,0 +1,63 @@
+name: workflow-for-fuzzing-build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build synth_espeak on ${{ matrix.arch }}
+    # Do not run this job on any forked repos
+    if: github.repository == 'espeak-ng/espeak-ng'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86-32, x86-64]
+        include:
+          - arch: x86-32
+            archdeps: "gcc-multilib g++-multilib libpcaudio-dev:i386 libsonic-dev:i386 libc6-dbg:i386"
+            archconfigflags: "-m32"
+
+          - arch: x86-64
+            archdeps: ""
+            archconfigflags: ''
+    steps:
+    - uses: actions/checkout@v7
+    - uses: firebuild/apt-eatmydata-action@1ffc51fd041ed87dcc2ef405913baec405763640 # v1
+    - name: enable 32bit architecture
+      run: sudo dpkg --add-architecture i386
+      if: matrix.arch == 'x86-32'
+    - name: dependencies
+      run: sudo apt-get update && sudo apt-get install cmake ninja-build libpcaudio-dev libsonic-dev ronn kramdown clang llvm mbrola ${{ matrix.archdeps }}
+    - name: configure (CMake)
+      run: |
+        proc="x86_64"
+        if [ "${{ matrix.arch }}" = "x86-32" ]; then proc="i686"; fi
+        target_flag=""
+        if [ "${proc}" = "i686" ]; then target_flag="-DCMAKE_C_COMPILER_TARGET=i686-linux-gnu -DCMAKE_CXX_COMPILER_TARGET=i686-linux-gnu"; fi
+        cmake -B build -G Ninja \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fstack-protector-strong -g -Og -fno-omit-frame-pointer ${{ matrix.archconfigflags }}" \
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fstack-protector-strong -g -Og -fno-omit-frame-pointer ${{ matrix.archconfigflags }}" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+          -DCMAKE_SYSTEM_PROCESSOR=${proc} ${target_flag} \
+          -DWITH_FUZZER=ON \
+          -DUSE_ASYNC:BOOL=OFF \
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+    - name: Store the CMake build tree
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: cmake-${{ matrix.arch }}-builddir
+        path: build
+        retention-days: 5
+    - name: build fuzzer + data
+      run: cmake --build build --target synth_fuzzer data --parallel
+    - uses: actions/cache@v6
+      with:
+        path: /home/runner/work/espeak-ng/espeak-ng
+        key: build-${{ matrix.arch }}-${{ github.sha }}

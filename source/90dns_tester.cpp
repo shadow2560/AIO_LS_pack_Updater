@@ -4,6 +4,8 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+
+#include "screenreader/ScreenReader.hpp"
 #include "90dns_tester.hpp"
 #include "main_util.h"
 

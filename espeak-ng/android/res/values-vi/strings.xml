@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">Thiết lập chương trình</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">Độ cao thấp mặc định</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">Bội số tốc độ đọc</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">Đang cài đặt dữ liệu giọng nói…</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">Đây là mẫu văn bản được đọc bằng %s</string>
+  <string name="espeak_volume">Âm lượng</string>
+  <string name="formatter_wpm">%s từ mỗi phút</string>
+  <string name="formatter_percentage">%s%%</string>
+  <string name="resetToDefault">Thiết lập về mặc định</string>
+  <string name="espeak_pitch_range">Độ biến động cao thấp</string>
+  <string name="espeak_variant">Độ biến động giọng cao thấp</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">eSpeak TTS सेटिंग</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">डिफ़ॉल्‍ट पिच</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">वाक् दर गुणक</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">ध्‍वनि डेटा इंस्टॉल किया जा रहा है…</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">यह %s में बोले गए पाठ का नमूना है</string>
+</resources>

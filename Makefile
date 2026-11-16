@@ -10,6 +10,8 @@ TOPDIR ?= $(CURDIR)
 LIBNX := $(CURDIR)/libnx
 include $(DEVKITPRO)/libnx/switch_rules
 
+ESPEAK_DIR := espeak-ng
+
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -40,13 +42,13 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.12.01
+APP_VERSION := 	7.13.00
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source source/contents_install source/contents_install/data source/contents_install/es source/contents_install/hos source/contents_install/install source/contents_install/ncm source/contents_install/ns source/contents_install/nx source/contents_install/nx/ipc source/contents_install/util source/firmwares_install
+SOURCES		:=	source source/contents_install source/contents_install/data source/contents_install/es source/contents_install/hos source/contents_install/install source/contents_install/ncm source/contents_install/ns source/contents_install/nx source/contents_install/nx/ipc source/contents_install/util source/firmwares_install source/screenreader espeak-ng/src/ucd-tools/src espeak-ng/src/libespeak-ng
 DATA		:=	data
-INCLUDES	:=	includes includes/contents_install include/contents_install/data include/contents_install/es include/contents_install/hos include/contents_install/install include/contents_install/ncm include/contents_install/ns include/contents_install/nx include/contents_install/nx/ipc include/contents_install/util includes/firmwares_install
+INCLUDES	:=	includes includes/contents_install include/contents_install/data include/contents_install/es include/contents_install/hos include/contents_install/install include/contents_install/ncm include/contents_install/ns include/contents_install/nx include/contents_install/nx/ipc include/contents_install/util includes/firmwares_install includes/screenreader espeak-ng/src/include espeak-ng/src/include/compat espeak-ng/src/include/compat/sys espeak-ng/src/include/espeak espeak-ng/src/include/espeak-ng espeak-ng/src/ucd-tools/src/include
 ROMFS		:=	romfs
 
 #---------------------------------------------------------------------------------
@@ -61,7 +63,11 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 # CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wall \
 # -DAPP_VERSION="\"$(APP_VERSION)\"" \
 # -DAPP_TITLE="\"$(APP_TITLE)\"" \
-# -DAPP_AUTHOR="\"$(APP_AUTHOR)\""
+# -DAPP_AUTHOR="\"$(APP_AUTHOR)\"" \
+# -D_GNU_SOURCE \
+# -DLIBESPEAK_NG_EXPORT=1 \
+# -D_PATH_ESPEAK_DATA=\"romfs:/espeak-ng-data\" \
+# -DENABLE_TESTS=0 -DBUILD_SHARED_LIBS=0
 
 # CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
 
@@ -73,7 +79,11 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS := -Os -Wall -ffunction-sections -fdata-sections $(ARCH) $(DEFINES) $(INCLUDE) -D__SWITCH__ \
 -DAPP_VERSION="\"$(APP_VERSION)\"" \
 -DAPP_TITLE="\"$(APP_TITLE)\"" \
--DAPP_AUTHOR="\"$(APP_AUTHOR)\""
+-DAPP_AUTHOR="\"$(APP_AUTHOR)\"" \
+-D_GNU_SOURCE \
+-DLIBESPEAK_NG_EXPORT=1 \
+-D_PATH_ESPEAK_DATA=\"romfs:/espeak-ng-data\" \
+-DENABLE_TESTS=0 -DBUILD_SHARED_LIBS=0
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
 
@@ -135,6 +145,7 @@ export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CFILES		+= $(ESPEAK_SRC)
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
@@ -233,6 +244,76 @@ else
 .PHONY:	all
 
 DEPENDS	:=	$(OFILES:.o=.d)
+
+# Hekate-style progress reporting. The dry-run marker counts only the object
+# compilations that Make would actually execute in this build.
+ifndef COMPILE_PROGRESS
+COMPILE_TOTAL := $(shell $(MAKE) $(OUTPUT).elf --no-print-directory -nrRf $(firstword $(MAKEFILE_LIST)) COMPILE_PROGRESS="COMPILE_PROGRESS_OBJ" | grep -c "COMPILE_PROGRESS_OBJ")
+COMPILE_STEP := x
+COMPILE_COUNT = $(words $(COMPILE_STEP))$(eval COMPILE_STEP := x $(COMPILE_STEP))
+COMPILE_PROGRESS = printf "\r[%3d%%] Compiling %s\033[K" `expr $(COMPILE_COUNT) \* 100 / $(COMPILE_TOTAL)`
+endif
+
+# Keep elf2nro diagnostics, but replace its per-file RomFS chatter with a summary.
+ifneq ($(strip $(ROMFS)),)
+%.nro: %.elf
+	@romfs_log="$(CURDIR)/.elf2nro-output.log"; \
+	elf2nro $< $@ $(NROFLAGS) > "$$romfs_log" 2>&1; \
+	result=$$?; \
+	if [ -s "$$romfs_log" ]; then \
+		if [ $$result -ne 0 ]; then cat "$$romfs_log"; \
+		else sed -e '/^Visiting directories\.\.\.$$/d' \
+			-e '/^Calculating metadata\.\.\.$$/d' \
+			-e '/^Adding .* to RomFS image\.\.\.$$/d' \
+			-e '/^Writing .* to RomFS image\.\.\.$$/d' "$$romfs_log"; fi; \
+	fi; \
+	rm -f "$$romfs_log"; \
+	if [ $$result -ne 0 ]; then exit $$result; fi; \
+	romfs_dir="$(TOPDIR)/$(ROMFS)"; \
+	if [ -d "$$romfs_dir" ]; then \
+		files=$$(find "$$romfs_dir" -type f | wc -l | tr -d '[:space:]'); \
+		directories=$$(find "$$romfs_dir" -mindepth 1 -type d | wc -l | tr -d '[:space:]'); \
+		bytes=$$(find "$$romfs_dir" -type f -exec cat {} + | wc -c | tr -d '[:space:]'); \
+		echo "RomFS: $$files files, $$directories directories, $$bytes bytes"; \
+	fi; echo "built ... $(notdir $@)"
+endif
+
+# Match the compiler recipes from devkitA64/base_rules while adding progress.
+%.o: %.cpp
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	$(ADD_COMPILE_COMMAND) add $(CXX) "$(_EXTRADEFS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@" $<
+	@log="$(DEPSDIR)/$*.compile.log"; \
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(_EXTRADEFS) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@ $(ERROR_FILTER) > "$$log" 2>&1; \
+	result=$$?; \
+	if [ -s "$$log" ]; then printf '\n'; cat "$$log"; elif [ $$result -ne 0 ]; then printf '\n'; fi; \
+	rm -f "$$log"; \
+	exit $$result
+
+%.o: %.c
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	$(ADD_COMPILE_COMMAND) add $(CC) "$(_EXTRADEFS) $(CPPFLAGS) $(CFLAGS) -c $< -o $@" $<
+	@log="$(DEPSDIR)/$*.compile.log"; \
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(_EXTRADEFS) $(CPPFLAGS) $(CFLAGS) -c $< -o $@ $(ERROR_FILTER) > "$$log" 2>&1; \
+	result=$$?; \
+	if [ -s "$$log" ]; then printf '\n'; cat "$$log"; elif [ $$result -ne 0 ]; then printf '\n'; fi; \
+	rm -f "$$log"; \
+	exit $$result
+
+%.o: %.s
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	$(ADD_COMPILE_COMMAND) add $(CC) "-x assembler-with-cpp $(_EXTRADEFS) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@" $<
+	@log="$(DEPSDIR)/$*.compile.log"; \
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(_EXTRADEFS) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@ $(ERROR_FILTER) > "$$log" 2>&1; \
+	result=$$?; \
+	if [ -s "$$log" ]; then printf '\n'; cat "$$log"; elif [ $$result -ne 0 ]; then printf '\n'; fi; \
+	rm -f "$$log"; \
+	exit $$result
+
+%.elf:
+	@printf '\n'; echo linking $(notdir $@)
+	$(ADD_COMPILE_COMMAND) end
+	@$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+	@$(NM) -CSn $@ > $(notdir $*.lst)
 
 #---------------------------------------------------------------------------------
 # main targets

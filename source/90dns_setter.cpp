@@ -8,7 +8,10 @@
 
 #include "90dns_setter.hpp"
 #include "main_util.h"
-#include "translate.hpp"
+#include "hb_translate.hpp"
+#include "screenreader/ScreenReader.hpp"
+
+extern PadState pad;
 
 const char *regions[] = {
     "Japan",
@@ -21,8 +24,15 @@ const char *regions[] = {
 
 bool set_90dns()
 {
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		language_vars["lng_screenreader_dns_started"], "");
+	auto announceFailure = []() {
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+			language_vars["lng_screenreader_dns_failed"], "");
+	};
 	Result res = 0;
 	SetRegion region;
+	bool noNetworks = false;
 	u32 europeDns = 0xdb8daca3; // 163.172.141.219
 	u32 americaDns = 0x4d79f6cf; // 207.246.121.77
 
@@ -33,7 +43,9 @@ bool set_90dns()
 		printf("\033[0;31m");
 		printf(language_vars["lng_dns_install_set_init_error"].c_str(), res);
 		printf("\033[0;37m\n");
-		consoleUpdate(&logs_console);		return false;
+		consoleUpdate(&logs_console);
+		announceFailure();
+		return false;
 	}
 	else {
 		res = setsysInitialize();
@@ -43,6 +55,7 @@ bool set_90dns()
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 			setExit();
+			announceFailure();
 			return false;
 		}
 		else {
@@ -54,6 +67,7 @@ bool set_90dns()
 				consoleUpdate(&logs_console);
 				setExit();
 				setsysExit();
+				announceFailure();
 				return false;
 			}
 			else {
@@ -105,13 +119,16 @@ bool set_90dns()
 			free(wifiSettings);
 			setExit();
 			setsysExit();
+			announceFailure();
 			return false;
 		}
 		else {
+			noNetworks = entryCount == 0;
 			printf(language_vars["lng_dns_install_networs_count"].c_str(), entryCount);
 			printf("\n");
 			consoleUpdate(&logs_console);
 			for (int i = 0; i < entryCount; i++){
+				ScreenReader::PollInput(&pad);
 				wifiSettings[i].primary_dns = primaryDns;
 				wifiSettings[i].secondary_dns = secondaryDns;
 				wifiSettings[i].auto_settings &= ~SetSysAutoSettings_AutoDns;
@@ -127,6 +144,7 @@ bool set_90dns()
 					free(wifiSettings);
 					setExit();
 					setsysExit();
+					announceFailure();
 					return false;
 				}
 				else {
@@ -137,11 +155,23 @@ bool set_90dns()
 				}
 			}
 		}
+	} else {
+		printf("\033[0;31m");
+		printf(language_vars["lng_dns_install_wifi_memory_error"].c_str());
+		printf("\033[0;37m\n");
+		consoleUpdate(&logs_console);
+		setExit();
+		setsysExit();
+		announceFailure();
+		return false;
 	}
 	free(wifiSettings);
 
 	// Deinitialize and clean up resources used by the console (important!)
 	setExit();
 	setsysExit();
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		noNetworks ? language_vars["lng_screenreader_dns_no_networks"] :
+		language_vars["lng_screenreader_dns_success"], "");
 	return true;
 }

@@ -1,6 +1,8 @@
 #ifndef _MAIN_UTIL_H_
 #define _MAIN_UTIL_H_
 
+#include <switch.h>
+
 /* Make this header file easier to include in C++ code */
 #ifdef __cplusplus
 extern "C" {
@@ -78,6 +80,9 @@ extern bool autoconfig_enabled;
 
 void debug_log_start();
 void debug_log_write(const char *text, ...);
+void debug_log_stop();
+PrintConsole* select_console(PrintConsole* console);
+PrintConsole* get_active_console(void);
 void to_lowercase(char *str);
 void to_uppercase(char *str);
 bool strcmp_ignore_case(const char *s1, const char *s2);

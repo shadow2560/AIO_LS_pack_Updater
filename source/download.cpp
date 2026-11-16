@@ -11,13 +11,15 @@
 
 #include "main_util.h"
 #include "download.hpp"
-#include "translate.hpp"
+#include "hb_translate.hpp"
+#include "screenreader/ScreenReader.hpp"
 
 #define API_AGENT "PoloNX"
 // #define _1MiB   0x100000
 #define _1MO   1000000
 
 MemoryStruct_t file_dl_in_memory;
+extern PadState pad;
 
 time_t prevtime;
 time_t currtime;
@@ -26,6 +28,7 @@ bool first = true;
 bool dl_speed_displayed = false;
 float dl_speed = 0;
 double dlold;
+static int last_announced_download_milestone = 0;
 
 static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     ntwrk_struct_t *s = (ntwrk_struct_t *)userp;
@@ -101,6 +104,21 @@ static size_t WriteMemoryCallback2(void *contents, size_t size, size_t nmemb, vo
 }
 
 int download_progress(void *p, double dltotal, double dlnow, double ultotal, double ulnow) {
+	ScreenReader::PollInput(&pad);
+	if (dltotal > 0.0) {
+		int percent = (int)((dlnow * 100.0) / dltotal);
+		if (percent > 100)
+			percent = 100;
+		int milestone = percent >= 100 ? 100 : percent >= 75 ? 75 :
+			percent >= 50 ? 50 : percent >= 25 ? 25 : percent >= 10 ? 10 : 0;
+		if (milestone > last_announced_download_milestone) {
+			last_announced_download_milestone = milestone;
+			char progressMessage[96];
+			snprintf(progressMessage, sizeof(progressMessage),
+				language_vars["lng_screenreader_download_progress"].c_str(), milestone);
+			ScreenReader::SpeakAfterCurrent(progressMessage, false);
+		}
+	}
 	if (first) {
 		time(&prevtime);
 		first = false;
@@ -152,11 +170,14 @@ int download_progress(void *p, double dltotal, double dlnow, double ultotal, dou
 }
 
 bool downloadFile(const char *url, const char *output, int api, bool display_log) {
+	last_announced_download_milestone = 0;
 	if (display_log) {
 		printf("\n\033[0;32m");
 		printf(language_vars["lng_dl_begin"].c_str(), url);
 		printf("\033[0;37m\n");
 		consoleUpdate(&logs_console);
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+			language_vars["lng_screenreader_download_started"], "");
 	}
 	debug_log_write("Téléchargement de \"%s\".\n", url);
 	if (!internet_is_connected()) {
@@ -167,6 +188,9 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			consoleUpdate(&logs_console);
 		}
 		debug_log_write("Erreur: Aucune connexion à internet.\n");
+		if (display_log)
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+				language_vars["lng_dl_dl_error"], "");
 		return false;
 	}
 	first = true;
@@ -216,6 +240,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 						printf("\033[0;37m\n");
 						consoleUpdate(&logs_console);
 						debug_log_write("Erreur durant l'écriture du fichier.\n\n");
+						ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+							language_vars["lng_dl_file_write_error"], "");
 					}
 					curl_easy_cleanup(curl);
 					curl_global_cleanup();
@@ -237,6 +263,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf(language_vars["lng_dl_success"].c_str());
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
+					ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+						language_vars["lng_dl_success"], "");
 				}
 				debug_log_write("Téléchargement OK.\n\n");
 				return true;
@@ -246,6 +274,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 					printf(language_vars["lng_dl_dl_error"].c_str());
 					printf("\033[0;37m\n\n");
 					consoleUpdate(&logs_console);
+					ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+						language_vars["lng_dl_dl_error"], "");
 				}
 				debug_log_write("Erreur de Téléchargement.\n\n");
 				return false;
@@ -257,6 +287,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 				printf(language_vars["lng_dl_open_temp_file_error"].c_str());
 				printf("\033[0;37m\n\n");
 				consoleUpdate(&logs_console);
+				ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+					language_vars["lng_dl_open_temp_file_error"], "");
 			}
 			curl_global_cleanup();
 			debug_log_write("Erreur d'ouverture du fichier temporaire.\n\n");
@@ -268,6 +300,8 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 			printf(language_vars["lng_dl_curl_init_error"].c_str());
 			printf("\033[0;37m\n\n");
 			consoleUpdate(&logs_console);
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_download"],
+				language_vars["lng_dl_curl_init_error"], "");
 		}
 		curl_easy_cleanup(curl);
 		curl_global_cleanup();
@@ -282,6 +316,7 @@ bool downloadFile(const char *url, const char *output, int api, bool display_log
 }
 
 bool downloadInMemory(char *url, MemoryStruct_t *chunk, int api, bool display_log) {
+	last_announced_download_milestone = 0;
 	if (display_log) {
 		printf("\n\033[0;32m");
 		printf(language_vars["lng_dl_begin"].c_str(), url);

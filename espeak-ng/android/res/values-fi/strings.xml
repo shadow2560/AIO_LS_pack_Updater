@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">eSpeak TTS -asetukset</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">Äänenkorkeus</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">Puhenopeus</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">Asennetaan äänitietoja...</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">Tämä on näyte puhutusta tekstistä kielellä %s</string>
+  <string name="espeak_volume">Voimakkuus</string>
+  <string name="formatter_wpm">%s sanaa minuutissa</string>
+  <string name="formatter_percentage">%s%%</string>
+  <string name="resetToDefault">Palauta oletus</string>
+  <string name="espeak_pitch_range">Äänenkorkeuden vaihtelu</string>
+  <string name="espeak_variant">Äänen muunnelma</string>
+  <string name="espeak_speak_punctuation">Puhu välimerkit</string>
+  <string name="punctuation_all">Kaikki</string>
+  <string name="punctuation_custom">Oma</string>
+  <string name="punctuation_custom_fmt">Oma: %s</string>
+  <string name="punctuation_none">Ei mitään</string>
+  <string name="punctuation_characters">Välimerkit</string>
+  <string name="category">Kategoria</string>
+  <string name="variant">Muunnelma</string>
+  <string name="variant_male">Mies</string>
+  <string name="variant_female">Nainen</string>
+  <string name="variant_default">Oletus</string>
+  <string name="variant_n">Muunnelma %d</string>
+  <string name="variant_young">Nuori</string>
+  <string name="variant_old">Vanha</string>
+  <string name="variant_croak">Raakkuva</string>
+  <string name="variant_whisper">Kuiskaava</string>
+  <string name="import_voice_title">Tuo eSpeak-sanasto</string>
+  <string name="import_voice_description">Tuo eSpeak-äänisanastotiedosto SD-kortilta.</string>
+</resources>

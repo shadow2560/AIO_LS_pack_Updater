@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">Izilungiselelo ze-eSpeak TTS</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">Izinga lezwi olithola likhona</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">Okuphindaphinda ukushesha kwenkulumo</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">Ifaka idatha yezwi</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">Lena yisampula yombhalo okhulunywa kwi %s</string>
+</resources>

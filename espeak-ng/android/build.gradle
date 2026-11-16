@@ -1,0 +1,158 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.3.0'
+    }
+}
+plugins {
+    id 'org.gradle.crypto.checksum' version '1.4.0'
+}
+
+import org.gradle.crypto.checksum.Checksum
+apply plugin: 'com.android.application'
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'org.hamcrest:hamcrest:2.2'
+    androidTestImplementation 'org.hamcrest:hamcrest-core:2.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
+
+android {
+    compileSdk = 36
+    ndkVersion = "29.0.14206865"
+    namespace = "com.reecedunn.espeak"
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 23
+        versionName = "1.53.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments.addAll(["-DUSE_ASYNC:BOOL=OFF", "-DUSE_MBROLA:BOOL=OFF", "-DUSE_LIBSONIC:BOOL=ON"])
+                targets.addAll(["ttsespeak", "espeak-data"])
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = "jni/CMakeLists.txt"
+            version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile('AndroidManifest.xml')
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+        }
+        androidTest {
+            java.srcDirs = ['eSpeakTests/src']
+            res.srcDirs = ['eSpeakTests/res']
+        }
+    }
+
+    lint {
+        abortOnError = false
+    }
+}
+
+tasks.register('checkData') {
+    doFirst {
+        assert file("../espeak-ng-data/en_dict").exists()
+        assert file("../espeak-ng-data/intonations").exists()
+        assert file("../espeak-ng-data/phondata").exists()
+        assert file("../espeak-ng-data/phondata-manifest").exists()
+        assert file("../espeak-ng-data/phonindex").exists()
+        assert file("../espeak-ng-data/phontab").exists()
+    }
+}
+
+tasks.register('createDataArchive', Zip) {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    archiveFileName = "espeakdata.zip"
+    destinationDirectory = file("res/raw")
+
+    from("build/generated/espeak-ng-data/") {
+        into "espeak-ng-data"
+    }
+}
+
+tasks.register('createDataHash', Checksum) {
+    dependsOn tasks.createDataArchive
+    checksumAlgorithm.set(Checksum.Algorithm.SHA256)
+    inputFiles.setFrom(file("./res/raw/espeakdata.zip"))
+    outputDirectory.set(layout.buildDirectory.dir('intermediates/datahash'))
+}
+
+tasks.register('createDataVersion', Copy) {
+    dependsOn tasks.createDataHash
+    from layout.buildDirectory.file('intermediates/datahash/espeakdata.zip.sha256')
+    rename { return 'espeakdata_version' }
+    into file("./res/raw")
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleDebug' || task.name == 'assembleRelease') {
+        task.dependsOn createDataVersion
+    }
+}
+
+createDataVersion.mustRunAfter 'externalNativeBuildDebug'
+createDataVersion.mustRunAfter 'externalNativeBuildRelease'
+
+project.afterEvaluate {
+    tasks.checkData.dependsOn(externalNativeBuildDebug)
+    tasks.createDataArchive.dependsOn(externalNativeBuildDebug)
+    tasks.named('mapDebugSourceSetPaths') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('generateDebugResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('processDebugNavigationResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('mergeDebugResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('packageDebugResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('mapReleaseSourceSetPaths') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('generateReleaseResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('processReleaseNavigationResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('mergeReleaseResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+    tasks.named('packageReleaseResources') {
+        dependsOn ':createDataVersion', ':createDataArchive'
+    }
+}

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/iosupport.h>
 #include "runtime/devices/console.h"
@@ -105,7 +106,248 @@ static PrintConsole currentCopy;
 
 static PrintConsole* currentConsole = &currentCopy;
 
+typedef struct ConsoleTextBuffer
+{
+	PrintConsole* console;
+	u32* cells;
+	int width;
+	int height;
+	struct ConsoleTextBuffer* next;
+} ConsoleTextBuffer;
+
+static ConsoleTextBuffer* consoleTextBuffers;
+
+static ConsoleTextBuffer* consoleFindTextBuffer(PrintConsole* console)
+{
+	ConsoleTextBuffer* buffer = consoleTextBuffers;
+	while (buffer) {
+		if (buffer->console == console)
+			return buffer;
+		buffer = buffer->next;
+	}
+	return NULL;
+}
+
+static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int height)
+{
+	if (!buffer)
+		return false;
+	if (width <= 0 || height <= 0) {
+		free(buffer->cells);
+		buffer->cells = NULL;
+		buffer->width = width;
+		buffer->height = height;
+		return false;
+	}
+	if (buffer->cells && buffer->width == width && buffer->height == height)
+		return true;
+	if ((size_t)width > SIZE_MAX / (size_t)height / sizeof(u32)) {
+		free(buffer->cells);
+		buffer->cells = NULL;
+		buffer->width = width;
+		buffer->height = height;
+		return false;
+	}
+
+	u32* cells = (u32*)malloc((size_t)width * (size_t)height * sizeof(u32));
+	if (!cells) {
+		free(buffer->cells);
+		buffer->cells = NULL;
+		buffer->width = width;
+		buffer->height = height;
+		return false;
+	}
+	for (size_t i = 0; i < (size_t)width * (size_t)height; i++)
+		cells[i] = ' ';
+
+	if (buffer->cells) {
+		int copyWidth = buffer->width < width ? buffer->width : width;
+		int copyHeight = buffer->height < height ? buffer->height : height;
+		for (int y = 0; y < copyHeight; y++)
+			memcpy(cells + (size_t)y * width, buffer->cells + (size_t)y * buffer->width, (size_t)copyWidth * sizeof(u32));
+	}
+
+	free(buffer->cells);
+	buffer->cells = cells;
+	buffer->width = width;
+	buffer->height = height;
+	return true;
+}
+
+static void consoleStoreTextCell(int x, int y, u32 codepoint)
+{
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(currentConsole);
+	if (!buffer || !buffer->cells || x < 1 || y < 1 || x > buffer->width || y > buffer->height)
+		return;
+	buffer->cells[(size_t)(y - 1) * buffer->width + (x - 1)] = codepoint;
+}
+
+static void consoleScrollTextBuffer(void)
+{
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(currentConsole);
+	if (!buffer || !buffer->cells || buffer->height <= 0 || buffer->width <= 0)
+		return;
+	if (buffer->height > 1)
+		memmove(buffer->cells, buffer->cells + buffer->width,
+			(size_t)(buffer->height - 1) * buffer->width * sizeof(u32));
+	for (int x = 0; x < buffer->width; x++)
+		buffer->cells[(size_t)(buffer->height - 1) * buffer->width + x] = ' ';
+}
+
 PrintConsole* consoleGetDefault(void){return &defaultConsole;}
+
+bool consoleEnableTextBuffer(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+	if (console->windowWidth <= 0 || console->windowHeight <= 0)
+		return false;
+
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	bool created = false;
+	if (!buffer) {
+		buffer = (ConsoleTextBuffer*)calloc(1, sizeof(ConsoleTextBuffer));
+		if (!buffer)
+			return false;
+		buffer->console = console;
+		buffer->next = consoleTextBuffers;
+		consoleTextBuffers = buffer;
+		created = true;
+	}
+	if (consoleResizeTextBuffer(buffer, console->windowWidth, console->windowHeight))
+		return true;
+	if (created)
+		consoleDisableTextBuffer(console);
+	return false;
+}
+
+void consoleDisableTextBuffer(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+
+	ConsoleTextBuffer** link = &consoleTextBuffers;
+	while (*link) {
+		if ((*link)->console == console) {
+			ConsoleTextBuffer* buffer = *link;
+			*link = buffer->next;
+			free(buffer->cells);
+			free(buffer);
+			return;
+		}
+		link = &(*link)->next;
+	}
+}
+
+bool consoleIsTextBufferEnabled(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	return buffer && buffer->cells;
+}
+
+int consoleGetLastTextLine(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || buffer->width <= 0 || buffer->height <= 0)
+		return -1;
+
+	for (int y = buffer->height - 1; y >= 0; y--) {
+		const u32* line = buffer->cells + (size_t)y * buffer->width;
+		for (int x = 0; x < buffer->width; x++) {
+			if (line[x] != ' ')
+				return y;
+		}
+	}
+	return -1;
+}
+
+static size_t consoleCodepointUtf8Size(u32 codepoint)
+{
+	if (codepoint <= 0x7F)
+		return 1;
+	if (codepoint <= 0x7FF)
+		return 2;
+	if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
+		return 3;
+	if (codepoint <= 0xFFFF)
+		return 3;
+	if (codepoint <= 0x10FFFF)
+		return 4;
+	return 3;
+}
+
+static size_t consoleWriteCodepointUtf8(char* output, size_t offset, size_t outputSize, u32 codepoint)
+{
+	if (codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
+		codepoint = 0xFFFD;
+	size_t length = consoleCodepointUtf8Size(codepoint);
+	if (!output || offset + length >= outputSize)
+		return offset;
+	if (length == 1) {
+		output[offset] = (char)codepoint;
+	} else if (length == 2) {
+		output[offset] = (char)(0xC0 | (codepoint >> 6));
+		output[offset + 1] = (char)(0x80 | (codepoint & 0x3F));
+	} else if (length == 3) {
+		output[offset] = (char)(0xE0 | (codepoint >> 12));
+		output[offset + 1] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+		output[offset + 2] = (char)(0x80 | (codepoint & 0x3F));
+	} else {
+		output[offset] = (char)(0xF0 | (codepoint >> 18));
+		output[offset + 1] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
+		output[offset + 2] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+		output[offset + 3] = (char)(0x80 | (codepoint & 0x3F));
+	}
+	return offset + length;
+}
+
+size_t consoleGetText(PrintConsole* console, int startLine, int endLine, char* output, size_t outputSize)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || startLine < 0 || endLine < startLine || endLine >= buffer->height)
+		return 0;
+
+	size_t required = 0;
+	size_t written = 0;
+	bool outputFull = false;
+	for (int y = startLine; y <= endLine; y++) {
+		int lastColumn = buffer->width - 1;
+		while (lastColumn >= 0 && buffer->cells[(size_t)y * buffer->width + lastColumn] == ' ')
+			lastColumn--;
+
+		for (int x = 0; x <= lastColumn; x++) {
+			u32 codepoint = buffer->cells[(size_t)y * buffer->width + x];
+			size_t length = consoleCodepointUtf8Size(codepoint);
+			required += length;
+			if (output && !outputFull) {
+				size_t nextWritten = consoleWriteCodepointUtf8(output, written, outputSize, codepoint);
+				if (nextWritten == written)
+					outputFull = true;
+				else
+					written = nextWritten;
+			}
+		}
+		if (y < endLine) {
+			required++;
+			if (output && !outputFull) {
+				if (written + 1 < outputSize)
+					output[written++] = '\n';
+				else
+					outputFull = true;
+			}
+		}
+	}
+
+	if (output && outputSize)
+		output[written < outputSize ? written : outputSize - 1] = '\0';
+	return required;
+}
 
 static void consoleNewRow(void);
 static void consolePrintChar(int c);
@@ -715,6 +957,9 @@ PrintConsole* consoleInit(PrintConsole* console) {
 
 	if (!console->consoleInitialised && console->renderer->init(console)) {
 		console->consoleInitialised = true;
+		ConsoleTextBuffer* textBuffer = consoleFindTextBuffer(console);
+		if (textBuffer)
+			consoleResizeTextBuffer(textBuffer, console->windowWidth, console->windowHeight);
 		consoleCls(2);
 		return console;
 	}
@@ -727,6 +972,7 @@ void consoleExit(PrintConsole* console) {
 //---------------------------------------------------------------------------------
 
 	if (!console) console = currentConsole;
+	consoleDisableTextBuffer(console);
 
 	if (console->consoleInitialised) {
 		console->renderer->deinit(console);
@@ -782,6 +1028,7 @@ void consoleNewRow(void) {
 
 	if(currentConsole->cursorY  > currentConsole->windowHeight)  {
 		currentConsole->renderer->scrollWindow(currentConsole);
+		consoleScrollTextBuffer();
 		currentConsole->cursorY = currentConsole->windowHeight;
 		consoleClearLine(2);
 	}
@@ -790,6 +1037,8 @@ void consoleNewRow(void) {
 //---------------------------------------------------------------------------------
 void consoleDrawChar(int c) {
 //---------------------------------------------------------------------------------
+	consoleStoreTextCell(currentConsole->cursorX, currentConsole->cursorY, (u32)c);
+
 	// Fast-path clear for l'espace: remplir la cellule en arrière-plan
 	if (c == ' ') {
 		currentConsole->renderer->drawChar(
@@ -902,5 +1151,8 @@ void consoleSetWindow(PrintConsole* console, int x, int y, int width, int height
 
 	console->cursorX = 1;
 	console->cursorY = 1;
+	ConsoleTextBuffer* textBuffer = consoleFindTextBuffer(console);
+	if (textBuffer)
+		consoleResizeTextBuffer(textBuffer, width, height);
 
 }

@@ -13,10 +13,23 @@
 
 #include "main_util.h"
 
+extern void screenreader_poll_input(void);
+
 bool debug_enabled = true;
 bool beta_mode = false;
 PrintConsole menu_console;
 PrintConsole logs_console;
+static PrintConsole* active_console = NULL;
+
+PrintConsole* select_console(PrintConsole* console) {
+	PrintConsole* previous = consoleSelect(console);
+	active_console = console ? console : consoleGetDefault();
+	return previous;
+}
+
+PrintConsole* get_active_console(void) {
+	return active_console;
+}
 
 char CFW_URL[1003] = "https://github.com/shadow2560/switch_AIO_LS_pack/releases/latest/download/Switch_AIO_LS_pack.zip";
 // char CFW_URL[1003] = "https://ls-atelier-tutos.fr/files/Switch_AIO_LS_pack/Switch_AIO_LS_pack.zip";
@@ -68,23 +81,58 @@ int hekate_autoboot_config = 0;
 int hekate_autoboot_config_lineno = -1;
 bool autoconfig_enabled = false;
 
+/* Serializes access to the shared debug log from the main and worker threads. */
+static Mutex debug_log_mutex;
+static FILE *debug_log_file;
+
 void debug_log_start() {
 	if (!debug_enabled) return;
+
+	mutexLock(&debug_log_mutex);
+	if (debug_log_file) {
+		mutexUnlock(&debug_log_mutex);
+		return;
+	}
+
 	remove("/switch/AIO_LS_pack_Updater/debug.log");
-	FILE *debug_log_file;
 	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "w");
-	fclose(debug_log_file);
+	mutexUnlock(&debug_log_mutex);
 }
 
 void debug_log_write(const char *text, ...) {
-	if (!debug_enabled) return;
-	FILE *debug_log_file;
-	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "a");
+	if (!debug_enabled || !text) return;
+
+	mutexLock(&debug_log_mutex);
+	if (!debug_log_file)
+		debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "a");
+
+	if (!debug_log_file) {
+		mutexUnlock(&debug_log_mutex);
+		return;
+	}
+
 	va_list v;
 	va_start(v, text);
-	vfprintf(debug_log_file, text, v);
+	int write_result = vfprintf(debug_log_file, text, v);
 	va_end(v);
-	fclose(debug_log_file);
+
+	/* Flush every message so recent diagnostics survive a later crash. */
+	int flush_result = fflush(debug_log_file);
+	if (write_result < 0 || flush_result != 0) {
+		fclose(debug_log_file);
+		debug_log_file = NULL;
+	}
+	mutexUnlock(&debug_log_mutex);
+}
+
+void debug_log_stop() {
+	mutexLock(&debug_log_mutex);
+	if (debug_log_file) {
+		fflush(debug_log_file);
+		fclose(debug_log_file);
+		debug_log_file = NULL;
+	}
+	mutexUnlock(&debug_log_mutex);
 }
 
 void to_lowercase(char *str) {
@@ -298,6 +346,7 @@ int remove_directory(const char *path) {
 
 	  r = 0;
 	  while (!r && (p=readdir(d))) {
+		  screenreader_poll_input();
 		  int r2 = -1;
 		  char *buf;
 		  size_t len;

@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">eSpeak TTS Settings</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">Pitch</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">Speech rate</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">Installing voice data…</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">This is a sample of text spoken in %s</string>
+  <string name="espeak_volume">Volume</string>
+  <string name="formatter_wpm">%s WPM</string>
+  <string name="formatter_percentage">%s%%</string>
+  <string name="resetToDefault">Set to default</string>
+  <string name="espeak_pitch_range">Pitch variation</string>
+  <string name="espeak_variant">Voice variant</string>
+</resources>

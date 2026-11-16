@@ -1,0 +1,324 @@
+// ***************************************************************************/
+// *   Mongolian (Khalkha) phoneme definitions  ph_mongolian                 *
+// *   Original Author Battseren Badral 15-05-2025                           *
+// *   Contact info: bbattseren88@gmail.com                                  *
+// ***************************************************************************/
+// *   This program is free software; you can redistribute it and/or modify  *
+// *   it under the terms of the GNU General Public License as published by  *
+// *   the Free Software Foundation; either version 3 of the License, or     *
+// *   (at your option) any later version.                                   *
+// *                                                                         *
+// *   This program is distributed in the hope that it will be useful,       *
+// *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+// *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+// *   GNU General Public License for more details.                          *
+// *                                                                         *
+// *   You should have received a copy of the GNU General Public License     *
+// *   along with this program; if not, see:                                 *
+// *               <http://www.gnu.org/licenses/>.                           *
+// ***************************************************************************/
+
+// ============================================================
+//  Khalkha Mongolian Vowel System
+//
+//  7 short vowels, 7 long vowels, 4 diphthongs.
+//  Vowel harmony: back {a, O, U} vs front {e, 8, y}; i neutral.
+//  Unstressed short vowels reduce significantly in natural speech.
+// ============================================================
+
+// -- SHORT VOWELS -------------------------------------------------
+
+// a /a/ - open central-to-back unrounded
+phoneme a
+  ipa a
+  vwl starttype #a endtype #a
+  length 150
+  ChangeIfUnstressed(a#)
+  FMT(mongolian/a)
+endphoneme
+
+// Reduced a in unstressed positions (same quality, just shorter)
+phoneme a#
+  ipa a
+  vwl starttype #a endtype #a
+  length 100
+  FMT(mongolian/a)
+endphoneme
+
+// e /e/ - front mid unrounded
+phoneme e
+  ipa e
+  vwl starttype #e endtype #e
+  length 150
+  ChangeIfUnstressed(e#)
+  FMT(mongolian/e)
+endphoneme
+
+// Reduced e (same quality, just shorter)
+phoneme e#
+  ipa e
+  vwl starttype #e endtype #e
+  length 100
+  FMT(mongolian/e)
+endphoneme
+
+// i /i/ - front close unrounded (vowel-harmony neutral)
+phoneme i
+  ipa i
+  vwl starttype #i endtype #i
+  length 140
+  ChangeIfUnstressed(i#)
+  FMT(mongolian/i)
+endphoneme
+
+// Reduced i (same quality, just shorter)
+phoneme i#
+  ipa i
+  vwl starttype #i endtype #i
+  length 95
+  FMT(mongolian/i)
+endphoneme
+
+// O /O/ - back mid-open rounded
+phoneme O
+  ipa O
+  vwl starttype #o endtype #o
+  length 150
+  ChangeIfUnstressed(O#)
+  FMT(mongolian/O)
+endphoneme
+
+// Reduced O (same quality, just shorter)
+phoneme O#
+  ipa O
+  vwl starttype #o endtype #o
+  length 100
+  FMT(mongolian/O)
+endphoneme
+
+// 8 /8/ - front mid rounded (+ATR), Khalkha /ɵ/
+phoneme 8
+  ipa 8
+  vwl starttype #o endtype #o
+  length 150
+  ChangeIfUnstressed(8#)
+  FMT(mongolian/oe)
+endphoneme
+
+// Reduced 8 (same quality, just shorter)
+phoneme 8#
+  ipa 8
+  vwl starttype #o endtype #o
+  length 100
+  FMT(mongolian/oe)
+endphoneme
+
+// U /U/ - back near-close rounded (-ATR)
+phoneme U
+  ipa U
+  vwl starttype #u endtype #u
+  length 150
+  ChangeIfUnstressed(U#)
+  FMT(mongolian/u)
+endphoneme
+
+// Reduced U (same quality, just shorter)
+phoneme U#
+  ipa U
+  vwl starttype #u endtype #u
+  length 100
+  FMT(mongolian/u)
+endphoneme
+
+// y /u/ - front close rounded (+ATR) (Mongolian u with umlaut)
+phoneme y
+  ipa u
+  vwl starttype #u endtype #u
+  length 140
+  ChangeIfUnstressed(y#)
+  FMT(mongolian/y)
+endphoneme
+
+// Reduced y (same quality, just shorter)
+phoneme y#
+  ipa u
+  vwl starttype #u endtype #u
+  length 95
+  FMT(mongolian/y)
+endphoneme
+
+
+// -- LONG VOWELS --------------------------------------------------
+// Approximately 2.2x short vowel duration.
+
+phoneme a:
+  ipa a:
+  vwl starttype #a endtype #a
+  length 270
+  FMT(mongolian/a_long)
+endphoneme
+
+phoneme e:
+  ipa e:
+  vwl starttype #e endtype #e
+  length 260
+  FMT(mongolian/e_long)
+endphoneme
+
+phoneme i:
+  ipa i:
+  vwl starttype #i endtype #i
+  length 250
+  FMT(mongolian/i_long)
+endphoneme
+
+phoneme O:
+  ipa O:
+  vwl starttype #o endtype #o
+  length 270
+  FMT(mongolian/O_long)
+endphoneme
+
+phoneme 8:
+  ipa 8:
+  vwl starttype #o endtype #o
+  length 260
+  FMT(mongolian/oe_long)
+endphoneme
+
+phoneme U:
+  ipa U:
+  vwl starttype #u endtype #u
+  length 270
+  FMT(mongolian/u_long)
+endphoneme
+
+phoneme y:
+  ipa u:
+  vwl starttype #u endtype #u
+  length 250
+  FMT(mongolian/y_long)
+endphoneme
+
+
+// -- DIPHTHONGS ---------------------------------------------------
+
+// ai /ai/
+phoneme aI
+  ipa ai
+  vwl starttype #a endtype #i
+  length 240
+  FMT(mongolian/ai)
+endphoneme
+
+// ei /ei/
+phoneme eI
+  ipa ei
+  vwl starttype #e endtype #i
+  length 220
+  FMT(mongolian/ei)
+endphoneme
+
+// Oi /Oi/
+phoneme OI
+  ipa Oi
+  vwl starttype #o endtype #i
+  length 240
+  FMT(mongolian/oi)
+endphoneme
+
+// Ui /Ui/
+phoneme UI
+  ipa Ui
+  vwl starttype #u endtype #i
+  length 230
+  FMT(mongolian/ui)
+endphoneme
+
+
+// ============================================================
+//  Consonants
+//
+//  base1 inherited: b, d, p, t, k, m, n, N, s, z, S, f, v,
+//                   j, tS, dZ
+//
+//  Mongolian-specific overrides below:
+//    g - softer velar stop with prevoicing support
+//    l - voiced lateral fricative /lateralFric/ (Khalkha feature)
+//    r - apical alveolar trill
+//    x - voiceless velar fricative (very frequent)
+//    ts - voiceless alveolar affricate (imported)
+// ============================================================
+
+// g - voiced velar stop, softer release
+phoneme g
+  vcd vel stp
+  voicingswitch k
+  lengthmod 5
+  Vowelin f1=2  f2=2300 200 300  f3=-300 80
+  Vowelout f1=2  f2=2300 250 300  f3=-300 80 brk
+
+  IF PreVoicing THEN
+    FMT(g/xg)
+  ENDIF
+  IF nextPh(isPause2) THEN
+    FMT(g/g_) addWav(x/g_)
+  ENDIF
+  FMT(g/g) addWav(x/g2, 100)
+endphoneme
+
+// l - voiced lateral fricative (characteristic of Khalkha)
+phoneme l
+  ipa l
+  liquid
+  lengthmod 7
+
+  NextVowelStarts
+    VowelStart(l/l@)
+    VowelStart(l/la)
+    VowelStart(l/le)
+    VowelStart(l/li)
+    VowelStart(l/lo)
+    VowelStart(l/lu)
+  EndSwitch
+
+  IF prevPh(isPause) THEN
+    FMT(l/_l)
+  ELIF nextPh(isNotVowel) THEN
+    FMT(l/l_)
+  ENDIF
+endphoneme
+
+// r - alveolar trill (strong onset, lighter between vowels)
+phoneme r
+  ipa r
+  liquid rhotic trl
+  lengthmod 7
+  length 60
+
+  IF nextPh(isVowel) THEN
+    FMT(r3/r_trill) addWav(r3/r_trill, 40)
+  ELIF prevPh(isVowel) AND nextPh(isNotVowel) THEN
+    FMT(r3/r_) addWav(r3/r_trill, 30)
+  ENDIF
+  FMT(r3/r_trill) addWav(r3/r_trill, 35)
+endphoneme
+
+// x - voiceless velar fricative (most frequent Mongolian consonant)
+phoneme x
+  ipa x
+  vls vel frc
+  lengthmod 3
+  Vowelin f1=0  f2=2300 200 400  f3=-100 80
+  Vowelout f1=0 f2=2300 300 400  f3=-100 80  rms=20
+
+  IF nextPh(isPause) THEN
+    WAV(ufric/x_hr, 15)
+  ENDIF
+  WAV(ufric/x_hr, 23)
+endphoneme
+
+// ts - voiceless alveolar affricate
+phoneme ts
+  import_phoneme consonants/ts
+endphoneme

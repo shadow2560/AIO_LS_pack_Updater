@@ -12,7 +12,10 @@
 #include "download.hpp"
 #include "main_util.h"
 #include "unzip.hpp"
-#include "translate.hpp"
+#include "hb_translate.hpp"
+#include "screenreader/ScreenReader.hpp"
+
+extern PadState pad;
 // #include "json.hpp"
 // #include "zip.h"
 
@@ -142,6 +145,7 @@ void fnc_clean_modules() {
 		// auto contents_json = nlohmann::ordered_json::array();
 		struct dirent *ent;
 		while ((ent = readdir(contents_dir)) != NULL) {
+			ScreenReader::PollInput(&pad);
 			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
 				continue;
 			}
@@ -213,10 +217,15 @@ void fnc_clean_theme() {
 	printf(language_vars["lng_clean_theme_begin"].c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
+	ScreenReader::PollInput(&pad);
 	removeDir_on_sd("/atmosphere/contents/0100000000001000");
+	ScreenReader::PollInput(&pad);
 	removeDir_on_sd("/atmosphere/contents/0100000000001013");
+	ScreenReader::PollInput(&pad);
 	removeDir_on_sd("/atmosphere/contents/0100000000001007"); //Player select
+	ScreenReader::PollInput(&pad);
 	removeDir_on_sd("/atmosphere/contents/0100000000000811"); //Custom font
+	ScreenReader::PollInput(&pad);
 	removeDir_on_sd("/atmosphere/contents/0100000000000039"); //needed to enable custom font
 	/*
 	remove_directory("atmosphere/contents/0100000000001000");
@@ -246,6 +255,7 @@ void fnc_agressive_clean(bool fw_install_only) {
 		debug_log_write("Suppression des répertoires  via un fichier personnalisé.\n");
 		char chaine[FS_MAX_PATH+1] = "";
 		while (fgets(chaine, FS_MAX_PATH+1, folders_list_file) != NULL) {
+			ScreenReader::PollInput(&pad);
 			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
 				char *c1 = substr(chaine, 0, strlen(chaine)-2);
 				remove_directory(c1);
@@ -258,6 +268,7 @@ void fnc_agressive_clean(bool fw_install_only) {
 		debug_log_write("Suppression des fichiers  via un fichier personnalisé.\n");
 		char chaine[FS_MAX_PATH+1] = "";
 		while (fgets(chaine, FS_MAX_PATH+1, files_list_file) != NULL) {
+			ScreenReader::PollInput(&pad);
 			if (strcmp(chaine, "") != 0 && strcmp(chaine, "\n") != 0) {
 				char *c1 = substr(chaine, 0, strlen(chaine)-2);
 				remove(c1);
@@ -279,6 +290,8 @@ void fnc_agressive_clean(bool fw_install_only) {
 
 void clean_sd(bool clean_theme, bool agressive_clean) {
 	debug_log_write("Nettoyage de la SD.\n");
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		language_vars["lng_screenreader_clean_started"], "");
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_begin"].c_str());
 	printf("\033[0;37m\n");
@@ -362,7 +375,9 @@ void clean_sd(bool clean_theme, bool agressive_clean) {
 	printf("\033[0;32m");
 	printf(language_vars["lng_clean_sd_finish"].c_str());
 	printf("\033[0;37m\n\n");
-		consoleUpdate(&logs_console);
+	consoleUpdate(&logs_console);
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_operation"],
+		language_vars["lng_screenreader_clean_finished"], "");
 }
 
 /*
@@ -479,9 +494,21 @@ int unzip2(const char *output, char *subfolder_in_zip) {
 
 int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	unzFile zfile;
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+		language_vars["lng_screenreader_extraction_started"], "");
 	zfile = unzOpen64(output);
+	if (!zfile) {
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+			language_vars["lng_screenreader_extraction_failed"], "");
+		return 1;
+	}
 	unz_global_info gi = {0};
-	unzGetGlobalInfo(zfile, &gi);
+	if (unzGetGlobalInfo(zfile, &gi) != UNZ_OK) {
+		unzClose(zfile);
+		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+			language_vars["lng_screenreader_extraction_failed"], "");
+		return 1;
+	}
 	uLong first_subfolder_passed = 0;
 	uLong subfolder_in_zip_length;
 	if (strcmp(subfolder_in_zip, "") != 0 && strcmp(subfolder_in_zip, "/") != 0) {
@@ -535,6 +562,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 	short copy_retry=3;
 
 	for (uLong i = 0; i < gi.number_entry; i++) {
+		ScreenReader::PollInput(&pad);
 		unzOpenCurrentFile(zfile);
 		unzGetCurrentFileInfo(zfile, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 		// size_t file_uncompressed_size = file_info.uncompressed_size;
@@ -714,11 +742,14 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			fclose(outfile);
 			unzCloseCurrentFile(zfile);
 			unzClose(zfile);
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+				language_vars["lng_screenreader_extraction_failed"], "");
 			return 1;
 		}
 		bool retry_copy = false;
 		int r;
 		while ((r = unzReadCurrentFile(zfile, buf, CHUNK)) > 0) {
+			ScreenReader::PollInput(&pad);
 			if ((size_t)r != fwrite(buf, 1, r, outfile)) {
 				// debug_log_write("Erreur durant fwrite pour le fichier %s\n", filename_on_sd);
 				free(buf);
@@ -749,6 +780,8 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 			printf("\033[0;37m\n");
 			consoleUpdate(&logs_console);
 			unzClose(zfile);
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+				language_vars["lng_screenreader_extraction_failed"], "");
 			return 1;
 		}
 		/*
@@ -773,6 +806,8 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				unzClose(zfile);
+				ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+					language_vars["lng_screenreader_extraction_failed"], "");
 				return 1;
 			}
 		}
@@ -809,6 +844,8 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 				printf("\033[0;37m\n");
 				consoleUpdate(&logs_console);
 				unzClose(zfile);
+				ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+					language_vars["lng_screenreader_extraction_failed"], "");
 				return 1;
 			}
 		}
@@ -820,5 +857,7 @@ int unzip(const char *output, char *subfolder_in_zip, bool keep_files) {
 
 	unzClose(zfile);
 	free((char*) atmo_bootlogo_dir);
+	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_extraction"],
+		language_vars["lng_screenreader_extraction_finished"], "");
 	return 0;
 }

@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+  <!--Source: Activity title.
+        Description: Title for the Settings activity.-->
+  <string name="tts_settings_label">eSpeak TTS Einstellungen</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default voice pitch.-->
+  <string name="setting_default_pitch">Stimmhöhe</string>
+  <!--Source: Preference title.
+        Description: Title for the preference that controls default speech rate.-->
+  <string name="setting_default_rate">Geschwindigkeit</string>
+  <!--Source: Dialog text.
+        Description: Status message shown when installing voice data.-->
+  <string name="installing_voice_data">Dateien für Sprachen werden installiert…</string>
+  <!--Source: Spoken aloud.
+        Description: Sample text spoken aloud when the user is trying out a language.-->
+  <string name="sample_text">Dies ist ein Beispieltext auf %s</string>
+  <string name="espeak_volume">Lautstärke</string>
+  <string name="formatter_wpm">%s WPM</string>
+  <string name="formatter_percentage">%s%%</string>
+  <string name="resetToDefault">Auf Standardwerte zurücksetzen</string>
+  <string name="espeak_pitch_range">Betonung</string>
+  <string name="espeak_variant">Variante</string>
+  <string name="espeak_speak_punctuation">Satzzeichen sprechen</string>
+  <string name="punctuation_all">Alle</string>
+  <string name="punctuation_custom">Benutzerdefiniert</string>
+  <string name="punctuation_custom_fmt">Benutzerdefiniert: %s</string>
+  <string name="punctuation_none">Keine</string>
+  <string name="punctuation_characters">Satzzeichen</string>
+  <string name="category">Kategorie</string>
+  <string name="variant">Variante</string>
+  <string name="variant_male">Männlich</string>
+  <string name="variant_female">Weiblich</string>
+  <string name="variant_default">Standard</string>
+  <string name="variant_n">Variante %d</string>
+  <string name="variant_young">Jung</string>
+  <string name="variant_old">Alt</string>
+  <string name="variant_croak">Krächzen</string>
+  <string name="variant_whisper">Flüstern</string>
+  <string name="import_voice_title">eSpeak-Wörterbuch importieren</string>
+  <string name="import_voice_description">Ein eSpeak-Sprachwörterbuch von der SD-Karte importieren.</string>
+</resources>

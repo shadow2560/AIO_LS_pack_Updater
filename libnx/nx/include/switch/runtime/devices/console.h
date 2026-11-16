@@ -154,6 +154,48 @@ void consoleSetFont(PrintConsole* console, ConsoleFont* font);
 void consoleSetWindow(PrintConsole* console, int x, int y, int width, int height);
 
 /**
+ * @brief Enables optional Unicode text capture for a console.
+ * @param console Console to capture (NULL uses the current console).
+ * @return True when the text buffer is available.
+ * @remark Capture is disabled by default and allocates memory only when enabled.
+ */
+bool consoleEnableTextBuffer(PrintConsole* console);
+
+/**
+ * @brief Disables text capture and releases its memory.
+ * @param console Console to update (NULL uses the current console).
+ */
+void consoleDisableTextBuffer(PrintConsole* console);
+
+/**
+ * @brief Checks whether text capture is enabled for a console.
+ * @param console Console to check (NULL uses the current console).
+ */
+bool consoleIsTextBufferEnabled(PrintConsole* console);
+
+/**
+ * @brief Gets the last visible line containing non-space text.
+ * @param console Console to inspect, or NULL for the current console.
+ * @return The zero-based line index, or -1 if capture is unavailable or no
+ *         line contains text.
+ * @remark This function does not modify the captured text buffer.
+ */
+int consoleGetLastTextLine(PrintConsole* console);
+
+/**
+ * @brief Copies captured console lines to a UTF-8 buffer.
+ * @param console Console to read (NULL uses the current console).
+ * @param startLine First zero-based line, inclusive.
+ * @param endLine Last zero-based line, inclusive.
+ * @param output Destination buffer, or NULL to query the required size.
+ * @param outputSize Destination size including the terminating NUL.
+ * @return Required UTF-8 byte count excluding the terminating NUL, or 0 if
+ *         capture is disabled or the requested range is invalid.
+ * @remark Trailing spaces on each line are omitted. A newline separates lines.
+ */
+size_t consoleGetText(PrintConsole* console, int startLine, int endLine, char* output, size_t outputSize);
+
+/**
  * @brief Gets a pointer to the console with the default values.
  * This should only be used when using a single console or without changing the console that is returned, otherwise use consoleInit().
  * @return A pointer to the console with the default values.
