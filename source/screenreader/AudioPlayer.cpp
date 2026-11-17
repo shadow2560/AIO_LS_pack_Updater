@@ -64,6 +64,39 @@ debug_log_write("AudioPlayer: audrvUpdate pendant le détachement du mempool a �
 				return false;
 			}
 			state = driver.in_mempools[playbackMemPoolId].state;
+
+			/* A running renderer may need another frame to acknowledge the detach. */
+			if (state == AudioRendererMemPoolState_RequestDetach && rendererStarted)
+			{
+				for (int frame = 0; frame < 4 && state == AudioRendererMemPoolState_RequestDetach; ++frame)
+				{
+					const Result waitResult = eventWait(audrenGetFrameEvent(), 100000000ULL);
+					if (R_FAILED(waitResult))
+					{
+#if SCREENREADER_DEBUG
+						debug_log_write("AudioPlayer: attente du détachement interrompue (frame=%d, rc=0x%08X, état=%d).\n",
+							frame + 1, (unsigned int)waitResult, (int)state);
+#endif
+						break;
+					}
+
+					const Result updateResult = audrvUpdate(&driver);
+					if (R_FAILED(updateResult))
+					{
+#if SCREENREADER_DEBUG
+						debug_log_write("AudioPlayer: mise à jour pendant l'attente du détachement échouée (frame=%d, rc=0x%08X).\n",
+							frame + 1, (unsigned int)updateResult);
+#endif
+						break;
+					}
+
+					state = driver.in_mempools[playbackMemPoolId].state;
+#if SCREENREADER_DEBUG
+					debug_log_write("AudioPlayer: état du mempool après frame de détachement %d = %d.\n",
+						frame + 1, (int)state);
+#endif
+				}
+			}
 		}
 
 		if (state != AudioRendererMemPoolState_Detached && state != AudioRendererMemPoolState_New && state != AudioRendererMemPoolState_Released)

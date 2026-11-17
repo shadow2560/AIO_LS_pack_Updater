@@ -42,7 +42,7 @@ ESPEAK_DIR := espeak-ng
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.13.01
+APP_VERSION := 	7.14.00
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build

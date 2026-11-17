@@ -36,6 +36,8 @@ typedef struct {
 
 Result amssuInitialize();
 void   amssuExit();
+void   amssuReleaseTransferMemoryBuffer(void);
+bool   amssuCanRetrySetup(void);
 Service *amssuGetServiceSession(void);
 
 Result amssuGetUpdateInformation(AmsSuUpdateInformation *out, const char *path);

@@ -4,6 +4,7 @@
 #include "EspeakEngine.hpp"
 #include "AudioPlayer.hpp"
 #include "../main_util.h"
+#include "MemoryDiagnostics.h"
 #include "../hb_translate.hpp"
 #include "ini.h"
 
@@ -15,6 +16,8 @@
 #include <ctype.h>
 #include <limits.h>
 #include <chrono>
+#include <mutex>
+#include <new>
 
 extern PadState pad;
 
@@ -353,7 +356,7 @@ void ScreenReader::LoadConfiguration()
 
 void ScreenReader::SaveConfiguration()
 {
-	std::lock_guard<std::mutex> fileLock(configurationFileMutex);
+	std::unique_lock<std::mutex> fileLock(configurationFileMutex);
 
 	bool currentEnabled;
 	int currentRate;
@@ -497,6 +500,10 @@ void ScreenReader::SaveConfiguration()
 		currentEnabled ? 1 : 0, currentRate, currentPitch, currentPitchRange,
 		currentWordGap, currentPunctuation, currentIntonation, currentLanguage.c_str());
 #endif
+	fileLock.unlock();
+#if SCREENREADER_DEBUG
+	debug_log_write("ScreenReader: mutex de configuration libéré.\n");
+#endif
 }
 
 bool ScreenReader::Initialize()
@@ -536,13 +543,33 @@ bool ScreenReader::Initialize()
 #endif
 
 	LoadConfiguration();
+#if SCREENREADER_DEBUG
+	debug_log_write("ScreenReader::Initialize: LoadConfiguration terminé.\n");
+#endif
+#if MEMORY_DIAGNOSTICS
+	MemoryDiagnosticsLogAllocator("après LoadConfiguration, avant réinitialisation des états");
+#endif
 
 	{
+#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: acquisition du mutex d'état.\n");
+#endif
 		std::lock_guard<std::mutex> lock(mutex);
+#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: mutex d'état acquis (file=%llu, capacité=%llu).\n",
+			(unsigned long long)deferredSpeechQueue.size(),
+			(unsigned long long)deferredSpeechQueue.capacity());
+		debug_log_write("ScreenReader::Initialize: avant deferredSpeechQueue.clear().\n");
+#endif
 		hasPending = false;
 		pendingIsFinalMessage = false;
 		pendingIsBlocking = false;
 		deferredSpeechQueue.clear();
+#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: après deferredSpeechQueue.clear() (file=%llu, capacité=%llu).\n",
+			(unsigned long long)deferredSpeechQueue.size(),
+			(unsigned long long)deferredSpeechQueue.capacity());
+#endif
 		speechBatchActive = false;
 		speechBatchHasRememberedText = false;
 		blockingSpeechInProgress = false;
@@ -550,11 +577,28 @@ bool ScreenReader::Initialize()
 		finalMessageInProgress = false;
 		stopRequested = false;
 		running = true;
+	#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: états réinitialisés, sortie imminente du mutex.\n");
+	#endif
 	}
+#if SCREENREADER_DEBUG
+	debug_log_write("ScreenReader::Initialize: mutex d'état libéré.\n");
+	debug_log_write("ScreenReader::Initialize: workerThread.joinable()=%d avant création.\n",
+		workerThread.joinable() ? 1 : 0);
+#endif
+#if MEMORY_DIAGNOSTICS
+	MemoryDiagnosticsLogAllocator("après réinitialisation des états, avant création du worker");
+#endif
 
 	try
 	{
+	#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: avant std::thread.\n");
+	#endif
 		workerThread = std::thread(&ScreenReader::Worker);
+	#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader::Initialize: std::thread construit.\n");
+	#endif
 	}
 	catch (...)
 	{
@@ -1695,6 +1739,7 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 	}
 #if SCREENREADER_DEBUG
 	debug_log_write("ScreenReader::HandleInput: langue sélectionnée=%s, auto=%d.\n",
+		selectedLanguage.c_str(), nextSelection == 0 ? 1 : 0);
 #endif
 
 	Speak(message, false);
@@ -1762,6 +1807,9 @@ void ScreenReader::Interrupt()
 void ScreenReader::Worker()
 {
 #if SCREENREADER_DEBUG
+	static u64 speechSequence = 0;
+#endif
+#if SCREENREADER_DEBUG
 	debug_log_write("ScreenReader worker loop started.\n");
 #endif
 
@@ -1779,6 +1827,9 @@ void ScreenReader::Worker()
 		bool finalMessage = false;
 		bool blockingSpeech = false;
 		u64 blockingSpeechId = 0;
+#if SCREENREADER_DEBUG
+		const u64 currentSpeechSequence = ++speechSequence;
+#endif
 
 		{
 			std::unique_lock<std::mutex> lock(mutex);
@@ -1826,8 +1877,17 @@ void ScreenReader::Worker()
 #if SCREENREADER_DEBUG
 		debug_log_write("ScreenReader worker: texte récupéré (longueur=%d, voix=%s, variante=%d, débit=%d).\n",
 			(int)text.size(), voice.c_str(), currentVoiceVariant, currentRate);
+	debug_log_write("ScreenReader worker: annonce #%llu (final=%d, blocking=%d, blocking_id=%llu).\n",
+		(unsigned long long)currentSpeechSequence, finalMessage ? 1 : 0, blockingSpeech ? 1 : 0,
+		(unsigned long long)blockingSpeechId);
 #endif
 
+		// The last observed failure occurred immediately after the announcement
+		// metadata, so bracket the first eSpeak operation before entering it.
+#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader worker: annonce #%llu, avant espeak_SetVoiceByName(%s, longueur=%d).\n",
+			(unsigned long long)currentSpeechSequence, voice.c_str(), (int)voice.size());
+#endif
 		espeak_ERROR voiceResult = espeak_SetVoiceByName(voice.c_str());
 #if SCREENREADER_DEBUG
 		debug_log_write("ScreenReader worker: espeak_SetVoiceByName(%s) = %d.\n", voice.c_str(), (int)voiceResult);
@@ -1844,6 +1904,10 @@ void ScreenReader::Worker()
 			// primary language with the requested voice variant before dropping it.
 			if (languageSeparator != std::string::npos && !variantSuffix.empty()) {
 				voice = requestedLanguage.substr(0, languageSeparator) + variantSuffix;
+#if SCREENREADER_DEBUG
+				debug_log_write("ScreenReader worker: annonce #%llu, avant voix de repli avec variante (%s).\n",
+					(unsigned long long)currentSpeechSequence, voice.c_str());
+#endif
 				voiceResult = espeak_SetVoiceByName(voice.c_str());
 #if SCREENREADER_DEBUG
 				debug_log_write("ScreenReader worker: variante sur langue principale %s = %d.\n", voice.c_str(), (int)voiceResult);
@@ -1851,6 +1915,10 @@ void ScreenReader::Worker()
 			}
 			if (voiceResult != EE_OK) {
 				voice = requestedLanguage;
+#if SCREENREADER_DEBUG
+				debug_log_write("ScreenReader worker: annonce #%llu, avant voix originale de repli (%s).\n",
+					(unsigned long long)currentSpeechSequence, voice.c_str());
+#endif
 				voiceResult = espeak_SetVoiceByName(voice.c_str());
 #if SCREENREADER_DEBUG
 				debug_log_write("ScreenReader worker: voix originale de repli %s = %d.\n", voice.c_str(), (int)voiceResult);
@@ -1858,6 +1926,10 @@ void ScreenReader::Worker()
 			}
 			if (voiceResult != EE_OK && languageSeparator != std::string::npos) {
 				voice = requestedLanguage.substr(0, languageSeparator);
+#if SCREENREADER_DEBUG
+				debug_log_write("ScreenReader worker: annonce #%llu, avant langue principale de repli (%s).\n",
+					(unsigned long long)currentSpeechSequence, voice.c_str());
+#endif
 				voiceResult = espeak_SetVoiceByName(voice.c_str());
 #if SCREENREADER_DEBUG
 				debug_log_write("ScreenReader worker: langue de repli %s = %d.\n", voice.c_str(), (int)voiceResult);
@@ -1865,6 +1937,10 @@ void ScreenReader::Worker()
 			}
 			if (voiceResult != EE_OK) {
 				voice = "en";
+#if SCREENREADER_DEBUG
+				debug_log_write("ScreenReader worker: annonce #%llu, avant voix de secours (en).\n",
+					(unsigned long long)currentSpeechSequence);
+#endif
 				voiceResult = espeak_SetVoiceByName(voice.c_str());
 #if SCREENREADER_DEBUG
 				debug_log_write("ScreenReader worker: voix de secours en = %d.\n", (int)voiceResult);
@@ -1872,6 +1948,10 @@ void ScreenReader::Worker()
 			}
 		}
 		// Set the rate after selecting the voice: SetVoiceByName may restore voice defaults.
+#if SCREENREADER_DEBUG
+		debug_log_write("ScreenReader worker: annonce #%llu, début application des paramètres eSpeak.\n",
+			(unsigned long long)currentSpeechSequence);
+#endif
 		SCREENREADER_DEBUG_RESULT(rateResult, espeak_SetParameter(espeakRATE, currentRate, 0));
 #if SCREENREADER_DEBUG
 		debug_log_write("ScreenReader worker: espeak_SetParameter(espeakRATE) = %d.\n", (int)rateResult);
@@ -1920,15 +2000,35 @@ void ScreenReader::Worker()
 
 		std::vector<int16_t> pcm;
 		int sampleRate = 0;
+		bool synthesisSucceeded = false;
 
 #if SCREENREADER_DEBUG
-		debug_log_write("ScreenReader worker: début de la synthèse.\n");
+		debug_log_write("ScreenReader worker: annonce #%llu, début de la synthèse eSpeak.\n",
+			(unsigned long long)currentSpeechSequence);
 #endif
-		if (!EspeakEngine::Synthesize(text, pcm, sampleRate, finalMessage))
+		try
+		{
+			synthesisSucceeded = EspeakEngine::Synthesize(text, pcm, sampleRate, finalMessage);
+		}
+		catch (const std::bad_alloc&)
 		{
 #if SCREENREADER_DEBUG
-			debug_log_write("ScreenReader worker: échec synthèse (échantillons=%d, fréquence=%d).\n",
-				(int)pcm.size(), sampleRate);
+			debug_log_write("ScreenReader worker: std::bad_alloc propagée depuis EspeakEngine::Synthesize (annonce #%llu).\n",
+				(unsigned long long)currentSpeechSequence);
+#endif
+		}
+		catch (...)
+		{
+#if SCREENREADER_DEBUG
+			debug_log_write("ScreenReader worker: exception inconnue propagée depuis EspeakEngine::Synthesize (annonce #%llu).\n",
+				(unsigned long long)currentSpeechSequence);
+#endif
+		}
+		if (!synthesisSucceeded)
+		{
+#if SCREENREADER_DEBUG
+			debug_log_write("ScreenReader worker: échec synthèse (annonce #%llu, échantillons=%d, capacité=%d, fréquence=%d).\n",
+				(unsigned long long)currentSpeechSequence, (int)pcm.size(), (int)pcm.capacity(), sampleRate);
 #endif
 			if (finalMessage) {
 				std::lock_guard<std::mutex> lock(mutex);
@@ -1947,8 +2047,8 @@ void ScreenReader::Worker()
 		}
 
 #if SCREENREADER_DEBUG
-		debug_log_write("ScreenReader worker: synthèse terminée (échantillons=%d, fréquence=%d).\n",
-			(int)pcm.size(), sampleRate);
+		debug_log_write("ScreenReader worker: synthèse terminée (annonce #%llu, échantillons=%d, capacité=%d, fréquence=%d).\n",
+			(unsigned long long)currentSpeechSequence, (int)pcm.size(), (int)pcm.capacity(), sampleRate);
 #endif
 
 		skipSpeech = false;
@@ -1981,11 +2081,13 @@ void ScreenReader::Worker()
 		if (!pcm.empty())
 		{
 #if SCREENREADER_DEBUG
-			debug_log_write("ScreenReader worker: appel AudioPlayer::Play.\n");
+			debug_log_write("ScreenReader worker: annonce #%llu, appel AudioPlayer::Play (PCM=%d, capacité=%d).\n",
+				(unsigned long long)currentSpeechSequence, (int)pcm.size(), (int)pcm.capacity());
 #endif
 			AudioPlayer::Play(pcm.data(), pcm.size(), sampleRate, &stopRequested);
 #if SCREENREADER_DEBUG
-			debug_log_write("ScreenReader worker: AudioPlayer::Play terminé.\n");
+			debug_log_write("ScreenReader worker: annonce #%llu, AudioPlayer::Play terminé.\n",
+				(unsigned long long)currentSpeechSequence);
 #endif
 		}
 		else {

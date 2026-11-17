@@ -17,20 +17,94 @@
 #include <string.h>
 #include "ams_su.h"
 #include "service_guard.h"
+#include "main_util.h"
 
 static Service g_amssuSrv;
 static TransferMemory g_tmem;
+static void *g_ownedTransferMemoryBuffer;
+static bool g_transferMemoryDetached;
+static bool g_setupRequestSent;
+static bool g_setupBufferWasOwned;
+static bool g_setupAccepted;
 
 NX_GENERATE_SERVICE_GUARD(amssu);
 
+static void AmssuDetachTransferMemory(void) {
+	/*
+	 * Do not free the source buffer here. After a successful SetupUpdate,
+	 * ams:su owns a mapped reference to this TransferMemory and may continue
+	 * using it while the asynchronous preparation/apply task is alive.
+	 * Closing our local handle does not release the service's reference.
+	 * Unlike Daybreak's standalone process lifecycle, this application keeps
+	 * running after DaybreakAppExit(), and ams:su exposes no public command to
+	 * destroy its update task or unmap the transferred memory. Freeing the
+	 * buffer merely because the local Daybreak session ended could therefore
+	 * invalidate memory still used by the service. Keep the pointer and only
+	 * release it later if svcQueryMemory confirms that it is RW again.
+	 */
+	if (g_tmem.src_addr != NULL)
+		g_ownedTransferMemoryBuffer = g_tmem.src_addr;
+	tmemCloseHandle(&g_tmem);
+	memset(&g_tmem, 0, sizeof(g_tmem));
+	g_tmem.handle = INVALID_HANDLE;
+}
+
 Result _amssuInitialize(void) {
-    return smGetService(&g_amssuSrv, "ams:su");
+	memset(&g_tmem, 0, sizeof(g_tmem));
+	g_tmem.handle = INVALID_HANDLE;
+	if (!g_setupAccepted) {
+		g_transferMemoryDetached = false;
+		g_setupRequestSent = false;
+		g_setupBufferWasOwned = false;
+	}
+	return smGetService(&g_amssuSrv, "ams:su");
 }
 
 void _amssuCleanup(void) {
-    serviceClose(&g_amssuSrv);
-    tmemClose(&g_tmem);
-    memset(&g_tmem, 0, sizeof(g_tmem));
+	serviceClose(&g_amssuSrv);
+	AmssuDetachTransferMemory();
+	g_transferMemoryDetached = true;
+}
+
+void amssuReleaseTransferMemoryBuffer(void) {
+	if (!g_transferMemoryDetached || g_ownedTransferMemoryBuffer == NULL)
+		return;
+
+	/* A one-shot permission check is intentional: never wait here because
+	 * ams:su may retain the mapping until process/system teardown. */
+	MemoryInfo memoryInfo = {0};
+	u32 pageInfo = 0;
+	Result rc = svcQueryMemory(&memoryInfo, &pageInfo, (u64)g_ownedTransferMemoryBuffer);
+	if (R_FAILED(rc))
+		return;
+
+	u64 bufferAddress = (u64)g_ownedTransferMemoryBuffer;
+	if (bufferAddress < memoryInfo.addr || bufferAddress - memoryInfo.addr >= memoryInfo.size)
+		return;
+	if ((memoryInfo.perm & Perm_Rw) != Perm_Rw)
+		return;
+
+	TransferMemory ownedMemory = {0};
+	ownedMemory.handle = INVALID_HANDLE;
+	ownedMemory.src_addr = g_ownedTransferMemoryBuffer;
+	rc = tmemClose(&ownedMemory);
+	if (R_SUCCEEDED(rc))
+		g_ownedTransferMemoryBuffer = NULL;
+}
+
+bool amssuCanRetrySetup(void) {
+	if (g_setupAccepted)
+		return false;
+	if (!g_setupRequestSent)
+		return true;
+	if (!g_setupBufferWasOwned)
+		return false;
+	amssuReleaseTransferMemoryBuffer();
+	if (g_ownedTransferMemoryBuffer != NULL)
+		return false;
+	g_setupRequestSent = false;
+	g_setupBufferWasOwned = false;
+	return true;
 }
 
 Service *amssuGetServiceSession(void) {
@@ -61,6 +135,8 @@ Result amssuValidateUpdate(AmsSuUpdateValidationInfo *out, const char *path) {
 
 Result amssuSetupUpdate(void *buffer, size_t size, const char *path, bool exfat) {
     Result rc = 0;
+	g_transferMemoryDetached = false;
+	g_setupBufferWasOwned = buffer == NULL;
 
     if (buffer == NULL) {
         rc = tmemCreate(&g_tmem, size, Perm_None);
@@ -78,6 +154,7 @@ Result amssuSetupUpdate(void *buffer, size_t size, const char *path, bool exfat)
         u64 size;
     } in = { exfat, g_tmem.size };
 
+	g_setupRequestSent = true;
     rc = serviceDispatchIn(&g_amssuSrv, 2, in,
         .in_num_handles = 1,
         .in_handles = { g_tmem.handle },
@@ -85,8 +162,9 @@ Result amssuSetupUpdate(void *buffer, size_t size, const char *path, bool exfat)
         .buffers      = { { send_path, FS_MAX_PATH } },
     );
     if (R_FAILED((rc))) {
-        tmemClose(&g_tmem);
-        memset(&g_tmem, 0, sizeof(g_tmem));
+		AmssuDetachTransferMemory();
+	} else {
+		g_setupAccepted = true;
     }
 
     return rc;
@@ -94,6 +172,7 @@ Result amssuSetupUpdate(void *buffer, size_t size, const char *path, bool exfat)
 
 Result amssuSetupUpdateWithVariation(void *buffer, size_t size, const char *path, bool exfat, u32 variation) {
     Result rc = 0;
+	g_transferMemoryDetached = false;
 
     if (buffer == NULL) {
         rc = tmemCreate(&g_tmem, size, Perm_None);
@@ -119,8 +198,7 @@ Result amssuSetupUpdateWithVariation(void *buffer, size_t size, const char *path
         .buffers      = { { send_path, FS_MAX_PATH } },
     );
     if (R_FAILED((rc))) {
-        tmemClose(&g_tmem);
-        memset(&g_tmem, 0, sizeof(g_tmem));
+		AmssuDetachTransferMemory();
     }
 
     return rc;

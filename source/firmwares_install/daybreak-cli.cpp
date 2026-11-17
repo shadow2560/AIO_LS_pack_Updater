@@ -28,10 +28,13 @@
 #include "../screenreader/ScreenReader.hpp"
 #include "../main_util.h"
 #include "../hb_translate.hpp"
+#include "MemoryDiagnostics.h"
 
 const char app_version[] = "2.1.2";
 
 PadState daybreak_pad;
+static int g_daybreak_log_start_line = 0;
+static bool g_daybreak_requires_reboot = false;
 
 		static constexpr u32 ExosphereApiVersionConfigItem = 65000;
 		static constexpr u32 ExosphereHasRcmBugPatch	   = 65004;
@@ -72,13 +75,25 @@ SetSysFirmwareVersion fw_ver;
 bool need_clean_21_dg = false;
 bool ask_dg = false;
 
+static void DaybreakReadNewConsoleText(const std::string& textAfter = "") {
+	const int lastLine = consoleGetLastTextLine(&logs_console);
+	if (g_daybreak_log_start_line > lastLine) {
+		if (!textAfter.empty())
+			ScreenReader::SpeakContext(language_vars["lng_screenreader_context_daybreak"], textAfter, "");
+		return;
+	}
+
+	ScreenReader::ReadConsole(&logs_console, g_daybreak_log_start_line, lastLine,
+		language_vars["lng_screenreader_context_daybreak"], textAfter, true);
+	g_daybreak_log_start_line = lastLine + 1;
+}
+
 void custom_pause() {
 	const std::string pauseMessage = language_vars["lng_db_pause"];
 	printf("%s", pauseMessage.c_str());
 	printf("\n");
 	consoleUpdate(&logs_console);
-	ScreenReader::ReadConsole(&logs_console, 0, -1,
-		language_vars["lng_screenreader_context_daybreak"], pauseMessage);
+	DaybreakReadNewConsoleText(pauseMessage);
 	while(1) {
 		padUpdate(&daybreak_pad);
 		u64 kDown = padGetButtonsDown(&daybreak_pad);
@@ -86,6 +101,7 @@ void custom_pause() {
 		if (ScreenReader::IsVirtualReviewActive())
 			continue;
 		if (kDown & HidNpadButton_A) {
+			ScreenReader::Interrupt();
 			break;
 		}
 	}
@@ -130,13 +146,56 @@ void DaybreakAppInit() {
 	setsysExit();
 }
 
+#if MEMORY_DIAGNOSTICS
+static void DaybreakLogMemoryUsage(const char *stage) {
+	MemoryDiagnosticsLogMemory(stage);
+}
+#endif
+
 void DaybreakAppExit() {
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: DaybreakAppExit début.\n");
+	DaybreakLogMemoryUsage("avant fermeture des services");
+#endif
 	hiddbgExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: hiddbgExit terminé.\n");
+	DaybreakLogMemoryUsage("après hiddbgExit");
+#endif
 	nsExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: nsExit terminé.\n");
+	DaybreakLogMemoryUsage("après nsExit");
+#endif
 	splExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: splExit terminé.\n");
+	DaybreakLogMemoryUsage("après splExit");
+#endif
 	plExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: plExit terminé.\n");
+	DaybreakLogMemoryUsage("après plExit");
+#endif
 	spsmExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: spsmExit terminé.\n");
+	DaybreakLogMemoryUsage("après spsmExit");
+#endif
+	if (serviceIsActive(&m_prepare_result.s)) {
+#if MEMORY_DIAGNOSTICS
+		debug_log_write("MemoryDiagnostics: fermeture de l'objet AsyncResult Daybreak.\n");
+#endif
+		asyncResultClose(&m_prepare_result);
+#if MEMORY_DIAGNOSTICS
+		debug_log_write("MemoryDiagnostics: objet AsyncResult Daybreak fermé.\n");
+#endif
+	}
 	amssuExit();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: amssuExit terminé.\n");
+	DaybreakLogMemoryUsage("après amssuExit");
+#endif
 }
 
 }
@@ -163,9 +222,11 @@ bool daybreak_ask_question(char *question_text) {
 		if (ScreenReader::IsVirtualReviewActive())
 			continue;
 		if (kDown & HidNpadButton_A) {
+			ScreenReader::Interrupt();
 			rc = true;
 			break;
 		} else if (kDown & HidNpadButton_B) {
+			ScreenReader::Interrupt();
 			rc = false;
 			break;
 		}
@@ -454,11 +515,46 @@ Result TransitionUpdateState() {
 	return rc;
 }
 
+static void ResetDaybreakAttemptState(void) {
+	memset(&m_update_info, 0, sizeof(m_update_info));
+	memset(&m_validation_info, 0, sizeof(m_validation_info));
+	memset(&m_prepare_result, 0, sizeof(m_prepare_result));
+	memset(&fw_ver, 0, sizeof(fw_ver));
+	m_has_drawn = false;
+	m_has_info = false;
+	m_has_validated = false;
+	m_install_state = InstallState::NeedsDraw;
+	m_progress_percent = 0.0f;
+	g_initialized = false;
+	g_supported_version = std::numeric_limits<u32>::max();
+	g_reset_to_factory = false;
+	g_exfat_supported = false;
+	g_use_exfat = false;
+	need_clean_21_dg = false;
+	ask_dg = false;
+}
+
+bool daybreak_requires_reboot(void) {
+	return g_daybreak_requires_reboot;
+}
+
 bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exfat, int force_unsuported_firmware) {
+	if (g_daybreak_requires_reboot || !amssuCanRetrySetup()) {
+		g_daybreak_requires_reboot = true;
+		debug_log_write("Daybreak: nouvelle tentative refusée, un redémarrage est nécessaire pour réinitialiser ams:su.\n");
+		return false;
+	}
+	ResetDaybreakAttemptState();
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: daybreak_main début (firmware=%s).\n", current_path);
+	DaybreakLogMemoryUsage("entrée daybreak_main");
+#endif
 	DaybreakAppInit();
 	printf(language_vars["lng_db_title"].c_str(), app_version);
 	printf("\n");
 	consoleUpdate(&logs_console);
+	/* The title is announced separately; do not include it in later console reads. */
+	g_daybreak_log_start_line = consoleGetLastTextLine(&logs_console) + 1;
 	char daybreakTitle[128];
 	snprintf(daybreakTitle, sizeof(daybreakTitle), language_vars["lng_db_title"].c_str(), app_version);
 	ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"], daybreakTitle, "");
@@ -518,14 +614,15 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		consoleUpdate(&logs_console);
 		ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"],
 			language_vars["lng_db_update_validation"], "");
+		/* This notice is announced separately; subsequent reads start after it. */
+		g_daybreak_log_start_line = consoleGetLastTextLine(&logs_console) + 1;
 	}
 	/* Perform validation if it hasn't been done already. */
 	if (m_has_info && m_has_drawn && !m_has_validated) {
 		ValidateUpdate();
 	}
 	if (m_has_validated)
-		ScreenReader::ReadConsole(&logs_console, 0, -1,
-			language_vars["lng_screenreader_context_daybreak"], "", true);
+		DaybreakReadNewConsoleText();
 	/* Don't continue if validation hasn't been done or has failed. */
 	if (!m_has_validated || R_FAILED(m_validation_info.result)) {
 		if (need_clean_21_dg == true && ask_dg == false) {
@@ -633,31 +730,34 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		m_install_state = InstallState::NeedsSetup;
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
+	Result install_result = 0;
 	/* Transition to the next update state. */
 	if (m_install_state != InstallState::NeedsDraw && m_install_state != InstallState::AwaitingReboot) {
-		TransitionUpdateState();
+		install_result = TransitionUpdateState();
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	if (m_install_state != InstallState::NeedsSetup && m_install_state != InstallState::AwaitingReboot) {
-		TransitionUpdateState();
+	if (R_SUCCEEDED(install_result) && m_install_state != InstallState::NeedsSetup && m_install_state != InstallState::AwaitingReboot) {
+		install_result = TransitionUpdateState();
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	if (m_install_state != InstallState::NeedsPrepare && m_install_state != InstallState::AwaitingReboot) {
+	if (R_SUCCEEDED(install_result) && m_install_state != InstallState::NeedsPrepare && m_install_state != InstallState::AwaitingReboot) {
 		while (1) {
 			if (m_install_state == InstallState::NeedsApply || m_install_state == InstallState::AwaitingReboot) {
 				break;
 			}
-			TransitionUpdateState();
+			install_result = TransitionUpdateState();
+			if (R_FAILED(install_result))
+				break;
 			// printf("\r* Update progress : %3.0f%s *", m_progress_percent, "%");
 			// consoleUpdate(&logs_console);
 		}
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	if (m_install_state != InstallState::AwaitingPrepare && m_install_state != InstallState::AwaitingReboot) {
-		TransitionUpdateState();
+	if (R_SUCCEEDED(install_result) && m_install_state != InstallState::AwaitingPrepare && m_install_state != InstallState::AwaitingReboot) {
+		install_result = TransitionUpdateState();
 	}
 	debug_log_write("Installation firmware étape: %i\n", m_install_state);
-	if (need_clean_21_dg == true) {
+	if (R_SUCCEEDED(install_result) && need_clean_21_dg == true) {
 		debug_log_write("Suppression nécessaire du fichier proglématique lors du downgrade d'un firmware 21.0.0+ vers un firmware inférieur.\n");
 		mkdir("/LockSmith-RCM", 0777);
 		if (is_emummc) {
@@ -667,5 +767,15 @@ bool daybreak_main(char *current_path, int force_reset_to_factory, int force_exf
 		}
 	}
 	DaybreakAppExit();
+	if (R_FAILED(install_result)) {
+		g_daybreak_requires_reboot = !amssuCanRetrySetup();
+		debug_log_write("Daybreak: échec de l'installation (rc=0x%08X, nouvelle_tentative=%d, redemarrage_requis=%d).\n",
+			(unsigned int)install_result, !g_daybreak_requires_reboot, g_daybreak_requires_reboot);
+		return false;
+	}
+#if MEMORY_DIAGNOSTICS
+	debug_log_write("MemoryDiagnostics: daybreak_main terminé normalement.\n");
+	DaybreakLogMemoryUsage("sortie daybreak_main");
+#endif
 	return true;
 }

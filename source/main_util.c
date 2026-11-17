@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <switch.h>
@@ -124,6 +125,7 @@ void debug_log_write(const char *text, ...) {
 	}
 	mutexUnlock(&debug_log_mutex);
 }
+
 
 void debug_log_stop() {
 	mutexLock(&debug_log_mutex);
@@ -327,9 +329,14 @@ Result removeDir_on_sd(const char* path)
 		debug_log_write("Erreur: filesystem sdmc non monté.\n");
 		return MAKERESULT(Module_Libnx, LibnxError_NotInitialized);
 	}
+	FsDirEntryType entry_type = (FsDirEntryType)-1;
+	Result entry_type_ret = fsFsGetEntryType(fs, fs_path, &entry_type);
+	debug_log_write("FS bas niveau: chemin=\"%s\", GetEntryType rc=0x%08X, type=%d.\n",
+		fs_path, entry_type_ret, (int)entry_type);
 	ret = fsFsDeleteDirectoryRecursively(fs, fs_path);
+	debug_log_write("FS bas niveau: DeleteDirectoryRecursively chemin=\"%s\", rc=0x%08X.\n",
+		fs_path, ret);
 	if (R_FAILED(ret)) {
-		debug_log_write("fsFsDeleteDirectoryRecursively rc=0x%08X\n", ret);
 		return ret;
 	}
 	return 0;
@@ -601,12 +608,13 @@ void get_sha256_file(const char* filepath, char* ret) {
 	if (!buf) {
 		debug_log_write("Erreur malloc dans get_sha256_file\n");
 		strcpy(ret, "");
+		fclose(file);
 		return;
 	}
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
 	size_t i;
-	while((i = fread(buf, 1, sizeof(buf), file)) > 0) {
+	while((i = fread(buf, 1, CHUNK, file)) > 0) {
 		sha256ContextUpdate(&ctx, buf, i);
 	}
 	sha256ContextGetHash(&ctx, sha256_hash);
@@ -635,7 +643,7 @@ void get_sha256_data(void* datas, size_t size, char* ret) {
 	Sha256Context ctx;
 	sha256ContextCreate(&ctx);
 	// size_t i;
-	// while((i = fread(buf, 1, sizeof(buf), file)) > 0) {
+	// while((i = fread(buf, 1, CHUNK, file)) > 0) {
 		// sha256ContextUpdate(&ctx, buf, i);
 	// }
 	sha256ContextUpdate(&ctx, datas, size);

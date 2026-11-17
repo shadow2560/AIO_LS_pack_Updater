@@ -23,10 +23,12 @@
 #include "unzip.hpp"
 #include "reboot_to_payload.hpp"
 #include "firmwares_install/daybreak-cli.hpp"
+#include "firmwares_install/ams_su.h"
 #include "main_config.h"
 #include "web_launch.h"
 #include "ntp.hpp"
 #include "screenreader/ScreenReader.hpp"
+#include "MemoryDiagnostics.h"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -71,6 +73,12 @@ bool console_is_erista = false;
 autoconfig_configuration autoconfig_config;
 
 PadState pad;
+
+#if MEMORY_DIAGNOSTICS
+static void MemoryDiagnosticsLogPostDaybreakMemory(const char *stage) {
+	MemoryDiagnosticsLogMemory(stage);
+}
+#endif
 
 extern "C" void screenreader_poll_input(void) {
 	ScreenReader::PollInput(&pad);
@@ -417,6 +425,7 @@ void logs_console_clear() {
 void appExit() {
 	ScreenReader::SpeakAndWait(language_vars["lng_screenreader_app_close"], false);
 	ScreenReader::Shutdown();
+	amssuReleaseTransferMemoryBuffer();
 	debug_log_write("Fermeture de l'application.\n\n-----------------------------\n\n");
 	debug_log_stop();
 	
@@ -1414,6 +1423,9 @@ void set_emummc_values() {
 }
 
 bool fnc_install_firmware() {
+#if MEMORY_DIAGNOSTICS
+	MemoryDiagnosticsLogMemory("entrée fnc_install_firmware, avant préparation Daybreak");
+#endif
 	debug_log_write("Début de l'installation du firmware.\n");
 	DIR *dir;
 	if (!beta_mode) {
@@ -1439,7 +1451,11 @@ bool fnc_install_firmware() {
 		return 0;
 		*/
 		if (!beta_mode) {
-			if (daybreak_main(firmware_path, 2, 1, 2)) {
+#if MEMORY_DIAGNOSTICS
+			MemoryDiagnosticsLogMemory("juste avant daybreak_main, firmware stable");
+#endif
+			const bool daybreakResult = daybreak_main(firmware_path, 2, 1, 2);
+			if (daybreakResult) {
 				debug_log_write("Installation du firmware OK.\n\n");
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"].c_str());
@@ -1452,10 +1468,19 @@ bool fnc_install_firmware() {
 				printDisplay(language_vars["lng_install_firmware_end_error"].c_str());
 				printDisplay("\033[0;37m\n");
 				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
+				if (daybreak_requires_reboot()) {
+					debug_log_write("Daybreak a accepté le transfert mais a échoué ensuite : redémarrage obligatoire avant toute nouvelle tentative.\n");
+					sleep(5);
+					aply_reboot();
+				}
 				return false;
 			}
 		} else {
-			if (daybreak_main(firmware_path_beta, 2, 1, 2)) {
+#if MEMORY_DIAGNOSTICS
+			MemoryDiagnosticsLogMemory("juste avant daybreak_main, firmware beta");
+#endif
+			const bool daybreakResult = daybreak_main(firmware_path_beta, 2, 1, 2);
+			if (daybreakResult) {
 				debug_log_write("Installation du firmware OK.\n\n");
 				printDisplay("\033[0;32m\n");
 				printDisplay(language_vars["lng_install_firmware_end_success"].c_str());
@@ -1468,6 +1493,11 @@ bool fnc_install_firmware() {
 				printDisplay(language_vars["lng_install_firmware_end_error"].c_str());
 				printDisplay("\033[0;37m\n");
 				ScreenReader::ReadConsole(&logs_console, 0, -1, language_vars["lng_screenreader_context_operation"]);
+				if (daybreak_requires_reboot()) {
+					debug_log_write("Daybreak a accepté le transfert mais a échoué ensuite : redémarrage obligatoire avant toute nouvelle tentative.\n");
+					sleep(5);
+					aply_reboot();
+				}
 				return false;
 			}
 		}
@@ -1650,6 +1680,7 @@ bool auto_update_app(bool update_app) {
 			}
 			if (dl_app_res) {
 				if (strcmp(app_sha256, "") != 0) {
+					speak_operation_message(language_vars["lng_calculate_sha256_of_downloaded_file"], true);
 					printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"].c_str());
 					printDisplay("\n");
 					char dl_app_sha256[65] = "";
@@ -2200,6 +2231,9 @@ int main(int argc, char **argv) {
 		debug_log_start();
 		debug_already_started = true;
 	}
+#if MEMORY_DIAGNOSTICS
+	MemoryDiagnosticsLogMemory("entrée main après appInit et ouverture du journal");
+#endif
 	if (strcmp(argv[0], (char*)"/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0 && strcmp(argv[0], (char*)"sdmc:/switch/AIO_LS_pack_Updater/AIO_LS_pack_Updater.nro") != 0) {
 		if (!custom_cp((char*)"romfs:/nro/aiosu-forwarder.nro", (char*)"/switch/AIO_LS_pack_Updater/aiosu-forwarder.nro")) {
 			debug_log_write("Erreur de copie du forwarder.\n\n");
@@ -2226,6 +2260,9 @@ int main(int argc, char **argv) {
 		ScreenReader::SetLanguage(get_translation_language());
 		const bool screenReaderEnabled = ScreenReader::IsEnabled();
 		ScreenReader::Enable(screenReaderEnabled);
+#if MEMORY_DIAGNOSTICS
+		MemoryDiagnosticsLogMemory("après initialisation et activation initiale du lecteur d'écran");
+#endif
 	} else {
 		debug_log_write("La revue d'écran n'a pas pu être initialisée.\n");
 	}
@@ -2691,13 +2728,39 @@ int main(int argc, char **argv) {
 				}
 				if (update_firmware2) {
 					if (fnc_install_firmware()) {
+#if MEMORY_DIAGNOSTICS
+						debug_log_write("MemoryDiagnostics: début du nettoyage post-Daybreak.\n");
+						MemoryDiagnosticsLogPostDaybreakMemory("avant fnc_clean_theme");
+#endif
 						fnc_clean_theme();
+#if MEMORY_DIAGNOSTICS
+						debug_log_write("MemoryDiagnostics: fnc_clean_theme terminé.\n");
+						MemoryDiagnosticsLogPostDaybreakMemory("après fnc_clean_theme");
+#endif
 						if (agressive_clean2) {
+#if MEMORY_DIAGNOSTICS
+							debug_log_write("MemoryDiagnostics: début fnc_agressive_clean.\n");
+#endif
 							fnc_agressive_clean(true);
+#if MEMORY_DIAGNOSTICS
+							debug_log_write("MemoryDiagnostics: fnc_agressive_clean terminé.\n");
+							MemoryDiagnosticsLogPostDaybreakMemory("après fnc_agressive_clean");
+#endif
 						}
 						if (clean_modules_2) {
+#if MEMORY_DIAGNOSTICS
+							debug_log_write("MemoryDiagnostics: début fnc_clean_modules.\n");
+#endif
 							fnc_clean_modules();
+#if MEMORY_DIAGNOSTICS
+							debug_log_write("MemoryDiagnostics: fnc_clean_modules terminé.\n");
+							MemoryDiagnosticsLogPostDaybreakMemory("après fnc_clean_modules");
+#endif
 						}
+#if MEMORY_DIAGNOSTICS
+						debug_log_write("MemoryDiagnostics: nettoyage post-Daybreak terminé, avant annonce et redémarrage.\n");
+						MemoryDiagnosticsLogPostDaybreakMemory("avant annonce redémarrage");
+#endif
 						debug_log_write("Installation du firmware OK.\n\n");
 						printDisplay("\033[0;32m\n");
 						printDisplay(language_vars["lng_success_reboot_in_five_seconds"].c_str());
@@ -3134,6 +3197,7 @@ int main(int argc, char **argv) {
 						}
 						if (dl_pack_res) {
 							if (strcmp(pack_sha256, "") != 0) {
+								speak_operation_message(language_vars["lng_calculate_sha256_of_downloaded_file"], true);
 								printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"].c_str());
 								printDisplay("\n");
 								char dl_pack_sha256[65] = "";
@@ -3198,6 +3262,7 @@ int main(int argc, char **argv) {
 									}
 									if (dl_pack_res2) {
 										if (strcmp(custom_files_pack_sha256, "") != 0) {
+											speak_operation_message(language_vars["lng_calculate_sha256_of_downloaded_file"], true);
 											printDisplay(language_vars["lng_calculate_sha256_of_downloaded_file"].c_str());
 											printDisplay("\n");
 											char dl_custom_files_pack_sha256[65] = "";
