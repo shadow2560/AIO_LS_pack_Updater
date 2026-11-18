@@ -141,6 +141,15 @@ typedef enum {
     BtdrvBleEventType_ServerAttributeOperation      =   13,    ///< GATT server attribute operation.
 } BtdrvBleEventType;
 
+/// BleScanFilterAction
+typedef enum {
+    BtdrvBleScanFilterAction_Add               =    0,
+    BtdrvBleScanFilterAction_Delete            =    1,
+    BtdrvBleScanFilterAction_Clear             =    2,
+    BtdrvBleScanFilterAction_Enable            =    3,
+    BtdrvBleScanFilterAction_Disable           =    4,
+} BtdrvBleScanFilterAction;
+
 /// GattAttributeType
 typedef enum {
     BtdrvGattAttributeType_IncludedService  =    0,    ///< Included service
@@ -192,6 +201,16 @@ typedef enum {
     BtdrvGattAuthReqType_SignedNoMitm   =    3,
     BtdrvGattAuthReqType_SignedMitm     =    4,
 } BtdrvGattAuthReqType;
+
+/// GattOperationType
+typedef enum {
+    BtdrvGattOperationType_CharacteristicRead   =    0,
+    BtdrvGattOperationType_CharacteristicWrite  =    1,
+    BtdrvGattOperationType_DescriptorRead       =    2,
+    BtdrvGattOperationType_DescriptorWrite      =    3,
+    BtdrvGattOperationType_Notification         =    4,
+    BtdrvGattOperationType_Indication           =    5,
+} BtdrvGattOperationType;
 
 /// BtdrvBleAdBit
 typedef enum {

@@ -79,7 +79,7 @@ static void DaybreakReadNewConsoleText(const std::string& textAfter = "") {
 	const int lastLine = consoleGetLastTextLine(&logs_console);
 	if (g_daybreak_log_start_line > lastLine) {
 		if (!textAfter.empty())
-			ScreenReader::SpeakContext(language_vars["lng_screenreader_context_daybreak"], textAfter, "");
+			ScreenReader::SpeakContextAfterCurrent(language_vars["lng_screenreader_context_daybreak"], textAfter, "");
 		return;
 	}
 

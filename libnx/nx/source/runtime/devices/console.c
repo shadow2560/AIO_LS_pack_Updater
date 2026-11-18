@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <sys/iosupport.h>
 #include "runtime/devices/console.h"
 #include "display/framebuffer.h"
@@ -112,6 +113,14 @@ typedef struct ConsoleTextBuffer
 	u32* cells;
 	int width;
 	int height;
+	u32* historyCells;
+	int historyCapacity;
+	int historyAllocatedCapacity;
+	int historyWidth;
+	int historyCount;
+	int historyStart;
+	u64 historyScrollCount;
+	u64 historyGeneration;
 	struct ConsoleTextBuffer* next;
 } ConsoleTextBuffer;
 
@@ -128,6 +137,82 @@ static ConsoleTextBuffer* consoleFindTextBuffer(PrintConsole* console)
 	return NULL;
 }
 
+static void consoleClearTextHistory(ConsoleTextBuffer* buffer)
+{
+	if (!buffer)
+		return;
+	buffer->historyCount = 0;
+	buffer->historyStart = 0;
+	buffer->historyScrollCount = 0;
+	buffer->historyGeneration++;
+}
+
+static void consoleStoreHistoryLine(ConsoleTextBuffer* buffer, const u32* line)
+{
+	if (!buffer)
+		return;
+	if (buffer->historyScrollCount >= ULLONG_MAX - (u64)buffer->height) {
+		consoleClearTextHistory(buffer);
+	}
+	buffer->historyScrollCount++;
+	if (!buffer->historyCells || buffer->historyCapacity <= 0 || !line)
+		return;
+
+	int index;
+	if (buffer->historyCount < buffer->historyCapacity) {
+		index = (buffer->historyStart + buffer->historyCount) % buffer->historyCapacity;
+		buffer->historyCount++;
+	} else {
+		index = buffer->historyStart;
+		buffer->historyStart = (buffer->historyStart + 1) % buffer->historyCapacity;
+	}
+	int copyWidth = buffer->width < buffer->historyWidth ? buffer->width : buffer->historyWidth;
+	u32* destination = buffer->historyCells + (size_t)index * buffer->historyWidth;
+	memcpy(destination, line, (size_t)copyWidth * sizeof(u32));
+	for (int x = copyWidth; x < buffer->historyWidth; x++)
+		destination[x] = ' ';
+}
+
+static void consoleReverseHistoryRows(u32* cells, int width, int first, int last)
+{
+	while (first < last) {
+		u32* firstRow = cells + (size_t)first * width;
+		u32* lastRow = cells + (size_t)last * width;
+		for (int x = 0; x < width; x++) {
+			u32 value = firstRow[x];
+			firstRow[x] = lastRow[x];
+			lastRow[x] = value;
+		}
+		first++;
+		last--;
+	}
+}
+
+static void consoleNormalizeHistory(ConsoleTextBuffer* buffer)
+{
+	if (!buffer || !buffer->historyCells || buffer->historyCapacity <= 0 ||
+		buffer->historyStart <= 0)
+		return;
+
+	consoleReverseHistoryRows(buffer->historyCells, buffer->historyWidth, 0, buffer->historyStart - 1);
+	consoleReverseHistoryRows(buffer->historyCells, buffer->historyWidth, buffer->historyStart,
+		buffer->historyCapacity - 1);
+	consoleReverseHistoryRows(buffer->historyCells, buffer->historyWidth, 0,
+		buffer->historyCapacity - 1);
+	buffer->historyStart = 0;
+}
+
+static const u32* consoleGetTextBufferLine(const ConsoleTextBuffer* buffer, int line)
+{
+	if (!buffer || line < 0 || line >= buffer->historyCount + buffer->height)
+		return NULL;
+	if (line < buffer->historyCount) {
+		const int index = (buffer->historyStart + line) % buffer->historyCapacity;
+		return buffer->historyCells + (size_t)index * buffer->historyWidth;
+	}
+	return buffer->cells + (size_t)(line - buffer->historyCount) * buffer->width;
+}
+
 static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int height)
 {
 	if (!buffer)
@@ -135,6 +220,8 @@ static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int he
 	if (width <= 0 || height <= 0) {
 		free(buffer->cells);
 		buffer->cells = NULL;
+		// A temporarily hidden console (zero-sized window) must not lose its scrollback.
+		// The history allocation and retained lines are reused when the window is restored.
 		buffer->width = width;
 		buffer->height = height;
 		return false;
@@ -144,6 +231,12 @@ static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int he
 	if ((size_t)width > SIZE_MAX / (size_t)height / sizeof(u32)) {
 		free(buffer->cells);
 		buffer->cells = NULL;
+		free(buffer->historyCells);
+		buffer->historyCells = NULL;
+		buffer->historyCapacity = 0;
+		buffer->historyAllocatedCapacity = 0;
+		buffer->historyWidth = 0;
+		consoleClearTextHistory(buffer);
 		buffer->width = width;
 		buffer->height = height;
 		return false;
@@ -153,6 +246,12 @@ static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int he
 	if (!cells) {
 		free(buffer->cells);
 		buffer->cells = NULL;
+		free(buffer->historyCells);
+		buffer->historyCells = NULL;
+		buffer->historyCapacity = 0;
+		buffer->historyAllocatedCapacity = 0;
+		buffer->historyWidth = 0;
+		consoleClearTextHistory(buffer);
 		buffer->width = width;
 		buffer->height = height;
 		return false;
@@ -165,6 +264,25 @@ static bool consoleResizeTextBuffer(ConsoleTextBuffer* buffer, int width, int he
 		int copyHeight = buffer->height < height ? buffer->height : height;
 		for (int y = 0; y < copyHeight; y++)
 			memcpy(cells + (size_t)y * width, buffer->cells + (size_t)y * buffer->width, (size_t)copyWidth * sizeof(u32));
+	}
+
+	if (buffer->historyCells && width > buffer->historyWidth && buffer->historyAllocatedCapacity > 0 &&
+		(size_t)width <= SIZE_MAX / (size_t)buffer->historyAllocatedCapacity / sizeof(u32)) {
+		const int oldHistoryWidth = buffer->historyWidth;
+		consoleNormalizeHistory(buffer);
+		size_t historySize = (size_t)width * (size_t)buffer->historyAllocatedCapacity * sizeof(u32);
+		u32* historyCells = (u32*)realloc(buffer->historyCells, historySize);
+		if (historyCells) {
+			for (int line = buffer->historyCount - 1; line >= 0; line--) {
+				u32* destination = historyCells + (size_t)line * width;
+				memmove(destination, historyCells + (size_t)line * oldHistoryWidth,
+					(size_t)oldHistoryWidth * sizeof(u32));
+				for (int x = oldHistoryWidth; x < width; x++)
+					destination[x] = ' ';
+			}
+			buffer->historyCells = historyCells;
+			buffer->historyWidth = width;
+		}
 	}
 
 	free(buffer->cells);
@@ -187,6 +305,7 @@ static void consoleScrollTextBuffer(void)
 	ConsoleTextBuffer* buffer = consoleFindTextBuffer(currentConsole);
 	if (!buffer || !buffer->cells || buffer->height <= 0 || buffer->width <= 0)
 		return;
+	consoleStoreHistoryLine(buffer, buffer->cells);
 	if (buffer->height > 1)
 		memmove(buffer->cells, buffer->cells + buffer->width,
 			(size_t)(buffer->height - 1) * buffer->width * sizeof(u32));
@@ -221,6 +340,65 @@ bool consoleEnableTextBuffer(PrintConsole* console)
 	return false;
 }
 
+bool consoleConfigureTextBufferHistory(PrintConsole* console, bool enabled, int maxLines)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || maxLines < 0 ||
+		(enabled && (maxLines == 0 || maxLines > INT_MAX - buffer->height)))
+		return false;
+
+	if (!enabled) {
+		free(buffer->historyCells);
+		buffer->historyCells = NULL;
+		buffer->historyCapacity = 0;
+		buffer->historyAllocatedCapacity = 0;
+		buffer->historyWidth = 0;
+		consoleClearTextHistory(buffer);
+		return true;
+	}
+
+	if (!buffer->historyCells)
+		buffer->historyWidth = buffer->width;
+	if ((size_t)buffer->historyWidth > SIZE_MAX / (size_t)maxLines / sizeof(u32))
+		return false;
+	if (buffer->historyCapacity == maxLines && buffer->historyCells)
+		return true;
+
+	if (maxLines > buffer->historyAllocatedCapacity) {
+		size_t allocationSize = (size_t)buffer->historyWidth * (size_t)maxLines * sizeof(u32);
+		u32* historyCells = buffer->historyCells ?
+			(u32*)realloc(buffer->historyCells, allocationSize) : (u32*)malloc(allocationSize);
+		if (!historyCells)
+			return false;
+		buffer->historyCells = historyCells;
+		buffer->historyAllocatedCapacity = maxLines;
+	}
+
+	consoleNormalizeHistory(buffer);
+	int keepLines = buffer->historyCount;
+	if (keepLines > maxLines)
+		keepLines = maxLines;
+	if (keepLines < buffer->historyCount) {
+		memmove(buffer->historyCells,
+			buffer->historyCells + (size_t)(buffer->historyCount - keepLines) * buffer->historyWidth,
+			(size_t)keepLines * buffer->historyWidth * sizeof(u32));
+	}
+	if (maxLines < buffer->historyAllocatedCapacity) {
+		size_t allocationSize = (size_t)buffer->historyWidth * (size_t)maxLines * sizeof(u32);
+		u32* historyCells = (u32*)realloc(buffer->historyCells, allocationSize);
+		if (historyCells) {
+			buffer->historyCells = historyCells;
+			buffer->historyAllocatedCapacity = maxLines;
+		}
+	}
+	buffer->historyCapacity = maxLines;
+	buffer->historyCount = keepLines;
+	buffer->historyStart = 0;
+	return true;
+}
+
 void consoleDisableTextBuffer(PrintConsole* console)
 {
 	if (!console)
@@ -232,6 +410,7 @@ void consoleDisableTextBuffer(PrintConsole* console)
 			ConsoleTextBuffer* buffer = *link;
 			*link = buffer->next;
 			free(buffer->cells);
+			free(buffer->historyCells);
 			free(buffer);
 			return;
 		}
@@ -255,6 +434,25 @@ int consoleGetLastTextLine(PrintConsole* console)
 	if (!buffer || !buffer->cells || buffer->width <= 0 || buffer->height <= 0)
 		return -1;
 
+	for (int y = buffer->historyCount + buffer->height - 1; y >= 0; y--) {
+		const u32* line = consoleGetTextBufferLine(buffer, y);
+		const int lineWidth = y < buffer->historyCount ? buffer->historyWidth : buffer->width;
+		for (int x = 0; x < lineWidth; x++) {
+			if (line[x] != ' ')
+				return y;
+		}
+	}
+	return -1;
+}
+
+int consoleGetLastVisibleTextLine(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || buffer->width <= 0 || buffer->height <= 0)
+		return -1;
+
 	for (int y = buffer->height - 1; y >= 0; y--) {
 		const u32* line = buffer->cells + (size_t)y * buffer->width;
 		for (int x = 0; x < buffer->width; x++) {
@@ -263,6 +461,41 @@ int consoleGetLastTextLine(PrintConsole* console)
 		}
 	}
 	return -1;
+}
+
+int consoleGetTextHistoryLineCount(PrintConsole* console)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	return buffer && buffer->cells ? buffer->historyCount : 0;
+}
+
+bool consoleGetTextBufferLineId(PrintConsole* console, int line, u64* generation, u64* lineId)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || line < 0 || line >= buffer->historyCount + buffer->height ||
+		!generation || !lineId)
+		return false;
+	*generation = buffer->historyGeneration;
+	*lineId = buffer->historyScrollCount - (u64)buffer->historyCount + (u64)line;
+	return true;
+}
+
+int consoleGetTextBufferLineIndex(PrintConsole* console, u64 generation, u64 lineId)
+{
+	if (!console)
+		console = currentConsole;
+	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
+	if (!buffer || !buffer->cells || generation != buffer->historyGeneration)
+		return -1;
+	u64 firstLineId = buffer->historyScrollCount - (u64)buffer->historyCount;
+	u64 lastLineId = buffer->historyScrollCount + (u64)buffer->height - 1;
+	if (lineId < firstLineId || lineId > lastLineId)
+		return -1;
+	return (int)(lineId - firstLineId);
 }
 
 static size_t consoleCodepointUtf8Size(u32 codepoint)
@@ -310,19 +543,22 @@ size_t consoleGetText(PrintConsole* console, int startLine, int endLine, char* o
 	if (!console)
 		console = currentConsole;
 	ConsoleTextBuffer* buffer = consoleFindTextBuffer(console);
-	if (!buffer || !buffer->cells || startLine < 0 || endLine < startLine || endLine >= buffer->height)
+	if (!buffer || !buffer->cells || startLine < 0 || endLine < startLine ||
+		endLine >= buffer->historyCount + buffer->height)
 		return 0;
 
 	size_t required = 0;
 	size_t written = 0;
 	bool outputFull = false;
 	for (int y = startLine; y <= endLine; y++) {
-		int lastColumn = buffer->width - 1;
-		while (lastColumn >= 0 && buffer->cells[(size_t)y * buffer->width + lastColumn] == ' ')
+		const u32* line = consoleGetTextBufferLine(buffer, y);
+		const int lineWidth = y < buffer->historyCount ? buffer->historyWidth : buffer->width;
+		int lastColumn = lineWidth - 1;
+		while (lastColumn >= 0 && line[lastColumn] == ' ')
 			lastColumn--;
 
 		for (int x = 0; x <= lastColumn; x++) {
-			u32 codepoint = buffer->cells[(size_t)y * buffer->width + x];
+			u32 codepoint = line[x];
 			size_t length = consoleCodepointUtf8Size(codepoint);
 			required += length;
 			if (output && !outputFull) {
@@ -399,6 +635,7 @@ static void consoleCls(int mode) {
 
 			currentConsole->cursorY  = 1;
 			currentConsole->cursorX  = 1;
+			consoleClearTextHistory(consoleFindTextBuffer(currentConsole));
 			break;
 		}
 	}

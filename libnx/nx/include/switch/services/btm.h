@@ -41,18 +41,18 @@ Result btmAcquireDeviceConditionEvent(Event* out_event);
 
 /**
  * @brief GetDeviceCondition [1.0.0-12.1.0]
- * @param[out] out \ref BtmDeviceCondition
+ * @param[out] out \ref BtmDeviceConditionList
  */
-Result btmLegacyGetDeviceCondition(BtmDeviceCondition *out);
+Result btmLegacyGetDeviceCondition(BtmDeviceConditionList *out);
 
 /**
  * @brief GetDeviceCondition [13.0.0+]
  * @param[in] profile \ref BtmProfile, when not ::BtmProfile_None entries are only returned which match this profile.
- * @param[out] out \ref BtmConnectedDeviceV13
+ * @param[out] out \ref BtmDeviceCondition
  * @param[in] count Size of the out array in entries.
  * @param[out] total_out Total output entries.
  */
-Result btmGetDeviceCondition(BtmProfile profile, BtmConnectedDeviceV13 *out, size_t count, s32 *total_out);
+Result btmGetDeviceCondition(BtmProfile profile, BtmDeviceCondition *out, size_t count, s32 *total_out);
 
 /**
  * @brief SetBurstMode
@@ -96,14 +96,20 @@ Result btmLegacyGetDeviceInfo(BtmDeviceInfoList *out);
 /**
  * @brief GetDeviceInfo [13.0.0+]
  * @param[in] profile \ref BtmProfile, when not ::BtmProfile_None entries are only returned which match this profile.
- * @param[out] out \ref BtmDeviceInfoV13
+ * @param[out] out \ref BtmDeviceInfo
  * @param[in] count Size of the out array in entries.
  * @param[out] total_out Total output entries.
  */
-Result btmGetDeviceInfo(BtmProfile profile, BtmDeviceInfoV13 *out, size_t count, s32 *total_out);
+Result btmGetDeviceInfo(BtmProfile profile, BtmDeviceInfo *out, size_t count, s32 *total_out);
 
 /**
- * @brief AddDeviceInfo
+ * @brief AddDeviceInfo [1.0.0-12.1.0]
+ * @param[in] info \ref BtmDeviceInfo
+ */
+Result btmLegacyAddDeviceInfo(const BtmDeviceInfoLegacy *info);
+
+/**
+ * @brief AddDeviceInfo [13.0.0+]
  * @param[in] info \ref BtmDeviceInfo
  */
 Result btmAddDeviceInfo(const BtmDeviceInfo *info);
@@ -489,3 +495,22 @@ Result btmUnregisterAppletResourceUserId(u64 AppletResourceUserId);
  */
 Result btmSetAppletResourceUserId(u64 AppletResourceUserId);
 
+/**
+ * @brief GetShortenedDeviceInfo
+ * @note Only available on [13.0.0+].
+ * @param[in] profile \ref BtmProfile, when not ::BtmProfile_None entries are only returned which match this profile.
+ * @param[out] out \ref BtmShortenedDeviceInfo
+ * @param[in] count Size of the out array in entries.
+ * @param[out] total_out Total output entries.
+ */
+Result btmGetShortenedDeviceInfo(BtmProfile profile, BtmShortenedDeviceInfo *out, size_t count, s32 *total_out);
+
+/**
+ * @brief GetShortenedDeviceCondition
+ * @note Only available on [14.0.0+].
+ * @param[in] profile \ref BtmProfile, when not ::BtmProfile_None entries are only returned which match this profile.
+ * @param[out] out \ref BtmShortenedDeviceCondition
+ * @param[in] count Size of the out array in entries.
+ * @param[out] total_out Total output entries.
+ */
+Result btmGetShortenedDeviceCondition(BtmProfile profile, BtmShortenedDeviceCondition *out, size_t count, s32 *total_out);

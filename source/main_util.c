@@ -13,6 +13,7 @@
 #include <switch.h>
 
 #include "main_util.h"
+#include "DebugConfig.h"
 
 extern void screenreader_poll_input(void);
 
@@ -84,10 +85,38 @@ bool autoconfig_enabled = false;
 
 /* Serializes access to the shared debug log from the main and worker threads. */
 static Mutex debug_log_mutex;
+static bool debug_log_runtime_enabled = true;
+static unsigned int debug_log_consecutive_errors;
 static FILE *debug_log_file;
 
+/* Compile-time diagnostics must keep the journal active even when the
+ * user-facing debug option is disabled in the configuration. */
+static bool debug_log_is_enabled(void) {
+#if SCREENREADER_DEBUG || MEMORY_DIAGNOSTICS || NXLINK_DEBUG
+	return true;
+#else
+	return debug_enabled;
+#endif
+}
+
+#define DEBUG_LOG_PATH "/switch/AIO_LS_pack_Updater/debug.log"
+#define DEBUG_LOG_MAX_SIZE 0x400000U
+
+static void debug_log_report_failure(void) {
+	debug_log_consecutive_errors++;
+	if (debug_log_consecutive_errors > 3)
+		debug_log_runtime_enabled = false;
+}
+
+/* Preserve earlier sessions, but cap the file size like LockSmith-RCM. */
 void debug_log_start() {
-	if (!debug_enabled) return;
+	static const char session_marker[] =
+		"\n===== AIO_LS_pack_Updater new application session =====\n";
+	long file_size;
+	int failed = 0;
+
+	if (!debug_log_is_enabled() || !debug_log_runtime_enabled)
+		return;
 
 	mutexLock(&debug_log_mutex);
 	if (debug_log_file) {
@@ -95,45 +124,92 @@ void debug_log_start() {
 		return;
 	}
 
-	remove("/switch/AIO_LS_pack_Updater/debug.log");
-	debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "w");
+	debug_log_file = fopen(DEBUG_LOG_PATH, "a+");
+	if (!debug_log_file) {
+		failed = 1;
+	} else {
+		if (fseek(debug_log_file, 0, SEEK_END) != 0) {
+			failed = 1;
+		} else {
+			file_size = ftell(debug_log_file);
+			if (file_size < 0) {
+				failed = 1;
+			} else if ((unsigned long)file_size > DEBUG_LOG_MAX_SIZE) {
+				if (fclose(debug_log_file) != 0)
+					failed = 1;
+				debug_log_file = NULL;
+				if (!failed) {
+					FILE *truncate_file = fopen(DEBUG_LOG_PATH, "w");
+					if (!truncate_file || fclose(truncate_file) != 0)
+						failed = 1;
+				}
+				if (!failed)
+					debug_log_file = fopen(DEBUG_LOG_PATH, "a");
+				if (!debug_log_file)
+					failed = 1;
+			}
+		}
+		if (!failed && debug_log_file) {
+			if (fwrite(session_marker, 1, sizeof(session_marker) - 1, debug_log_file) != sizeof(session_marker) - 1 ||
+				fflush(debug_log_file) != 0)
+				failed = 1;
+		}
+	}
+	if (failed) {
+		if (debug_log_file) {
+			fclose(debug_log_file);
+			debug_log_file = NULL;
+		}
+		debug_log_report_failure();
+	} else {
+		debug_log_consecutive_errors = 0;
+	}
 	mutexUnlock(&debug_log_mutex);
 }
 
+/* Keep the log open for the whole application session to avoid repeated SD opens. */
 void debug_log_write(const char *text, ...) {
-	if (!debug_enabled || !text) return;
+	int write_result;
+	int flush_result;
+	va_list v;
+
+	if (!debug_log_is_enabled() || !debug_log_runtime_enabled || !text)
+		return;
 
 	mutexLock(&debug_log_mutex);
-	if (!debug_log_file)
-		debug_log_file = fopen("/switch/AIO_LS_pack_Updater/debug.log", "a");
-
 	if (!debug_log_file) {
+		debug_log_report_failure();
 		mutexUnlock(&debug_log_mutex);
 		return;
 	}
 
-	va_list v;
 	va_start(v, text);
-	int write_result = vfprintf(debug_log_file, text, v);
+	write_result = vfprintf(debug_log_file, text, v);
 	va_end(v);
-
-	/* Flush every message so recent diagnostics survive a later crash. */
-	int flush_result = fflush(debug_log_file);
+	/* Flush each message so diagnostics remain available after a crash. */
+	flush_result = fflush(debug_log_file);
 	if (write_result < 0 || flush_result != 0) {
-		fclose(debug_log_file);
-		debug_log_file = NULL;
+		clearerr(debug_log_file);
+		debug_log_report_failure();
+	} else {
+		debug_log_consecutive_errors = 0;
 	}
 	mutexUnlock(&debug_log_mutex);
 }
 
 
 void debug_log_stop() {
+	int flush_result = 0;
+	int close_result = 0;
+
 	mutexLock(&debug_log_mutex);
 	if (debug_log_file) {
-		fflush(debug_log_file);
-		fclose(debug_log_file);
+		flush_result = fflush(debug_log_file);
+		close_result = fclose(debug_log_file);
 		debug_log_file = NULL;
 	}
+	if (flush_result != 0 || close_result != 0)
+		debug_log_report_failure();
 	mutexUnlock(&debug_log_mutex);
 }
 

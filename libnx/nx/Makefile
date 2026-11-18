@@ -114,15 +114,17 @@ lib/libnx.a : lib release $(SOURCES) $(INCLUDES)
 	@$(MAKE) BUILD=release OUTPUT=$(CURDIR)/$@ \
 	BUILD_CFLAGS="-DNDEBUG=1 -O2" \
 	DEPSDIR=$(CURDIR)/release \
-	--no-print-directory -C release \
+	-C release \
 	-f $(CURDIR)/Makefile
+	@printf '\r[100%%] Release compilation complete: %s\033[K\n' "$(notdir $@)"
 
 lib/libnxd.a : lib debug $(SOURCES) $(INCLUDES)
 	@$(MAKE) BUILD=debug OUTPUT=$(CURDIR)/$@ \
 	BUILD_CFLAGS="-DDEBUG=1 -Og" \
 	DEPSDIR=$(CURDIR)/debug \
-	--no-print-directory -C debug \
+	-C debug \
 	-f $(CURDIR)/Makefile
+	@printf '\r[100%%] Debug compilation complete: %s\033[K\n' "$(notdir $@)"
 
 #---------------------------------------------------------------------------------
 clean:
@@ -131,6 +133,26 @@ clean:
 
 #---------------------------------------------------------------------------------
 else
+
+# Match the homebrew build output: show only the source currently compiled.
+ifndef COMPILE_PROGRESS
+COMPILE_TOTAL := $(shell MAKEFLAGS= $(MAKE) -j1 $(OUTPUT) --no-print-directory -nrRf $(firstword $(MAKEFILE_LIST)) COMPILE_PROGRESS=COMPILE_PROGRESS_OBJ | grep -c "COMPILE_PROGRESS_OBJ")
+COMPILE_STEP := x
+COMPILE_COUNT = $(words $(COMPILE_STEP))$(eval COMPILE_STEP := x $(COMPILE_STEP))
+COMPILE_PROGRESS = printf "\r[%3d%%] Compiling %s\033[K" `expr $(COMPILE_COUNT) \* 100 / $(COMPILE_TOTAL)`
+endif
+
+%.o: %.cpp
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+%.o: %.c
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+%.o: %.s
+	@$(COMPILE_PROGRESS) $(notdir $<)
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
 DEPENDS	:=	$(OFILES:.o=.d)
 

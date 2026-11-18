@@ -35,7 +35,6 @@ If you choose to use all functions of the app only the questions during pack ins
 ## Translate the project
 
 You can translate the project but for now there are some limitations:
-* You can't use special chars or accents
 * Only supported language of Nintendo could be used, see [this page](https://switchbrew.org/wiki/Settings_services#LanguageCode) for more infos.
 
 You can see the french language file for example, it is located in "romfs/lng/fr.ini".
@@ -47,7 +46,7 @@ Here are some Rules to translate correctly the app:
 * Don't touch the % char and the chars witch follow it until the next space, this is used to display some variables of the app.
 * Don't use more lines than "26" for the main menu or you could brake the display of it.
 * Include every variables and don't add some new ones or the translation file will not work.
-* If you get an error while using a translation file it could be caused by a too long string for a variable.
+* If you get an error while using a translation file it could be caused by a too long string for a variable (1003 chars max for a line).
 
 ## How to build 🏗️
 
@@ -64,6 +63,19 @@ To build the project you have to download devkitPro, install devkitPro and the m
 ``mv ./aiosu-forwarder.nro ../romfs/nro/aiosu-forwarder.nro``
 ``cd ..``
 ``make``  
+
+## Generating Espeak-ng data
+
+You need cmake in your environment.
+
+Delete the "build" folder inside of "espeak-ng" folder then:
+cd espeak-ng
+cmake --build build --target clean --config Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+ cmake --build build --config Release --target data
+ 
+ The content will be in build/espeak-ng-data of the Espeak-ng folder
  
 ## Issues 🚩 
 
@@ -83,7 +95,6 @@ To build the project you have to download devkitPro, install devkitPro and the m
 * Improve or add error handling, for example when using malloc() or in the zip function when using Minizip functions.
 * Improve configs files of the app datas storage, could be improved using globals Configuration structures to store the datas and witch be cleaned  when  closing the app  or  switching app mode  (second solution could be better for memory used by the app because only one global Configuration structure could  be  used against two for the first solution witch need to store the config for Normal Mode and an other for the Beta Mode).
 * Improve storage of the datas for emunand config and Hekate's global config values  using a  global structure (one for the emunand and one for Hekate's global configs).
-* Rewrite translation  method without  using  vectors to  have a pur C code for it, using structures could probably be a solution but it's a massive work to do.
 * Reorganize code logic, massive work to do but lots of improvement can be done.
 * Fix bugs, there are probably always some.
 * Fix typo, ameliorate messages and maybe add some messages in translations.

@@ -29,6 +29,7 @@
 #include "ntp.hpp"
 #include "screenreader/ScreenReader.hpp"
 #include "MemoryDiagnostics.h"
+#include "DebugConfig.h"
 
 extern u32 __nx_applet_exit_mode;
 const u64 hbmenu_title_id = 0x0104444444441001;
@@ -304,8 +305,29 @@ void help_menu() {
 			printf("%s\n", language_vars["lng_r_zl_menu"].c_str());
 		} else {
 			printf("%s\n\n", language_vars["lng_help_page_screenreader"].c_str());
-			fputs(language_vars["lng_screenreader_help"].c_str(), stdout);
-			printf("\n");
+			printf("%s\n\n", language_vars["lng_screenreader_help_title"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zl_y"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zl_x"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zl_rate"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zl_language"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zl_reset"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zr_y"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zr_b"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zr_pitch"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_zr_pitch_range"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_r_word_gap"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_r_intonation"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_r_punctuation"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_l_voice_variant"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_l_position"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_l_navigation"].c_str());
+			printf("\n%s\n", language_vars["lng_screenreader_help_virtual_title"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_read_lines"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_page"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_console"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_switch_console"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_repeat_line"].c_str());
+			printf("%s\n", language_vars["lng_screenreader_help_virtual_read_to_end"].c_str());
 		}
 		printf("\n%s\n", language_vars["lng_help_switch_screens"].c_str());
 		printf("%s\n\n", language_vars["lng_plus_menu"].c_str());
@@ -399,6 +421,8 @@ int appInit() {
 	set_consoles_default_size();
 	consoleEnableTextBuffer(&menu_console);
 	consoleEnableTextBuffer(&logs_console);
+	consoleConfigureTextBufferHistory(&menu_console, false, CONSOLE_TEXT_HISTORY_DEFAULT_LINES);
+	consoleConfigureTextBufferHistory(&logs_console, true, 2000);
 	select_console(&menu_console);
 	// menu_console->font = default_font_bin;
 	// consoleSetFont(menu_console, custom_font);
@@ -421,6 +445,27 @@ void logs_console_clear() {
 	consoleUpdate(&logs_console);
 	select_console(&menu_console);
 }
+
+#if CONSOLE_HISTORY_TESTS
+static void logs_console_history_test(bool clearHistory, int lineCount, const char *label) {
+	select_console(&logs_console);
+	if (clearHistory)
+		consoleClear();
+	for (int i = 0; i < lineCount; i++) {
+		const int currentLine = consoleGetTextHistoryLineCount(&logs_console) + logs_console.cursorY;
+		u64 generation = 0;
+		u64 lineId = 0;
+		const unsigned long long consoleLine = consoleGetTextBufferLineId(&logs_console, currentLine, &generation, &lineId) ?
+			(unsigned long long)lineId + 1ULL : (unsigned long long)currentLine + 1ULL;
+		printf("[TEST HISTORIQUE %s] ligne console %llu (test %02d/%02d)\n",
+			label, consoleLine, i + 1, lineCount);
+	}
+	consoleUpdate(&logs_console);
+	select_console(&menu_console);
+	ScreenReader::SpeakContext(language_vars["lng_screenreader_context_operation"],
+		std::string("Test de l'historique : ") + label + ". " + std::to_string(lineCount) + " lignes ajoutées.", "");
+}
+#endif
 
 void appExit() {
 	ScreenReader::SpeakAndWait(language_vars["lng_screenreader_app_close"], false);
@@ -2529,6 +2574,24 @@ int main(int argc, char **argv) {
 			hekate_autoboot_enable_combot_disable = false;
 			hekate_autoboot_disable_combot_disable = false;
 		}
+
+#if CONSOLE_HISTORY_TESTS
+		else if ((kDown & HidNpadButton_StickR) && (kHeld & HidNpadButton_ZL)) {
+			ScreenReader::Interrupt();
+			logs_console_history_test(true, 40, "effacement puis remplissage");
+		}
+
+		else if ((kDown & HidNpadButton_StickR) && (kHeld & HidNpadButton_ZR)) {
+			ScreenReader::Interrupt();
+			logs_console_history_test(false, 2, "ajout court");
+		}
+
+		else if ((kDown & HidNpadButton_StickR) && (kHeld & HidNpadButton_R)) {
+			ScreenReader::Interrupt();
+			logs_console_history_test(false, 40, "ajout long sans effacement");
+		}
+
+#endif
 
 		else if (kDown & HidNpadButton_StickR) {
 			ScreenReader::Interrupt();

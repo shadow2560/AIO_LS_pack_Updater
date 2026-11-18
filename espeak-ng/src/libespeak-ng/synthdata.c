@@ -69,9 +69,9 @@ static espeak_ng_STATUS ReadPhFile(void **ptr, const char *fname, int *size, esp
 
 	FILE *f_in;
 	int length;
-	char buf[sizeof(path_home)+40];
+	char buf[N_PATH_BUF];
 
-	sprintf(buf, "%s%c%s", path_home, PATHSEP, fname);
+	snprintf(buf, sizeof(buf), "%s%c%s", path_home, PATHSEP, fname);
 	length = GetFileLength(buf);
 	if (length < 0) // length == -errno
 		return create_file_error_context(context, -length, buf);
@@ -83,17 +83,18 @@ static espeak_ng_STATUS ReadPhFile(void **ptr, const char *fname, int *size, esp
 		free(*ptr);
 		*ptr = NULL;
 	}
-	
+
 	if (length == 0) {
-		*ptr = NULL;
-		return 0;
+		// Callers dereference *data without a NULL check, so an empty file is an error.
+		fclose(f_in);
+		return create_file_error_context(context, ENS_UNEXPECTED_EOF, buf);
 	}
 
 	if ((*ptr = malloc(length)) == NULL) {
 		fclose(f_in);
 		return ENOMEM;
 	}
-	if (fread(*ptr, 1, length, f_in) != length) {
+	if (fread(*ptr, 1, length, f_in) != (size_t)length) {
 		int error = errno;
 		fclose(f_in);
 		free(*ptr);
@@ -112,15 +113,18 @@ espeak_ng_STATUS LoadPhData(int *srate, espeak_ng_ERROR_CONTEXT *context)
 	int ix;
 	int version;
 	int length = 0;
+	int phontab_size = 0;
+	int phondata_size = 0;
 	int rate;
 	unsigned char *p;
+	unsigned char *p_end;
 
 	espeak_ng_STATUS status;
-	if ((status = ReadPhFile((void **)&phoneme_tab_data, "phontab", NULL, context)) != ENS_OK)
+	if ((status = ReadPhFile((void **)&phoneme_tab_data, "phontab", &phontab_size, context)) != ENS_OK)
 		return status;
 	if ((status = ReadPhFile((void **)&phoneme_index, "phonindex", NULL, context)) != ENS_OK)
 		return status;
-	if ((status = ReadPhFile((void **)&phondata_ptr, "phondata", NULL, context)) != ENS_OK)
+	if ((status = ReadPhFile((void **)&phondata_ptr, "phondata", &phondata_size, context)) != ENS_OK)
 		return status;
 	if ((status = ReadPhFile((void **)&tunes, "intonations", &length, context)) != ENS_OK)
 		return status;
@@ -130,7 +134,7 @@ espeak_ng_STATUS LoadPhData(int *srate, espeak_ng_ERROR_CONTEXT *context)
 	// read the version number and sample rate from the first 8 bytes of phondata
 	version = 0; // bytes 0-3, version number
 	rate = 0;    // bytes 4-7, sample rate
-	if (wavefile_data) {
+	if (wavefile_data && (phondata_size >= 8)) {
 		for (ix = 0; ix < 4; ix++) {
 			version += (wavefile_data[ix] << (ix*8));
 			rate += (wavefile_data[ix+4] << (ix*8));
@@ -141,12 +145,22 @@ espeak_ng_STATUS LoadPhData(int *srate, espeak_ng_ERROR_CONTEXT *context)
 		return create_version_mismatch_error_context(context, path_home, version, version_phdata);
 
 	// set up phoneme tables
+	if ((phoneme_tab_data == NULL) || (phontab_size < 4))
+		return ENS_UNSUPPORTED_PHON_FORMAT;
 	p = phoneme_tab_data;
+	p_end = p + phontab_size;
 	n_phoneme_tables = p[0];
+	if (n_phoneme_tables > N_PHONEME_TABS)
+		return ENS_UNSUPPORTED_PHON_FORMAT;
 	p += 4;
 
 	for (ix = 0; ix < n_phoneme_tables; ix++) {
-		int n_phonemes = p[0];
+		int n_phonemes;
+		if (p + 4 + N_PHONEME_TAB_NAME > p_end)
+			return ENS_UNSUPPORTED_PHON_FORMAT;
+		n_phonemes = p[0];
+		if (p + 4 + N_PHONEME_TAB_NAME + (n_phonemes * sizeof(PHONEME_TAB)) > p_end)
+			return ENS_UNSUPPORTED_PHON_FORMAT;
 		phoneme_tab_list[ix].n_phonemes = p[0];
 		phoneme_tab_list[ix].includes = p[1];
 		p += 4;
@@ -174,6 +188,7 @@ void FreePhData(void)
 	phoneme_index = NULL;
 	phondata_ptr = NULL;
 	tunes = NULL;
+	n_tunes = 0;
 	current_phoneme_table = -1;
 }
 
@@ -366,7 +381,7 @@ void SelectPhonemeTable(int number)
 {
 	if (current_phoneme_table == number) return;
 	n_phoneme_tab = 0;
-	MAKE_MEM_UNDEFINED(&phoneme_tab, sizeof(phoneme_tab));
+	memset(phoneme_tab, 0, sizeof(phoneme_tab)); // clear so a code absent from the new table looks up as NULL, not a stale pointer from the previous table
 	SetUpPhonemeTable(number); // recursively for included phoneme tables
 	n_phoneme_tab++;
 	current_phoneme_table = number;
@@ -413,11 +428,14 @@ static bool StressCondition(Translator *tr, PHONEME_LIST *plist, int condition, 
 	PHONEME_LIST *pl;
 	static const int condition_level[4] = { 1, 2, 4, 15 };
 
-	if (phoneme_tab[plist[0].phcode]->type == phVOWEL)
+	PHONEME_TAB *ph0 = phoneme_tab[plist[0].phcode];
+	if (ph0 != NULL && ph0->type == phVOWEL)
 		pl = plist;
 	else {
-		// consonant, get stress from the following vowel
-		if (phoneme_tab[plist[1].phcode]->type == phVOWEL)
+		// consonant (or a phoneme from another table after a phoneme-table
+		// switch), get stress from the following vowel
+		PHONEME_TAB *ph1 = phoneme_tab[plist[1].phcode];
+		if (ph1 != NULL && ph1->type == phVOWEL)
 			pl = &plist[1];
 		else
 			return false; // no stress elevel for this consonant
@@ -456,7 +474,7 @@ static int CountVowelPosition(PHONEME_LIST *plist, PHONEME_LIST *plist_start)
 	int count = 0;
 
 	for (;;) {
-		if (plist->ph->type == phVOWEL)
+		if (plist->ph != NULL && plist->ph->type == phVOWEL)
 			count++;
 		if (plist->sourceix != 0 || plist == plist_start)
 			break;
@@ -535,7 +553,12 @@ static bool InterpretCondition(Translator *tr, int control, PHONEME_LIST *plist,
 			for (which = 1;; which++) {
 				if (plist[which].sourceix)
 					return false;
-				if (phoneme_tab[plist[which].phcode]->type == phVOWEL) {
+				PHONEME_TAB *phw = phoneme_tab[plist[which].phcode];
+				if (phw == NULL)
+					// phoneme from another table after a phoneme-table switch;
+					// treat it as a boundary, there is no next vowel in this word
+					return false;
+				if (phw->type == phVOWEL) {
 					plist = &plist[which];
 					break;
 				}
@@ -580,9 +603,20 @@ static bool InterpretCondition(Translator *tr, int control, PHONEME_LIST *plist,
 		PHONEME_TAB *ph;
 		ph = plist->ph;
 
+		if (ph == NULL)
+			// the neighbouring phoneme is not in the current phoneme table
+			// (e.g. a phoneme from another table after a mid-clause phoneme-table
+			// switch); it cannot satisfy a condition, so treat it as not matching
+			return false;
+
 		if (instn2 < 7) {
 			// 'data' is a phoneme number
-			if ((phoneme_tab[data]->mnemonic == ph->mnemonic) == true)
+			// it may not be in the current phoneme table either (same reason as
+			// above), in which case no exact match is possible, but 'data' is
+			// still meaningful as a vowel type below
+			PHONEME_TAB *ph_data = phoneme_tab[data];
+
+			if ((ph_data != NULL) && (ph_data->mnemonic == ph->mnemonic))
 				return true;
 
 			//  not an exact match, check for a vowel type (eg. #i )
@@ -615,7 +649,9 @@ static bool InterpretCondition(Translator *tr, int control, PHONEME_LIST *plist,
 			case isWordStart:
 				return plist->sourceix != 0;
 			case isWordEnd:
-				return plist[1].sourceix || (plist[1].ph->type == phPAUSE);
+				// a phoneme from another table (NULL ph) after a phoneme-table
+				// switch acts as a word boundary
+				return plist[1].sourceix || (plist[1].ph == NULL) || (plist[1].ph->type == phPAUSE);
 			case isAfterStress:
 				if (plist->sourceix != 0)
 					return false;
@@ -635,6 +671,8 @@ static bool InterpretCondition(Translator *tr, int control, PHONEME_LIST *plist,
 					plist++;
 					if (plist->sourceix != 0)
 						return true; // start of next word, without finding another vowel
+					if (plist->ph == NULL)
+						return true; // reached another phoneme table, no more vowels in this word
 					if (plist->ph->type == phVOWEL)
 						return false;
 				}
@@ -677,9 +715,14 @@ static void SwitchOnVowelType(PHONEME_LIST *plist, PHONEME_DATA *phdata, unsigne
 
 	if (instn_type == 2) {
 		phdata->pd_control |= pd_FORNEXTPH;
+		if (plist[1].ph == NULL)
+			return; // next phoneme is from another table (phoneme-table switch)
 		voweltype = plist[1].ph->start_type; // SwitchNextVowelType
-	} else
+	} else {
+		if (plist[-1].ph == NULL)
+			return; // previous phoneme is from another table (phoneme-table switch)
 		voweltype = plist[-1].ph->end_type; // SwitchPrevVowelType
+	}
 
 	voweltype -= phonVOWELTYPES;
 	if ((voweltype >= 0) && (voweltype < 6)) {
@@ -803,7 +846,12 @@ void InterpretPhoneme(Translator *tr, int control, PHONEME_LIST *plist, PHONEME_
 					break;
 				}
 			} else if (instn2 == i_APPEND_IFNEXTVOWEL) {
-				if (phoneme_tab[plist[1].phcode]->type == phVOWEL)
+				// the next phoneme may not be in the current phoneme table (e.g.
+				// a phoneme from another table after a mid-clause phoneme-table
+				// switch); it cannot be shown to be a vowel, so don't append
+				PHONEME_TAB *ph_next = phoneme_tab[plist[1].phcode];
+
+				if ((ph_next != NULL) && (ph_next->type == phVOWEL))
 					phdata->pd_param[i_APPEND_PHONEME] = data;
 			} else if (instn2 == i_ADD_LENGTH) {
 				if (data & 0x80) {
@@ -978,12 +1026,18 @@ void InterpretPhoneme(Translator *tr, int control, PHONEME_LIST *plist, PHONEME_
 	}
 }
 
-void InterpretPhoneme2(int phcode, PHONEME_DATA *phdata)
+void InterpretPhoneme2WithData(int phcode, PHONEME_TAB *ph, PHONEME_DATA *phdata)
 {
-	// Examine the program of a single isolated phoneme
+	// Examine the program of a single isolated phoneme. The caller may pass
+	// a resolved phoneme from an alternate table; the numeric code alone is
+	// table-local and is unsafe after the base table has been restored.
 	int ix;
 	PHONEME_LIST plist[4];
 	memset(plist, 0, sizeof(plist));
+	if (ph == NULL) {
+		memset(phdata, 0, sizeof(*phdata));
+		return;
+	}
 
 	for (ix = 0; ix < 4; ix++) {
 		plist[ix].phcode = phonPAUSE;
@@ -991,8 +1045,23 @@ void InterpretPhoneme2(int phcode, PHONEME_DATA *phdata)
 	}
 
 	plist[1].phcode = phcode;
-	plist[1].ph = phoneme_tab[phcode];
+	plist[1].ph = ph;
 	plist[2].sourceix = 1;
 
 	InterpretPhoneme(NULL, 0, &plist[1], plist, phdata, NULL);
+}
+
+void InterpretPhoneme2(int phcode, PHONEME_DATA *phdata)
+{
+	InterpretPhoneme2WithData(phcode, phoneme_tab[phcode], phdata);
+}
+
+PHONEME_TAB *TonePhoneme(const PHONEME_LIST *plist)
+{
+	// Prefer the phoneme resolved while the word's own table was current.
+	// tone_ph on its own is table-local, so looking it up in phoneme_tab is
+	// only correct for words which did not switch language.
+	if (plist->tone_ph_data != NULL)
+		return plist->tone_ph_data;
+	return phoneme_tab[plist->tone_ph];
 }

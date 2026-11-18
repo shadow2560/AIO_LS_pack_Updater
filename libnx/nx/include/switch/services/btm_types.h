@@ -48,6 +48,13 @@ typedef enum {
     BtmTsiMode_Active              = 255,  ///< Active
 } BtmTsiMode;
 
+typedef enum {
+    BtmSniffMode_5ms               = 0,    ///< 5ms
+    BtmSniffMode_10ms              = 1,    ///< 10ms
+    BtmSniffMode_15ms              = 2,    ///< 15ms
+    BtmSniffMode_Active            = 3,    ///< Active
+} BtmSniffMode;
+
 /// SlotMode
 typedef enum {
     BtmSlotMode_2                  = 0,    ///< 2
@@ -78,11 +85,54 @@ typedef struct {
     u8 link_key[0x10];         ///< LinkKey
 } BtmLinkKey;
 
+/// ZeroRetransmissionList
+typedef struct {
+    u8 enabled_report_id_count;   ///< EnabledReportIdCount
+    u8 enabled_report_id[0x10];   ///< Array of EnabledReportId.
+} BtmZeroRetransmissionList;
+
+/// HidDeviceCondition
+typedef struct {
+    u32 sniff_mode;                                         ///< \ref BtmSniffMode
+    u32 slot_mode;                                          ///< \ref BtmSlotMode
+    bool is_burst_mode;                                     ///< IsBurstMode
+    BtmZeroRetransmissionList zero_retransmission_list;     ///< \ref BtmZeroRetransmissionList
+    u16 vid;                                                ///< Vid
+    u16 pid;                                                ///< Pid
+} BtmHidDeviceCondition;
+
+/// AudioDeviceCondition [13.0.0+]
+typedef struct {
+    u8 unk_x0;                                    ///< Unknown
+} BtmAudioDeviceCondition;
+
 /// HidDeviceInfo
 typedef struct {
-    u16 vid;                              ///< Vid
-    u16 pid;                              ///< Pid
+    u16 vid;                                      ///< Vid
+    u16 pid;                                      ///< Pid
 } BtmHidDeviceInfo;
+
+/// AudioDeviceInfo [13.0.0+]
+typedef struct {
+    union {
+        struct {
+            u8 source_volume;                             ///< SourceVolume
+        } v13;                                            ///< [13.0.0-13.2.1]
+
+        struct {
+            u8 source_volume;                             ///< SourceVolume
+            bool is_first_audio_control_connection;       ///< IsFirstAudioControlConnection
+            u8 unk_0x2;                                   ///< Unknown
+        } v14;                                            ///< [14.0.0-14.1.2]
+
+        struct {
+            u8 source_volume;                             ///< SourceVolume
+            u8 sink_volume;                               ///< SinkVolume
+            bool is_first_audio_control_connection;       ///< IsFirstAudioControlConnection
+            bool unk_0x3;                                 ///< Unknown     
+        } v15;                                            ///< [15.0.0+]
+    };
+} BtmAudioDeviceInfo;
 
 /// HostDeviceProperty
 typedef struct {
@@ -103,80 +153,101 @@ typedef struct {
     };
 } BtmHostDeviceProperty;
 
-/// BtmConnectedDevice [1.0.0-12.1.0]
-typedef struct {
-    BtdrvAddress address;
-    u8 pad[2];
-    u32 unk_x8;
-    char name[0x20];
-    u8 unk_x2C[0x1C];
-    u16 vid;
-    u16 pid;
-    u8 unk_x4C[0x20];
-} BtmConnectedDeviceV1;
-
-/// BtmConnectedDevice [13.0.0+]
-typedef struct {
-    BtdrvAddress address;
-    u8 pad[2];
-    u32 profile;                                  ///< \ref BtmProfile
-    u8 unk_xC[0x40];
-    char name[0x20];
-    u8 unk_x6C[0xD9];
-    u8 pad2[3];
-} BtmConnectedDeviceV13;
-
-/// DeviceCondition [1.0.0-5.0.2]
-typedef struct {
-    u32 unk_x0;
-    u32 unk_x4;
-    u8 unk_x8;
-    u8 unk_x9;
-    u8 max_count;
-    u8 connected_count;
-    BtmConnectedDeviceV1 devices[8];
-} BtmDeviceConditionV100;
-
-/// DeviceCondition [5.1.0-7.0.1]
-typedef struct {
-    u32 unk_x0;
-    u32 unk_x4;
-    u8 unk_x8;
-    u8 unk_x9[2];
-    u8 max_count;
-    u8 connected_count;
-    u8 pad[3];
-    BtmConnectedDeviceV1 devices[8];
-} BtmDeviceConditionV510;
-
-/// DeviceCondition [8.0.0-8.1.1]
-typedef struct {
-    u32 unk_x0;
-    u32 unk_x4;
-    u8 unk_x8;
-    u8 unk_x9;
-    u8 max_count;
-    u8 connected_count;
-    BtmConnectedDeviceV1 devices[8];
-} BtmDeviceConditionV800;
-
-/// DeviceCondition [9.0.0-12.1.0]
-typedef struct {
-    u32 unk_x0;
-    u8 unk_x4;
-    u8 unk_x5;
-    u8 max_count;
-    u8 connected_count;
-    BtmConnectedDeviceV1 devices[8];
-} BtmDeviceConditionV900;
-
 /// DeviceCondition [1.0.0-12.1.0]
-typedef union {
-    BtmDeviceConditionV100 v100;
-    BtmDeviceConditionV510 v510;
-    BtmDeviceConditionV800 v800;
-    BtmDeviceConditionV900 v900;
+typedef struct {
+    BtdrvAddress address;                         ///< \ref BtdrvAddress
+    u8 pad[2];                                    ///< Padding
+    u32 profile;                                  ///< \ref BtmProfile
+    char name[0x20];                              ///< BdName
+    union {
+        u8 data[0x20];                            ///< Empty (Profile = None)
+        BtmHidDeviceCondition hid;                ///< \ref BtmHidDeviceCondition (Profile = Hid)
+    } profile_condition;
+    u8 reserved[0x20];                            ///< Reserved
+} BtmDeviceConditionLegacy;
+
+/// DeviceCondition [13.0.0+]
+typedef struct {
+    BtdrvAddress address;                         ///< \ref BtdrvAddress
+    u8 pad[2];                                    ///< Padding
+    u32 profile;                                  ///< \ref BtmProfile
+    union {
+        u8 data[0x20];                            ///< Empty (Profile = None)
+        BtmHidDeviceCondition hid;                ///< \ref BtmHidDeviceCondition (Profile = Hid)
+        BtmAudioDeviceCondition audio;            ///< \ref BtmAudioDeviceCondition (Profile = Audio)
+    } profile_condition;
+    u8 reserved[0x20];                            ///< Reserved
+    char name[0xF9];                              ///< Name
+    u8 pad2[3];                                   ///< Padding
 } BtmDeviceCondition;
+
+/// ShortenedDeviceCondition [14.0.0+]
+typedef struct {
+    BtdrvAddress address;                         ///< \ref BtdrvAddress
+    u8 pad[2];                                    ///< Padding
+    u32 profile;                                  ///< \ref BtmProfile
+    union {
+        u8 data[0x20];                            ///< Empty (Profile = None)
+        BtmHidDeviceCondition hid;                ///< \ref BtmHidDeviceCondition (Profile = Hid)
+        BtmAudioDeviceCondition audio;            ///< \ref BtmAudioDeviceCondition (Profile = Audio)
+    } profile_condition;
+    u8 reserved[0x20];                            ///< Reserved
+    char name[0x15];                              ///< Name
+    u8 pad2[3];                                   ///< Padding
+} BtmShortenedDeviceCondition;
+
+/// DeviceConditionList [1.0.0-5.0.2]
+typedef struct {
+    u32 bluetooth_mode;                     ///< \ref BtmBluetoothMode
+    u32 wlan_mode;                          ///< \ref BtmWlanMode
+    bool is_slot_saving_for_pairing;        ///< IsSlotSavingForPairing
+    bool is_slot_saving;                    ///< IsSlotSaving
+    u8 connection_capacity;                 ///< ConnectionCapacity
+    u8 device_count;                        ///< DeviceCount
+    BtmDeviceConditionLegacy devices[8];    ///< Array of \ref BtmDeviceConditionLegacy with the above count.
+} BtmDeviceConditionListV100;
+
+/// DeviceConditionList [5.1.0-7.0.1]
+typedef struct {
+    u32 bluetooth_mode;                     ///< \ref BtmBluetoothMode
+    u32 wlan_mode;                          ///< \ref BtmWlanMode
+    bool is_slot_saving_for_pairing;        ///< IsSlotSavingForPairing
+    bool is_slot_saving;                    ///< IsSlotSaving
+    u8 unk_0xA;                             ///< Unknown
+    u8 connection_capacity;                 ///< ConnectionCapacity
+    u8 device_count;                        ///< DeviceCount
+    u8 pad[3];                              ///< Padding
+    BtmDeviceConditionLegacy devices[8];    ///< Array of \ref BtmDeviceConditionLegacy with the above count.
+} BtmDeviceConditionListV510;
+
+/// DeviceConditionList [8.0.0-8.1.1]
+typedef struct {
+    u32 bluetooth_mode;                     ///< \ref BtmBluetoothMode
+    u32 wlan_mode;                          ///< \ref BtmWlanMode
+    bool is_slot_saving_for_pairing;        ///< IsSlotSavingForPairing
+    bool is_slot_saving;                    ///< IsSlotSaving
+    u8 connection_capacity;                 ///< ConnectionCapacity
+    u8 device_count;                        ///< DeviceCount
+    BtmDeviceConditionLegacy devices[8];    ///< Array of \ref BtmDeviceConditionLegacy with the above count.
+} BtmDeviceConditionListV800;
+
+/// DeviceConditionList [9.0.0-12.1.0]
+typedef struct {
+    u32 wlan_mode;                          ///< \ref BtmWlanMode
+    bool is_slot_saving_for_pairing;        ///< IsSlotSavingForPairing
+    bool is_slot_saving;                    ///< IsSlotSaving
+    u8 connection_capacity;                 ///< ConnectionCapacity
+    u8 device_count;                        ///< DeviceCount
+    BtmDeviceConditionLegacy devices[8];    ///< Array of \ref BtmDeviceConditionLegacy with the above count.
+} BtmDeviceConditionListV900;
+
+/// DeviceConditionList [1.0.0-12.1.0]
+typedef union {
+    BtmDeviceConditionListV100 v100;
+    BtmDeviceConditionListV510 v510;
+    BtmDeviceConditionListV800 v800;
+    BtmDeviceConditionListV900 v900;
+} BtmDeviceConditionList;
 
 /// DeviceSlotMode
 typedef struct {
@@ -201,39 +272,50 @@ typedef struct {
     u8 reserved[3];                       ///< Reserved
     u32 profile;                          ///< \ref BtmProfile
     union {
-        u8 data[0x4];                     ///< Empty (Profile = None)
-        BtmHidDeviceInfo hid_device_info; ///< \ref BtmHidDeviceInfo (Profile = Hid)
+        u8 data[0x20];                    ///< Empty (Profile = None)
+        BtmHidDeviceInfo hid;             ///< \ref BtmHidDeviceInfo (Profile = Hid)
     } profile_info;
-    u8 reserved2[0x1C];                   ///< Reserved
-} BtmDeviceInfoV1;
+} BtmDeviceInfoLegacy;
 
 /// DeviceInfo [13.0.0+]
 typedef struct {
     BtdrvAddress addr;                    ///< \ref BtdrvAddress
     BtmClassOfDevice class_of_device;     ///< ClassOfDevice
     BtmLinkKey link_key;                  ///< LinkKey
-    u8 reserved[3];                       ///< Reserved
+    u8 key_type;                          ///< KeyType
+    u8 reserved[2];                       ///< Reserved
     u32 profile;                          ///< \ref BtmProfile
     union {
-        u8 data[0x4];                     ///< Empty (Profile = None)
-        BtmHidDeviceInfo hid_device_info; ///< \ref BtmHidDeviceInfo (Profile = Hid)
+        u8 data[0x20];                    ///< Empty (Profile = None)
+        BtmHidDeviceInfo hid;             ///< \ref BtmHidDeviceInfo (Profile = Hid)
+        BtmAudioDeviceInfo audio;         ///< \ref BtmAudioDeviceInfo (Profile = Audio)
     } profile_info;
-    u8 reserved2[0x1C];                   ///< Reserved
     char name[0xF9];                      ///< Name
     u8 pad[3];                            ///< Padding
-} BtmDeviceInfoV13;
-
-/// DeviceInfo [1.0.0-13.0.0]
-typedef union {
-    BtmDeviceInfoV1 v1;
-    BtmDeviceInfoV13 v13;
 } BtmDeviceInfo;
+
+/// ShortenedDeviceInfo [13.0.0+]
+typedef struct {
+    BtdrvAddress addr;                    ///< \ref BtdrvAddress
+    BtmClassOfDevice class_of_device;     ///< ClassOfDevice
+    BtmLinkKey link_key;                  ///< LinkKey
+    u8 key_type;                          ///< KeyType
+    u8 reserved[2];                       ///< Reserved
+    u32 profile;                          ///< \ref BtmProfile
+    union {
+        u8 data[0x20];                    ///< Empty (Profile = None)
+        BtmHidDeviceInfo hid;             ///< \ref BtmHidDeviceInfo (Profile = Hid)
+        BtmAudioDeviceInfo audio;         ///< \ref BtmAudioDeviceInfo (Profile = Audio)
+    } profile_info;
+    char name[0x15];                      ///< Name
+    u8 pad[2];                            ///< Padding
+} BtmShortenedDeviceInfo;
 
 /// DeviceInfoList
 typedef struct {
-    u8 device_count;              ///< DeviceCount
-    u8 reserved[3];               ///< Reserved
-    BtmDeviceInfoV1 devices[10];  ///< Array of \ref BtmDeviceInfoV1 with the above count.
+    u8 device_count;                      ///< DeviceCount
+    u8 reserved[3];                       ///< Reserved
+    BtmDeviceInfoLegacy devices[10];      ///< Array of \ref BtmDeviceInfoLegacy with the above count.
 } BtmDeviceInfoList;
 
 /// DeviceProperty
@@ -248,12 +330,6 @@ typedef struct {
     u8 device_count;                ///< DeviceCount
     BtmDeviceProperty devices[15];  ///< Array of \ref BtmDeviceProperty.
 } BtmDevicePropertyList;
-
-/// ZeroRetransmissionList
-typedef struct {
-    u8 enabled_report_id_count;   ///< EnabledReportIdCount
-    u8 enabled_report_id[0x10];   ///< Array of EnabledReportId.
-} BtmZeroRetransmissionList;
 
 /// GattClientConditionList
 typedef struct {

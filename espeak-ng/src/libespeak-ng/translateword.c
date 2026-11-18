@@ -49,13 +49,129 @@ static void addPluralSuffixes(int flags, Translator *tr, char last_char, char *w
 static void ApplySpecialAttribute2(Translator *tr, char *phonemes, int dict_flags);
 static void ChangeWordStress(Translator *tr, char *word, int new_stress);
 static int CheckDottedAbbrev(char *word1);
+static bool LookupEmojiBaseSequence(Translator *tr, char **wordptr, unsigned int *flags, WORD_TAB *wtab, int wtab_remaining);
 static int NonAsciiNumber(int letter);
 static char *SpeakIndividualLetters(Translator *tr, char *word, char *phonemes, int spell_word, const ALPHABET *current_alphabet, char word_phonemes[]);
 static int TranslateLetter(Translator *tr, char *word, char *phonemes, int control, const ALPHABET *current_alphabet);
 static int Unpronouncable(Translator *tr, char *word, int posn);
 static int Unpronouncable2(Translator *tr, char *word);
 
-int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_out, bool *any_stressed_words, ALPHABET *current_alphabet, char word_phonemes[], size_t size_word_phonemes)
+static bool LookupEmojiBaseSequence(Translator *tr, char **wordptr, unsigned int *flags, WORD_TAB *wtab, int wtab_remaining)
+{
+	// An emoji sequence carrying skin tone modifiers (U+1F3FB..U+1F3FF) or tag
+	// characters (U+E0020..U+E007F) often has no dictionary entry of its own.
+	// Retry the lookup with those removed, and speak the modifier names after
+	// the base sequence:
+	// woman + medium skin tone + ZWJ + microscope -> "woman scientist medium skin tone"
+	// Tag characters have no names, so an unlisted subdivision flag falls back
+	// to the name of its base emoji ("black flag") rather than to silence.
+
+	static char replacement[N_WORD_BYTES];
+	char stripped[N_WORD_BYTES + 2];
+	int modifiers[8];
+	int n_modifiers = 0;
+	int n_stripped = 0;
+	int c;
+	int nbytes;
+	int length = 0;
+	int len2;
+	int ix;
+	const char *p;
+	char *wp;
+	char ph_buf[N_WORD_PHONEMES];
+	unsigned int flags2[2];
+
+	p = *wordptr;
+	utf8_in(&c, p);
+	if (!IsEmoji(c))
+		return false;
+
+	while ((*p != 0) && (*p != ' ')) {
+		nbytes = utf8_in(&c, p);
+		if (IsEmojiModifier(c)) {
+			n_stripped++;
+			if (n_modifiers < 8)
+				modifiers[n_modifiers++] = c;
+		} else if (IsEmojiTag(c)) {
+			n_stripped++; // no spoken name for a tag character
+		} else if (length + nbytes < N_WORD_BYTES) {
+			memcpy(&stripped[length], p, nbytes);
+			length += nbytes;
+		}
+		p += nbytes;
+	}
+
+	if ((n_stripped == 0) || (length == 0))
+		return false;
+
+	stripped[length] = ' ';
+	stripped[length+1] = 0;
+
+	flags2[0] = 0;
+	flags2[1] = 0;
+	wp = stripped;
+	LookupDictList(tr, &wp, ph_buf, flags2, FLAG_ALLOW_TEXTMODE, wtab, wtab_remaining);
+	if (!(flags2[0] & FLAG_TEXTMODE)) {
+		if (n_modifiers > 0)
+			return false; // the base sequence has no replacement text either
+
+		// Only tag characters were removed, and the base emoji has no entry in
+		// this language. Hand the base back as the replacement text so that an
+		// unlisted subdivision flag is read the way the bare base emoji is read
+		// here, rather than falling silent. The retranslation cannot come back
+		// through this function, as the base carries no tag characters.
+		wp = stripped;
+	}
+
+	// wp now points into a static buffer which the modifier lookups below
+	// will overwrite, so copy the base replacement text out immediately
+	length = strlen(wp); // includes a trailing space
+	if (length > N_WORD_BYTES-4)
+		return false;
+	replacement[0] = 0;
+	replacement[1] = ' ';
+	memcpy(&replacement[2], wp, length+1);
+	length += 2;
+
+	for (ix = 0; ix < n_modifiers; ix++) {
+		char modifier_word[8];
+
+		len2 = utf8_out(modifiers[ix], modifier_word);
+		modifier_word[len2] = ' ';
+		modifier_word[len2+1] = 0;
+
+		flags2[0] = 0;
+		flags2[1] = 0;
+		wp = modifier_word;
+		LookupDictList(tr, &wp, ph_buf, flags2, FLAG_ALLOW_TEXTMODE, wtab, wtab_remaining);
+		if (!(flags2[0] & FLAG_TEXTMODE))
+			continue; // no replacement text for the modifier in this language
+
+		len2 = strlen(wp);
+		if (length + len2 >= N_WORD_BYTES-1)
+			break;
+		memcpy(&replacement[length], wp, len2+1);
+		length += len2;
+	}
+
+	if (option_phonemes & espeakPHONEMES_TRACE) {
+		char word_buf[N_WORD_BYTES];
+
+		for (len2 = 0; len2 < N_WORD_BYTES-1; len2++) {
+			if (((c = (*wordptr)[len2]) == 0) || (c == ' '))
+				break;
+			word_buf[len2] = c;
+		}
+		word_buf[len2] = 0;
+		fprintf(f_trans, "Replace: %s  %s\n", word_buf, &replacement[2]);
+	}
+
+	*wordptr = &replacement[2];
+	*flags |= FLAG_TEXTMODE;
+	return true;
+}
+
+int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, int wtab_remaining, char *word_out, bool *any_stressed_words, ALPHABET *current_alphabet, char word_phonemes[], size_t size_word_phonemes)
 {
 	// word1 is terminated by space (0x20) character
 
@@ -101,6 +217,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 	if (wtab == NULL) {
 		memset(wtab_null, 0, sizeof(wtab_null));
 		wtab = wtab_null;
+		wtab_remaining = 0;
 	}
 	wflags = wtab->flags;
 
@@ -154,7 +271,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 			// is there a translation for this keyname ?
 			word1--;
 			*word1 = '_'; // prefix keyname with '_'
-			found = LookupDictList(tr, &word1, phonemes, dictionary_flags, 0, wtab);
+			found = LookupDictList(tr, &word1, phonemes, dictionary_flags, 0, wtab, wtab_remaining);
 		}
 	}
 
@@ -165,14 +282,20 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 		spell_word = option_sayas & 0xf; // 2,3,4
 	} else {
 		if (!found)
-			found = LookupDictList(tr, &word1, phonemes, dictionary_flags, FLAG_ALLOW_TEXTMODE, wtab);   // the original word
+			found = LookupDictList(tr, &word1, phonemes, dictionary_flags, FLAG_ALLOW_TEXTMODE, wtab, wtab_remaining);   // the original word
+
+		if (!found && !(dictionary_flags[0] & FLAG_TEXTMODE) && IsEmoji(first_char))
+			LookupEmojiBaseSequence(tr, &word1, dictionary_flags, wtab, wtab_remaining);
 
 		if ((dictionary_flags[0] & (FLAG_ALLOW_DOT | FLAG_NEEDS_DOT)) && (wordx[1] == '.'))
 			wordx[1] = ' '; // remove a Dot after this word
 
 		if (dictionary_flags[0] & FLAG_TEXTMODE) {
 			if (word_out != NULL)
-				strcpy(word_out, word1);
+				// an abbreviation match (a.b.c) leaves word1 pointing at the
+				// whole joined span, so bound the copy to word_out, which is
+				// &word_replaced[2] in a word_replaced[N_WORD_BYTES+1] buffer
+				strncpy0(word_out, word1, N_WORD_BYTES-1);
 
 			return dictionary_flags[0];
 		} else if ((found == false) && (dictionary_flags[0] & FLAG_SKIPWORDS) && !(dictionary_flags[0] & FLAG_ABBREV)) {
@@ -211,7 +334,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 		}
 
 		if (!found && iswdigit(first_char)) {
-			Lookup(tr, "_0lang", word_phonemes);
+			Lookup(tr, "_0lang", word_phonemes, size_word_phonemes);
 			if (word_phonemes[0] == phonSWITCH)
 				return 0;
 
@@ -221,16 +344,16 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 				return 0;
 			}
 
-			found = TranslateNumber(tr, word1, phonemes, phonemes + sizeof(phonemes), dictionary_flags, wtab, 0);
+			found = TranslateNumber(tr, word1, phonemes, phonemes + sizeof(phonemes), dictionary_flags, wtab, wtab_remaining, 0);
 		}
 
 		if (!found && ((wflags & FLAG_UPPERS) != FLAG_FIRST_UPPER)) {
 			// either all upper or all lower case
 
 			if ((tr->langopts.numbers & NUM_ROMAN) || ((tr->langopts.numbers & NUM_ROMAN_CAPITALS) && (wflags & FLAG_ALL_UPPER))) {
-				if ((wflags & FLAG_LAST_WORD) || !(wtab[1].flags & FLAG_NOSPACE)) {
+				if ((wflags & FLAG_LAST_WORD) || (wtab_remaining <= 1) || !(wtab[1].flags & FLAG_NOSPACE)) {
 					// don't use Roman number if this word is not separated from the next word (eg. "XLTest")
-					if ((found = TranslateRoman(tr, word1, phonemes, phonemes + sizeof(phonemes), wtab)) != 0)
+					if ((found = TranslateRoman(tr, word1, phonemes, phonemes + sizeof(phonemes), wtab, wtab_remaining)) != 0)
 						dictionary_flags[0] |= FLAG_ABBREV; // prevent emphasis if capitals
 				}
 			}
@@ -304,6 +427,9 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 
 		// anything left ?
 		if (*wordx != ' ') {
+			// Exclude spelled letters when looking up the stem with its prefixes.
+			char *word_with_prefix = wordx;
+
 			if ((unpron_phonemes[0] != 0) && (wordx[0] != '\'')) {
 				// letters which have been spoken individually from affecting the pronunciation of the pronuncable part
 				wordx[-1] = ' ';
@@ -356,7 +482,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 							strcpy(phonemes, phonemes2);
 							strcpy(end_phonemes, end_phonemes2);
 							if (option_phonemes & espeakPHONEMES_TRACE) {
-								DecodePhonemes(end_phonemes, end_phonemes2);
+								DecodePhonemes(end_phonemes, end_phonemes2, sizeof(end_phonemes2));
 								fprintf(f_trans, "  suffix [%s]\n\n", end_phonemes2);
 							}
 						}
@@ -406,19 +532,23 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 					strcpy(prefix_phonemes, phonemes);
 
 					// look for stress marker or $abbrev
-					found = LookupDictList(tr, &wordpf, phonemes, dictionary_flags, 0, wtab);
+					found = LookupDictList(tr, &wordpf, phonemes, dictionary_flags, 0, wtab, wtab_remaining);
 					if (found)
 						strcpy(prefix_phonemes, phonemes);
 					if (dictionary_flags[0] & FLAG_ABBREV) {
 						prefix_phonemes[0] = 0;
 						SpeakIndividualLetters(tr, wordpf, prefix_phonemes, 1, current_alphabet, word_phonemes);
 					}
-				} else
-					strcat(prefix_phonemes, end_phonemes);
+				} else {
+					// this loop runs up to 50 times, so truncate rather than
+					// overflow prefix_phonemes
+					size_t len = strlen(prefix_phonemes);
+					snprintf(prefix_phonemes + len, sizeof(prefix_phonemes) - len, "%s", end_phonemes);
+				}
 				end_phonemes[0] = 0;
 
 				end_type = 0;
-				found = LookupDictList(tr, &wordx, phonemes, dictionary_flags2, SUFX_P, wtab); // without prefix
+				found = LookupDictList(tr, &wordx, phonemes, dictionary_flags2, SUFX_P, wtab, wtab_remaining); // without prefix
 				if (dictionary_flags[0] == 0) {
 					dictionary_flags[0] = dictionary_flags2[0];
 					dictionary_flags[1] = dictionary_flags2[1];
@@ -451,7 +581,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 					if (prefix_phonemes[0] != 0) {
 						// lookup the stem without the prefix removed
 						wordx[-1] = c_temp;
-						found = LookupDictList(tr, &word1, phonemes, dictionary_flags2, end_flags, wtab);  // include prefix, but not suffix
+						found = LookupDictList(tr, &word_with_prefix, phonemes, dictionary_flags2, end_flags, wtab, wtab_remaining);  // include prefix, but not suffix
 						wordx[-1] = ' ';
 						if (phonemes[0] == phonSWITCH) {
 							// change to another language in order to translate this word
@@ -470,7 +600,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 							prefix_flags = 1;
 					}
 					if (found == false) {
-						found = LookupDictList(tr, &wordx, phonemes, dictionary_flags2, end_flags, wtab);  // without prefix and suffix
+						found = LookupDictList(tr, &wordx, phonemes, dictionary_flags2, end_flags, wtab, wtab_remaining);  // without prefix and suffix
 						if (phonemes[0] == phonSWITCH) {
 							// change to another language in order to translate this word
 							memcpy(wordx, word_copy, strlen(word_copy));
@@ -497,7 +627,10 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 								// allow more suffixes before this suffix
 								strcpy(end_phonemes2, end_phonemes);
 								end_type = TranslateRules(tr, wordx, phonemes, N_WORD_PHONEMES, end_phonemes, wflags, dictionary_flags);
-								strcat(end_phonemes, end_phonemes2); // add the phonemes for the previous suffixes after this one
+								// add the phonemes for the previous suffixes after this one.
+								// A word can carry any number of suffixes (e.g. "s's's'..."), so
+								// truncate rather than overflow end_phonemes.
+								strncat(end_phonemes, end_phonemes2, N_WORD_PHONEMES - strlen(end_phonemes) - 1);
 
 								if ((end_type != 0) && !(end_type & SUFX_P)) {
 									// there is another suffix
@@ -602,7 +735,7 @@ int TranslateWord3(Translator *tr, char *word_start, WORD_TAB *wtab, char *word_
 
 		if (wflags & FLAG_EMPHASIZED)
 			dictionary_flags[0] |= FLAG_PAUSE1; // precede by short pause
-	} else if (wtab[dictionary_skipwords].flags & FLAG_LAST_WORD) {
+	} else if ((dictionary_skipwords < wtab_remaining) && (wtab[dictionary_skipwords].flags & FLAG_LAST_WORD)) {
 		// the word has attribute to stress or unstress when at end of clause
 		if (dictionary_flags[0] & (FLAG_STRESS_END | FLAG_STRESS_END2))
 			ChangeWordStress(tr, word_phonemes, 4);
@@ -819,10 +952,10 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 	if (control & 2) {
 		// include CAPITAL information
 		if (iswupper(letter))
-			Lookup(tr, "_cap", capital);
+			Lookup(tr, "_cap", capital, sizeof(capital));
 	}
 	letter = towlower2(letter, tr);
-	LookupLetter(tr, letter, word[n_bytes], ph_buf, control & 1);
+	LookupLetter(tr, letter, word[n_bytes], ph_buf, sizeof(ph_buf), control & 1);
 
 	if (ph_buf[0] == 0) {
 		// is this a subscript or superscript letter ?
@@ -833,10 +966,10 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 			const char *modifier;
 			if ((control & 4 ) && ((modifier = modifiers[c >> 14]) != NULL)) {
 				// don't say "superscript" during normal text reading
-				Lookup(tr, modifier, capital);
+				Lookup(tr, modifier, capital, sizeof(capital));
 				if (capital[0] == 0) {
 					capital[2] = SetTranslator3(ESPEAKNG_DEFAULT_VOICE); // overwrites previous contents of translator3
-					Lookup(translator3, modifier, &capital[3]);
+					Lookup(translator3, modifier, &capital[3], sizeof(capital) - 3);
 					if (capital[3] != 0) {
 						capital[0] = phonPAUSE;
 						capital[1] = phonSWITCH;
@@ -848,7 +981,7 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 				}
 			}
 		}
-		LookupLetter(tr, letter, word[n_bytes], ph_buf, control & 1);
+		LookupLetter(tr, letter, word[n_bytes], ph_buf, sizeof(ph_buf), control & 1);
 	}
 
 	if (ph_buf[0] == phonSWITCH) {
@@ -859,7 +992,7 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 
 	if ((ph_buf[0] == 0) && ((number = NonAsciiNumber(letter)) > 0)) {
 		// convert a non-ascii number to 0-9
-		LookupLetter(tr, number, 0, ph_buf, control & 1);
+		LookupLetter(tr, number, 0, ph_buf, sizeof(ph_buf), control & 1);
 	}
 
 	al_offset = 0;
@@ -877,10 +1010,10 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 				// don't say the alphabet name
 			} else {
 				ph_buf2[0] = 0;
-				if (Lookup(translator, alphabet->name, ph_alphabet) == 0) { // the original language for the current voice
+				if (Lookup(translator, alphabet->name, ph_alphabet, sizeof(ph_alphabet)) == 0) { // the original language for the current voice
 					// Can't find the local name for this alphabet, use the English name
 					ph_alphabet[2] = SetTranslator3(ESPEAKNG_DEFAULT_VOICE); // overwrites previous contents of translator3
-					Lookup(translator3, alphabet->name, ph_buf2);
+					Lookup(translator3, alphabet->name, ph_buf2, sizeof(ph_buf2));
 				} else if (translator != tr) {
 					phontab_1 = tr->phoneme_tab_ix;
 					strcpy(ph_buf2, ph_alphabet);
@@ -941,12 +1074,12 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 					TranslateRules(translator3, &hangul_buf[1], &ph_buf[3], sizeof(ph_buf)-3, NULL, 0, NULL);
 					SetWordStress(translator3, &ph_buf[3], NULL, -1, 0);
 				} else
-					LookupLetter(translator3, letter, word[n_bytes], &ph_buf[3], control & 1);
+					LookupLetter(translator3, letter, word[n_bytes], &ph_buf[3], sizeof(ph_buf) - 3, control & 1);
 
 				if (ph_buf[3] == phonSWITCH) {
 					// another level of language change
 					ph_buf[2] = SetTranslator3(&ph_buf[4]);
-					LookupLetter(translator3, letter, word[n_bytes], &ph_buf[3], control & 1);
+					LookupLetter(translator3, letter, word[n_bytes], &ph_buf[3], sizeof(ph_buf) - 3, control & 1);
 				}
 
 				SelectPhonemeTable(voice->phoneme_tab_ix); // revert to original phoneme table
@@ -968,10 +1101,10 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 		int speak_letter_number = 1;
 		if (!(al_flags & AL_NO_SYMBOL)) {
 			if (iswalpha(letter))
-				Lookup(translator, "_?A", ph_buf);
+				Lookup(translator, "_?A", ph_buf, sizeof(ph_buf));
 
 			if ((ph_buf[0] == 0) && !iswspace(letter))
-				Lookup(translator, "_??", ph_buf);
+				Lookup(translator, "_??", ph_buf, sizeof(ph_buf));
 
 			if (ph_buf[0] == 0)
 				EncodePhonemes("l'et@", ph_buf, NULL);
@@ -1002,7 +1135,7 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 			for (p2 = hexbuf; *p2 != 0; p2++) {
 				pbuf += strlen(pbuf);
 				*pbuf++ = phonPAUSE_VSHORT;
-				LookupLetter(translator, *p2, 0, pbuf, 1);
+				LookupLetter(translator, *p2, 0, pbuf, sizeof(ph_buf) - (pbuf - ph_buf), 1);
 				if (((pbuf[0] == 0) || (pbuf[0] == phonSWITCH)) && (*p2 >= 'a')) {
 					// This language has no translation for 'a' to 'f', speak English names using base phonemes
 					EncodePhonemes(hex_letters[*p2 - 'a'], pbuf, NULL);
@@ -1015,9 +1148,9 @@ static int TranslateLetter(Translator *tr, char *word, char *phonemes, int contr
 	len = strlen(phonemes);
 
 	if (tr->langopts.accents & 2)  // 'capital' before or after the word ?
-		sprintf(ph_buf2, "%c%s%s%s", 0xff, ph_alphabet, ph_buf, capital);
+		snprintf(ph_buf2, sizeof(ph_buf2), "%c%s%s%s", 0xff, ph_alphabet, ph_buf, capital);
 	else
-		sprintf(ph_buf2, "%c%s%s%s", 0xff, ph_alphabet, capital, ph_buf); // the 0xff marker will be removed or replaced in SetSpellingStress()
+		snprintf(ph_buf2, sizeof(ph_buf2), "%c%s%s%s", 0xff, ph_alphabet, capital, ph_buf); // the 0xff marker will be removed or replaced in SetSpellingStress()
 	if ((len + strlen(ph_buf2)) < N_WORD_PHONEMES)
 		strcpy(&phonemes[len], ph_buf2);
 	return n_bytes;
@@ -1072,6 +1205,9 @@ static int CheckDottedAbbrev(char *word1)
 
 		if (ok == 0)
 			break;
+
+		if ((nbytes <= 0) || ((size_t)nbytes > sizeof(word_buf) - (size_t)(wbuf - word_buf)))
+			return 0;
 
 		for (ix = 0; ix < nbytes; ix++)
 			*wbuf++ = word[ix];

@@ -79,6 +79,7 @@ extern translation_map language_vars;
 	{"lng_screenreader_no_other_console", (std::string) "Aucune autre console disponible."}, \
 	{"lng_screenreader_console_start", (std::string) "Début de la console."}, \
 	{"lng_screenreader_console_end", (std::string) "Fin de la console."}, \
+	{"lng_screenreader_console_review_line_lost", (std::string) "La ligne consultée n'est plus disponible. Repositionnement au début du contenu conservé."}, \
 	{"lng_screenreader_reset_done", (std::string) "Paramètres vocaux réinitialisés aux valeurs par défaut."}, \
 	{"lng_screenreader_reset_confirmation", (std::string) "Pour réinitialiser les paramètres vocaux, appuyez à nouveau sur ZL et B dans la seconde."}, \
 	{"lng_screenreader_position_of", (std::string) "sur"}, \
@@ -126,26 +127,29 @@ extern translation_map language_vars;
 	{"lng_screenreader_sync_started", (std::string) "Synchronisation de l'heure en cours."}, \
 	{"lng_screenreader_sync_success", (std::string) "Heure de la console synchronisée avec internet."}, \
 	{"lng_screenreader_sync_fallback", (std::string) "Synchronisation internet impossible. L'heure locale a été conservée."}, \
-	{"lng_screenreader_help", (std::string) "Raccourcis de la revue d'écran :\n\n" \
-		"ZL + Y : activer ou désactiver le lecteur d'écran\n" \
-		"ZL + X : répéter le dernier élément lu\n" \
-		"ZL + Haut / Bas : augmenter ou diminuer la vitesse\n" \
-		"ZL + Gauche / Droite : changer la langue du synthétiseur (si traduction personnalisée active)\n" \
-		"ZL + B deux fois : réinitialiser les paramètres vocaux\n" \
-		"ZR + Y : activer ou désactiver la revue virtuelle\n" \
-		"ZR + B : interrompre immédiatement la lecture en cours\n" \
-		"ZR + Haut / Bas : modifier la hauteur de la voix\n" \
-		"ZR + Gauche / Droite : modifier la variation de hauteur\n" \
-		"R + Haut / Bas : modifier l'espacement entre les mots\n" \
-		"R + Gauche / Droite : modifier l'intonation\n" \
-		"R + Y : modifier l'annonce de la ponctuation\n" \
-		"L + Haut / Bas : changer la variante de voix eSpeak-NG\n" \
-		"L + X : activer ou désactiver l'annonce de la position\n" \
-		"L + Y : activer ou désactiver l'aide à la navigation\n\n" \
-		"Revue virtuelle : Haut / Bas ou axe vertical des sticks pour lire les lignes\n" \
-		"Revue virtuelle : Gauche / Droite ou axe horizontal des sticks pour changer de console\n" \
-		"Revue virtuelle : X pour relire la ligne courante\n" \
-		"Revue virtuelle : Y pour lire depuis la ligne courante jusqu'à la fin"}, \
+	{"lng_screenreader_help_title", (std::string) "Raccourcis de la revue d'écran :"}, \
+	{"lng_screenreader_help_zl_y", (std::string) "ZL + Y : activer ou désactiver le lecteur d'écran"}, \
+	{"lng_screenreader_help_zl_x", (std::string) "ZL + X : répéter le dernier élément lu"}, \
+	{"lng_screenreader_help_zl_rate", (std::string) "ZL + Haut / Bas : augmenter ou diminuer la vitesse"}, \
+	{"lng_screenreader_help_zl_language", (std::string) "ZL + Gauche / Droite : changer la langue du synthétiseur (si traduction personnalisée active)"}, \
+	{"lng_screenreader_help_zl_reset", (std::string) "ZL + B deux fois : réinitialiser les paramètres vocaux"}, \
+	{"lng_screenreader_help_zr_y", (std::string) "ZR + Y : activer ou désactiver la revue virtuelle"}, \
+	{"lng_screenreader_help_zr_b", (std::string) "ZR + B : interrompre immédiatement la lecture en cours"}, \
+	{"lng_screenreader_help_zr_pitch", (std::string) "ZR + Haut / Bas : modifier la hauteur de la voix"}, \
+	{"lng_screenreader_help_zr_pitch_range", (std::string) "ZR + Gauche / Droite : modifier la variation de hauteur"}, \
+	{"lng_screenreader_help_r_word_gap", (std::string) "R + Haut / Bas : modifier l'espacement entre les mots"}, \
+	{"lng_screenreader_help_r_intonation", (std::string) "R + Gauche / Droite : modifier l'intonation"}, \
+	{"lng_screenreader_help_r_punctuation", (std::string) "R + Y : modifier l'annonce de la ponctuation"}, \
+	{"lng_screenreader_help_l_voice_variant", (std::string) "L + Haut / Bas : changer la variante de voix eSpeak-NG"}, \
+	{"lng_screenreader_help_l_position", (std::string) "L + X : activer ou désactiver l'annonce de la position"}, \
+	{"lng_screenreader_help_l_navigation", (std::string) "L + Y : activer ou désactiver l'aide à la navigation"}, \
+	{"lng_screenreader_help_virtual_title", (std::string) "Pendant la revue virtuelle :"}, \
+	{"lng_screenreader_help_virtual_read_lines", (std::string) "Haut / Bas ou axe vertical des sticks : lire les lignes"}, \
+	{"lng_screenreader_help_virtual_page", (std::string) "L + Haut / Bas : reculer ou avancer d'une page"}, \
+	{"lng_screenreader_help_virtual_console", (std::string) "L + Gauche / Droite : aller au début ou à la fin de la console"}, \
+	{"lng_screenreader_help_virtual_switch_console", (std::string) "Gauche / Droite ou axe horizontal des sticks : changer de console"}, \
+	{"lng_screenreader_help_virtual_repeat_line", (std::string) "X : relire la ligne courante"}, \
+	{"lng_screenreader_help_virtual_read_to_end", (std::string) "Y : lire depuis la ligne courante jusqu'à la fin"}, \
 	{"lng_a_menu", (std::string) "Appuyez sur (A) pour sélectionner une option"}, \
 	{"lng_x_menu", (std::string) "Appuyez sur (X) pour afficher diverses informations"}, \
 	{"lng_y_menu", (std::string) "Appuyez sur (Y) pour enregistrer diverses informations dans un fichier"}, \

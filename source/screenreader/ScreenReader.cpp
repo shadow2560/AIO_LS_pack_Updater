@@ -51,6 +51,38 @@ namespace {
 	};
 	static std::vector<ReviewConsoleEntry> reviewConsoles;
 	static PrintConsole* virtualReviewPreviousConsole = nullptr;
+	static u64 virtualReviewLineId = 0;
+	static u64 virtualReviewGeneration = 0;
+
+	static void rememberVirtualReviewPosition(PrintConsole* console, int line,
+		u64& generation, u64& lineId)
+	{
+		consoleGetTextBufferLineId(console, line, &generation, &lineId);
+	}
+
+	static bool synchronizeVirtualReviewPosition(PrintConsole* console, int& line,
+		u64& generation, u64& lineId)
+	{
+		if (!console)
+			return false;
+
+		int currentLine = consoleGetTextBufferLineIndex(console, generation, lineId);
+		if (currentLine >= 0) {
+			line = currentLine;
+			return false;
+		}
+
+		u64 currentGeneration = 0;
+		u64 firstLineId = 0;
+		if (!consoleGetTextBufferLineId(console, 0,
+			&currentGeneration, &firstLineId))
+			return false;
+
+		const bool lineWasEvicted = currentGeneration == generation && lineId < firstLineId;
+		line = 0;
+		rememberVirtualReviewPosition(console, 0, generation, lineId);
+		return lineWasEvicted;
+	}
 
 	static void restoreVirtualReviewConsole(PrintConsole* reviewConsole) {
 		if (!virtualReviewPreviousConsole)
@@ -1081,7 +1113,7 @@ void ScreenReader::SpeakAndWait(const std::string& text, bool remember)
 
 bool ScreenReader::ReadConsole(PrintConsole* console, int startLine, int endLine,
 	const std::string& text_to_say_before, const std::string& text_to_say_after,
-	bool waitForSpeech)
+	bool waitForSpeech, bool includeHistory)
 {
 	if (!enabled || !running)
 		return false;
@@ -1104,7 +1136,9 @@ bool ScreenReader::ReadConsole(PrintConsole* console, int startLine, int endLine
 		return false;
 	}
 
-	const int lastLine = consoleGetLastTextLine(console);
+	const int historyLineCount = includeHistory ? 0 : consoleGetTextHistoryLineCount(console);
+	const int lastLine = includeHistory ? consoleGetLastTextLine(console) :
+		consoleGetLastVisibleTextLine(console);
 	if (startLine == -1)
 		startLine = 0;
 	else if (startLine < 0)
@@ -1126,12 +1160,14 @@ bool ScreenReader::ReadConsole(PrintConsole* console, int startLine, int endLine
 		return false;
 	}
 
+	const int actualStartLine = startLine + historyLineCount;
+	const int actualEndLine = endLine + historyLineCount;
 	const size_t textLength = lastLine >= 0 && startLine <= endLine ?
-		consoleGetText(console, startLine, endLine, NULL, 0) : 0;
+		consoleGetText(console, actualStartLine, actualEndLine, NULL, 0) : 0;
 	std::string consoleText;
 	if (textLength) {
 		consoleText.resize(textLength + 1);
-		consoleGetText(console, startLine, endLine, &consoleText[0], textLength + 1);
+		consoleGetText(console, actualStartLine, actualEndLine, &consoleText[0], textLength + 1);
 		consoleText.resize(textLength);
 	}
 
@@ -1241,8 +1277,10 @@ void ScreenReader::ToggleVirtualReview()
 	virtualReviewPreviousConsole = get_active_console();
 	virtualReviewConsole = console;
 	// cursorY is the output cursor, not a meaningful reading position. Start
-	// at the first visible row so that leading and intermediate empty rows remain navigable.
+	// at the oldest retained row so historical and visible blank rows stay navigable.
 	virtualReviewLine = 0;
+	rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+		virtualReviewGeneration, virtualReviewLineId);
 	virtualReviewActive = true;
 #if SCREENREADER_DEBUG
 	debug_log_write("ScreenReader: revue virtuelle activée (ligne=%d, dernière ligne=%d).\n",
@@ -1258,7 +1296,7 @@ bool ScreenReader::IsVirtualReviewActive()
 
 static void speakVirtualReviewLine(PrintConsole* console, int line)
 {
-	if (!console || line < 0 || line >= console->windowHeight)
+	if (!console || line < 0)
 		return;
 
 	const size_t textSize = consoleGetText(console, line, line, nullptr, 0);
@@ -1267,7 +1305,7 @@ static void speakVirtualReviewLine(PrintConsole* console, int line)
 		return;
 	}
 
-	ScreenReader::ReadConsole(console, line, line);
+	ScreenReader::ReadConsole(console, line, line, "", "", false, true);
 }
 
 bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
@@ -1333,6 +1371,12 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 	}
 
 	if (virtualReviewActive) {
+		if (synchronizeVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+			virtualReviewGeneration, virtualReviewLineId)) {
+			Speak(language_vars["lng_screenreader_console_review_line_lost"], false);
+			return true;
+		}
+
 		if (buttonsDown & (HidNpadButton_X | HidNpadButton_Y)) {
 			Interrupt();
 			const bool readToEnd = (buttonsDown & HidNpadButton_Y) != 0;
@@ -1348,16 +1392,17 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 
 			const int lastTextLine = consoleGetLastTextLine(virtualReviewConsole);
 			if (lastTextLine < 0) {
-				restoreVirtualReviewConsole(virtualReviewConsole);
-				virtualReviewActive = false;
-				virtualReviewConsole = nullptr;
-				Speak(language_vars["lng_screenreader_console_empty_review_disabled"], false);
+				Speak(language_vars["lng_screenreader_console_empty"], false);
 				return true;
 			}
 			if (virtualReviewLine > lastTextLine)
+			{
 				virtualReviewLine = lastTextLine;
+				rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+					virtualReviewGeneration, virtualReviewLineId);
+			}
 			if (readToEnd)
-				ReadConsole(virtualReviewConsole, virtualReviewLine, -1);
+				ReadConsole(virtualReviewConsole, virtualReviewLine, -1, "", "", false, true);
 			else
 				speakVirtualReviewLine(virtualReviewConsole, virtualReviewLine);
 			return true;
@@ -1382,6 +1427,21 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 			Interrupt();
 			buttonsDown = 0;
 			stickRepeatDelay = 12;
+
+			if ((buttonsHeld & HidNpadButton_L) && horizontalButtons != 0) {
+				const int lastTextLine = consoleGetLastTextLine(virtualReviewConsole);
+				if (lastTextLine < 0) {
+					Speak(language_vars["lng_screenreader_console_empty"], false);
+					return true;
+				}
+
+				virtualReviewLine = horizontalDirection < 0 ? 0 : lastTextLine;
+				rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+					virtualReviewGeneration, virtualReviewLineId);
+				speakVirtualReviewLine(virtualReviewConsole, virtualReviewLine);
+				return true;
+			}
+
 			if (reviewConsoles.size() < 2) {
 				Speak(language_vars["lng_screenreader_no_other_console"], false);
 				return true;
@@ -1423,6 +1483,8 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 
 			virtualReviewConsole = nextConsole;
 			virtualReviewLine = 0;
+			rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+				virtualReviewGeneration, virtualReviewLineId);
 			select_console(nextConsole);
 			consoleUpdate(nextConsole);
 
@@ -1430,7 +1492,7 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 			const int lastTextLine = consoleGetLastTextLine(nextConsole);
 			if (lastTextLine < 0) {
 				Speak(label + ". " + language_vars["lng_screenreader_console_empty"], false);
-			} else if (!ReadConsole(nextConsole, 0, 0, label)) {
+			} else if (!ReadConsole(nextConsole, 0, 0, label, "", false, true)) {
 				Speak(label, false);
 			}
 			return true;
@@ -1463,26 +1525,35 @@ bool ScreenReader::HandleInput(PadState* pad, u64& buttonsDown)
 
 			const int lastTextLine = consoleGetLastTextLine(virtualReviewConsole);
 			if (lastTextLine < 0) {
-				restoreVirtualReviewConsole(virtualReviewConsole);
-				virtualReviewActive = false;
-				virtualReviewConsole = nullptr;
-				Speak(language_vars["lng_screenreader_console_empty_review_disabled"], false);
+				Speak(language_vars["lng_screenreader_console_empty"], false);
 				return true;
 			}
 
 			if (virtualReviewLine > lastTextLine) {
 				virtualReviewLine = lastTextLine;
+				rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+					virtualReviewGeneration, virtualReviewLineId);
 				speakVirtualReviewLine(virtualReviewConsole, virtualReviewLine);
 				return true;
 			}
 
-			const int nextLine = virtualReviewLine + direction;
-			if (nextLine < 0) {
+			const bool pageNavigation = (buttonsHeld & HidNpadButton_L) != 0;
+			const int lineStep = pageNavigation ? virtualReviewConsole->windowHeight : 1;
+			int nextLine = virtualReviewLine + direction * lineStep;
+			if (pageNavigation) {
+				if (nextLine < 0)
+					nextLine = 0;
+				else if (nextLine > lastTextLine)
+					nextLine = lastTextLine;
+			}
+			if (nextLine < 0 || (nextLine == virtualReviewLine && direction < 0)) {
 				Speak(language_vars["lng_screenreader_console_start"], false);
-			} else if (nextLine > lastTextLine) {
+			} else if (nextLine > lastTextLine || (nextLine == virtualReviewLine && direction > 0)) {
 				Speak(language_vars["lng_screenreader_console_end"], false);
 			} else {
 				virtualReviewLine = nextLine;
+				rememberVirtualReviewPosition(virtualReviewConsole, virtualReviewLine,
+					virtualReviewGeneration, virtualReviewLineId);
 				speakVirtualReviewLine(virtualReviewConsole, virtualReviewLine);
 			}
 		}

@@ -161,6 +161,40 @@ void consoleSetWindow(PrintConsole* console, int x, int y, int width, int height
  */
 bool consoleEnableTextBuffer(PrintConsole* console);
 
+#define CONSOLE_TEXT_HISTORY_DEFAULT_LINES 256
+
+/**
+ * @brief Configures the optional scrollback history for a captured console.
+ * @param console Console to configure (NULL uses the current console).
+ * @param enabled Whether lines removed by scrolling should be retained.
+ * @param maxLines Maximum number of historical lines to retain. Must be
+ *        greater than zero when enabled and nonnegative when disabled.
+ * @return True when the requested configuration is applied.
+ * @remark History is disabled by default. Reconfiguring its capacity keeps
+ *         the newest lines that fit. A failed growth allocation leaves the
+ *         previous history allocation and capacity unchanged. Temporarily
+ *         hiding a console with a zero-sized window preserves history;
+ *         consoleClear() still clears it.
+ */
+bool consoleConfigureTextBufferHistory(PrintConsole* console, bool enabled, int maxLines);
+
+/** @brief Gets the number of historical lines currently retained. */
+int consoleGetTextHistoryLineCount(PrintConsole* console);
+
+/** @brief Gets the last non-empty line in the visible window, using a zero-based row. */
+int consoleGetLastVisibleTextLine(PrintConsole* console);
+
+/**
+ * @brief Gets the stable identity of a combined history/visible line.
+ * @param line Zero-based index in retained history followed by visible rows.
+ * @param generation Receives the console text-buffer generation.
+ * @param lineId Receives the stable line identity within that generation.
+ */
+bool consoleGetTextBufferLineId(PrintConsole* console, int line, u64* generation, u64* lineId);
+
+/** @brief Resolves a stable line identity to its current combined line index, or -1 if unavailable. */
+int consoleGetTextBufferLineIndex(PrintConsole* console, u64 generation, u64 lineId);
+
 /**
  * @brief Disables text capture and releases its memory.
  * @param console Console to update (NULL uses the current console).
@@ -174,18 +208,19 @@ void consoleDisableTextBuffer(PrintConsole* console);
 bool consoleIsTextBufferEnabled(PrintConsole* console);
 
 /**
- * @brief Gets the last visible line containing non-space text.
+ * @brief Gets the last captured line containing non-space text.
  * @param console Console to inspect, or NULL for the current console.
  * @return The zero-based line index, or -1 if capture is unavailable or no
  *         line contains text.
- * @remark This function does not modify the captured text buffer.
+ * @remark When history is enabled, returned indices include historical lines
+ *         before the current visible window.
  */
 int consoleGetLastTextLine(PrintConsole* console);
 
 /**
  * @brief Copies captured console lines to a UTF-8 buffer.
  * @param console Console to read (NULL uses the current console).
- * @param startLine First zero-based line, inclusive.
+ * @param startLine First zero-based line, inclusive, with history starting at 0.
  * @param endLine Last zero-based line, inclusive.
  * @param output Destination buffer, or NULL to query the required size.
  * @param outputSize Destination size including the terminating NUL.

@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -85,7 +86,7 @@ static espeak_ng_STATUS err = ENS_OK;
 
 static t_espeak_callback *synth_callback = NULL;
 
-char path_home[N_PATH_HOME]; // this is the espeak-ng-data directory
+char path_home[N_PATH_BUF]; // this is the espeak-ng-data directory
 extern int saved_parameters[N_SPEECH_PARAM]; // Parameters saved on synthesis start
 
 void cancel_audio(void)
@@ -281,6 +282,9 @@ ESPEAK_NG_API espeak_ng_STATUS espeak_ng_InitializeOutput(espeak_ng_OUTPUT_MODE 
 	if (buffer_length < min_buffer_length)
 		buffer_length = min_buffer_length;
 
+	if ((samplerate > 0) && (buffer_length > (INT_MAX - 1000) / samplerate))
+		return EINVAL;
+
 	// allocate 2 bytes per sample
 	// Always round up to the nearest sample and the nearest byte.
 	int millisamples = buffer_length * samplerate;
@@ -317,13 +321,28 @@ ESPEAK_NG_API void espeak_ng_InitializePath(const char *path)
 	if (check_data_path(getenv("ESPEAK_DATA_PATH"), 1))
 		return;
 
-	buf[0] = 0;
-	RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\eSpeak NG", 0, KEY_READ, &RegKey);
-	if (RegKey == NULL)
-		RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\WOW6432Node\\eSpeak NG", 0, KEY_READ, &RegKey);
-	size = sizeof(buf);
+	// Look for espeak-ng-data next to the executable (portable use)
+	{
+		char exe_dir[MAX_PATH];
+		DWORD n = GetModuleFileNameA(NULL, exe_dir, sizeof(exe_dir));
+		if (n > 0 && n < sizeof(exe_dir)) {
+			char *sep = strrchr(exe_dir, '\\');
+			if (sep) {
+				*sep = 0;
+				if (check_data_path(exe_dir, 0))
+					return;
+			}
+		}
+	}
+
+	memset(buf, 0, sizeof(buf));
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\eSpeak NG", 0, KEY_READ, &RegKey) != ERROR_SUCCESS &&
+	    RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\WOW6432Node\\eSpeak NG", 0, KEY_READ, &RegKey) != ERROR_SUCCESS)
+		RegKey = NULL;
+	size = sizeof(buf) - 1;
 	var_type = REG_SZ;
-	RegQueryValueExA(RegKey, "Path", 0, &var_type, buf, &size);
+	if (RegKey != NULL)
+		RegQueryValueExA(RegKey, "Path", 0, &var_type, buf, &size);
 
 	if (check_data_path(buf, 1))
 		return;
@@ -538,6 +557,51 @@ void MarkerEvent(int type, unsigned int char_position, int value, int value2, un
 	} else
 		ep->id.number = value;
 }
+
+#if USE_LIBSONIC
+void RescaleEventSamples(int length_pre, int length_post)
+{
+	// MarkerEvent() records positions while the buffer is being filled, which
+	// happens before libsonic compresses it, so the positions refer to audio
+	// that is longer than what is handed to the caller.  Map them onto the
+	// audio actually produced, keeping ep->sample and ep->audio_position
+	// consistent with the buffer passed to the synth callback.
+	//
+	// libsonic is a stream and can carry samples over between calls, so this
+	// linear mapping is an approximation; what it guarantees is that an event
+	// never points past the audio its buffer produced.
+
+#if !USE_MBROLA
+	static const int mbrola_delay = 0;
+#endif
+	int base;
+
+	if ((event_list == NULL) || (length_pre <= 0) || (length_pre == length_post))
+		return;
+
+	// count_samples is not advanced for this buffer until WavegenFill() has
+	// returned, so it still holds the total emitted by preceding buffers --
+	// the same base MarkerEvent() used.
+	base = count_samples + mbrola_delay;
+
+	for (int ix = 0; ix < event_list_ix; ix++) {
+		espeak_EVENT *ep = &event_list[ix];
+		int offset = ep->sample - base;
+
+		if (offset <= 0)
+			continue;
+		if (offset > length_pre)
+			offset = length_pre;
+		// Both factors are bounded by the buffer length, so the product can
+		// exceed 32 bits for buffers over about two seconds.  long is 32-bit on
+		// Windows, so widen explicitly rather than relying on it.
+		offset = (int)(((int64_t)offset * length_post) / length_pre);
+
+		ep->sample = base + offset;
+		ep->audio_position = (int)(((double)ep->sample * 1000.0) / samplerate);
+	}
+}
+#endif
 
 espeak_ng_STATUS sync_espeak_Synth(unsigned int unique_identifier, const void *text,
                                    unsigned int position, espeak_POSITION_TYPE position_type,
@@ -788,6 +852,8 @@ ESPEAK_NG_API espeak_ng_STATUS espeak_ng_SpeakCharacter(wchar_t character)
 ESPEAK_API int espeak_GetParameter(espeak_PARAMETER parameter, int current)
 {
 	// current: 0=default value, 1=current value
+	if (parameter < 0 || parameter >= N_SPEECH_PARAM)
+		return -1;
 	if (current)
 		return param_stack[0].parameter[parameter];
 	return param_defaults[parameter];
@@ -859,6 +925,9 @@ ESPEAK_API const char* espeak_TextToPhonemesWithTerminator(const void** textptr,
 	    bit 7:   use (bits 8-23) as a tie within multi-letter phonemes names
 	    bits 8-23:  separator character, between phoneme names
 	 */
+
+	if (translator == NULL && espeak_ng_SetVoiceByName(ESPEAKNG_DEFAULT_VOICE) != ENS_OK)
+		return NULL;
 
 	if (p_decoder == NULL)
 		p_decoder = create_text_decoder();
@@ -944,6 +1013,11 @@ ESPEAK_NG_API espeak_ng_STATUS espeak_ng_Terminate(void)
 
 	DeleteTranslator(translator);
 	translator = NULL;
+	DeleteTranslator(translator2);
+	translator2 = NULL;
+	DeleteTranslator(translator3);
+	translator3 = NULL;
+	InitNamedata();
 
 	if (p_decoder != NULL) {
 		destroy_text_decoder(p_decoder);

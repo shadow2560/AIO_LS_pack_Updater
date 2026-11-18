@@ -166,23 +166,23 @@ Result btmAcquireDeviceConditionEvent(Event* out_event) {
     return _btmCmdGetEventOutFlag(out_event, true, 2);
 }
 
-Result btmLegacyGetDeviceCondition(BtmDeviceCondition *out) {
+Result btmLegacyGetDeviceCondition(BtmDeviceConditionList *out) {
     if (hosversionAtLeast(13,0,0))
         return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
 
     size_t buff_size;
-    if (hosversionAtLeast(9,0,0)) buff_size = sizeof(BtmDeviceConditionV900);
-    else if (hosversionAtLeast(8,0,0)) buff_size = sizeof(BtmDeviceConditionV800);
-    else if (hosversionAtLeast(5,1,0)) buff_size = sizeof(BtmDeviceConditionV510);
-    else buff_size = sizeof(BtmDeviceConditionV100);
+    if (hosversionAtLeast(9,0,0)) buff_size = sizeof(BtmDeviceConditionListV900);
+    else if (hosversionAtLeast(8,0,0)) buff_size = sizeof(BtmDeviceConditionListV800);
+    else if (hosversionAtLeast(5,1,0)) buff_size = sizeof(BtmDeviceConditionListV510);
+    else buff_size = sizeof(BtmDeviceConditionListV100);
     return _btmCmdOutBufPtrFixed(out, buff_size, 3);
 }
 
-Result btmGetDeviceCondition(BtmProfile profile, BtmConnectedDeviceV13 *out, size_t count, s32 *total_out) {
+Result btmGetDeviceCondition(BtmProfile profile, BtmDeviceCondition *out, size_t count, s32 *total_out) {
     if (hosversionBefore(13,0,0))
         return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
 
-    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmConnectedDeviceV13)*count, total_out, 3);
+    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmDeviceCondition)*count, total_out, 3);
 }
 
 Result btmSetBurstMode(BtdrvAddress addr, bool flag) {
@@ -215,18 +215,25 @@ Result btmLegacyGetDeviceInfo(BtmDeviceInfoList *out) {
     return _btmCmdOutBufPtrFixed(out, sizeof(*out), 9);
 }
 
-Result btmGetDeviceInfo(BtmProfile profile, BtmDeviceInfoV13 *out, size_t count, s32 *total_out) {
+Result btmGetDeviceInfo(BtmProfile profile, BtmDeviceInfo *out, size_t count, s32 *total_out) {
     if (hosversionBefore(13,0,0))
         return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
 
-    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmDeviceInfoV13)*count, total_out, 9);
+    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmDeviceInfo)*count, total_out, 9);
+}
+
+Result btmLegacyAddDeviceInfo(const BtmDeviceInfoLegacy *info) {
+    if (hosversionAtLeast(13,0,0))
+        return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
+
+    return _btmCmdInBufPtrFixed(info, sizeof((*info)), 10);
 }
 
 Result btmAddDeviceInfo(const BtmDeviceInfo *info) {
     if (hosversionBefore(13,0,0))
-        return serviceDispatchIn(&g_btmSrv, 10, (*info).v1);
+        return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
 
-    return _btmCmdInBufPtrFixed(info, sizeof((*info).v13), 10);
+    return _btmCmdInBufPtrFixed(info, sizeof((*info)), 10);
 }
 
 Result btmRemoveDeviceInfo(BtdrvAddress addr) {
@@ -633,3 +640,16 @@ Result btmSetAppletResourceUserId(u64 AppletResourceUserId) {
     return _btmCmdInU64NoOut(AppletResourceUserId, cmd_id);
 }
 
+Result btmGetShortenedDeviceInfo(BtmProfile profile, BtmShortenedDeviceInfo *out, size_t count, s32 *total_out) {
+    if (hosversionBefore(13,0,0))
+        return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
+
+    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmShortenedDeviceInfo)*count, total_out, 110);
+}
+
+Result btmGetShortenedDeviceCondition(BtmProfile profile, BtmShortenedDeviceCondition *out, size_t count, s32 *total_out) {
+    if (hosversionBefore(14,0,0))
+    return MAKERESULT(Module_Libnx, LibnxError_IncompatSysVer);
+
+    return _btmCmdInIdOutBufPtr(profile, out, sizeof(BtmShortenedDeviceCondition)*count, total_out, 115);
+}

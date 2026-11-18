@@ -27,9 +27,10 @@ public:
     static void SpeakContext(const std::string& context_window, const std::string& text,
         const std::string& nav_help, int selected_element = -1, int total_elements = -1,
         bool waitForSpeech = false);
+    // includeHistory makes line indices span retained history followed by the visible window.
     static bool ReadConsole(PrintConsole* console, int startLine = -1, int endLine = -1,
         const std::string& text_to_say_before = "", const std::string& text_to_say_after = "",
-        bool waitForSpeech = false);
+        bool waitForSpeech = false, bool includeHistory = false);
     static void RegisterConsole(PrintConsole* console, const std::string& label);
     static void ClearRegisteredConsoles();
     static void ToggleVirtualReview();

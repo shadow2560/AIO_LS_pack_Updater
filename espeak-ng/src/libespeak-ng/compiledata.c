@@ -357,7 +357,7 @@ typedef struct CompileContext {
 	#define N_PROCS 50
 	int n_procs;
 	int proc_addr[N_PROCS];
-	char proc_names[N_ITEM_STRING+1][N_PROCS];
+	char proc_names[N_PROCS][N_ITEM_STRING+1];
 
 	#define MAX_PROG_BUF 2000
 	unsigned short *prog_out;
@@ -405,7 +405,7 @@ typedef struct CompileContext {
 
 	NAMETAB *manifest;
 	int n_manifest;
-	char phsrc[sizeof(path_home)+40]; // Source: path to the 'phonemes' source file.
+	char phsrc[N_PATH_BUF]; // Source: path to the 'phonemes' source file.
 } CompileContext;
 
 static void clean_context(CompileContext *ctx) {
@@ -453,10 +453,10 @@ static espeak_ng_STATUS ReadPhondataManifest(CompileContext *ctx, espeak_ng_ERRO
 	int n_lines = 0;
 	char *p;
 	unsigned int value;
-	char buf[sizeof(path_home)+40];
+	char buf[N_PATH_BUF];
 	char name[120];
 
-	sprintf(buf, "%s%c%s", path_home, PATHSEP, "phondata-manifest");
+	snprintf(buf, sizeof(buf), "%s%c%s", path_home, PATHSEP, "phondata-manifest");
 	if ((f = fopen(buf, "r")) == NULL)
 		return create_file_error_context(context, errno, buf);
 
@@ -468,6 +468,7 @@ static espeak_ng_STATUS ReadPhondataManifest(CompileContext *ctx, espeak_ng_ERRO
 	if (ctx->manifest != NULL) {
 		for (int ix = 0; ix < ctx->n_manifest; ix++)
 			free(ctx->manifest[ix].name);
+		ctx->n_manifest = 0;
 	}
 
 	if (n_lines == 0) {
@@ -479,6 +480,7 @@ static espeak_ng_STATUS ReadPhondataManifest(CompileContext *ctx, espeak_ng_ERRO
 	if (new_manifest == NULL) {
 		fclose(f);
 		free(ctx->manifest);
+		ctx->manifest = NULL;
 		return ENOMEM;
 	} else
 		ctx->manifest = new_manifest;
@@ -488,7 +490,7 @@ static espeak_ng_STATUS ReadPhondataManifest(CompileContext *ctx, espeak_ng_ERRO
 		if (!isalpha(buf[0]))
 			continue;
 
-		if (sscanf(&buf[2], "%x %s", &value, name) == 2) {
+		if (sscanf(&buf[2], "%x %119s", &value, name) == 2) {
 			if ((p = (char *)malloc(strlen(name)+1)) != NULL) {
 				strcpy(p, name);
 				ctx->manifest[ctx->n_manifest].value = value;
@@ -911,7 +913,7 @@ static espeak_ng_STATUS LoadSpect(CompileContext *ctx, const char *path, int con
 	int klatt_flag = 0;
 	SpectFrame *fr;
 	frame_t *fr_out;
-	char filename[sizeof(path_home)+20];
+	char filename[N_PATH_BUF];
 
 	SPECT_SEQ seq_out;
 	SPECT_SEQK seqk_out;
@@ -935,6 +937,15 @@ static espeak_ng_STATUS LoadSpect(CompileContext *ctx, const char *path, int con
 			if (spectseq->frames[frame]->klatt_param[ix] != 0)
 				klatt_flag = FRFLAG_KLATT;
 		}
+	}
+
+	n_frames = 0;
+	for (frame = 0; frame < spectseq->numframes; frame++)
+		n_frames += spectseq->frames[frame]->keyframe != 0;
+	if (n_frames > N_SEQ_FRAMES) {
+		error(ctx, "Too many keyframes in '%s'", path);
+		SpectSeqDestroy(spectseq);
+		return ENS_COMPILE_ERROR;
 	}
 
 	*addr = ftell(ctx->f_phdata);
@@ -1179,8 +1190,8 @@ static espeak_ng_STATUS LoadEnvelope(CompileContext *ctx, FILE *f, int *displ)
 	if (fseek(f, 12, SEEK_SET) == -1)
 		return errno;
 
-	if (fread(buf, 128, 1, f) != 128)
-		return errno;
+	if (fread(buf, 128, 1, f) != 1)
+		return errno ? errno : EIO;
 	fwrite(buf, 128, 1, ctx->f_phdata);
 
 	return ENS_OK;
@@ -1211,7 +1222,7 @@ static int LoadEnvelope2(CompileContext *ctx, FILE *f)
 	float env_x[20];
 	float env_y[20];
 	int env_lin[20];
-	unsigned char env[ENV_LEN];
+	unsigned char env[ENV_LEN] = { 0 };
 
 	n_points = 0;
 	if (fgets(line_buf, sizeof(line_buf), f) != NULL) { ; // skip first line, then loop
@@ -1224,6 +1235,8 @@ static int LoadEnvelope2(CompileContext *ctx, FILE *f)
 			if (n >= 2) {
 				env_x[n_points] *= (float)1.28; // convert range 0-100 to 0-128
 				n_points++;
+				if (n_points == 19) // one slot is kept for the repeated end point
+					break;
 			}
 		}
 	}
@@ -1235,9 +1248,9 @@ static int LoadEnvelope2(CompileContext *ctx, FILE *f)
 		int ix = 0;
     	int ix2 = 0;
 		for (int x = 0; x < ENV_LEN; x++) {
-		if (n_points > 3 && x > env_x[ix+3])
+		if (n_points > 3 && ix + 3 < n_points && x > env_x[ix+3])
 			ix++;
-		if (n_points > 2 && x >= env_x[ix2+1])
+		if (n_points > 2 && ix2 + 1 < n_points && x >= env_x[ix2+1])
 			ix2++;
 
 		int y;
@@ -1288,12 +1301,12 @@ static espeak_ng_STATUS LoadDataFile(CompileContext *ctx, const char *path, int 
 	}
 
 	if (*addr == 0) {
-		char buf[sizeof(path_home)+150];
-		sprintf(buf, "%s/%s", ctx->phsrc, path);
+		char buf[N_PATH_BUF];
+		snprintf(buf, sizeof(buf), "%s/%s", ctx->phsrc, path);
 
 		FILE *f;
 		if ((f = fopen(buf, "rb")) == NULL) {
-			sprintf(buf, "%s/%s.wav", ctx->phsrc, path);
+			snprintf(buf, sizeof(buf), "%s/%s.wav", ctx->phsrc, path);
 			if ((f = fopen(buf, "rb")) == NULL) {
 				error(ctx, "Can't read file: %s", path);
 				return errno;
@@ -1530,6 +1543,10 @@ static int CompileIf(CompileContext *ctx, int elif)
 	}
 
 	if (elif == 0) {
+		if (ctx->if_level + 1 >= N_IF_STACK) {
+			error(ctx, "IF statements nested too deeply");
+			return 0;
+		}
 		ctx->if_level++;
 		ctx->if_stack[ctx->if_level].p_else = NULL;
 	}
@@ -1679,13 +1696,17 @@ static PHONEME_TAB *FindPhoneme(CompileContext *ctx, const char *string)
 		return &ctx->phoneme_tab2[ix];
 
 	// no, treat the name as phonemetable/phoneme
-	strcpy(buf, string);
+	snprintf(buf, sizeof(buf), "%s", string);
 	if ((phname = strchr(buf, '/')) != 0)
 		*phname++ = 0;
 
 	phtab = FindPhonemeTable(ctx, buf);
 	if (phtab == NULL)
 		return NULL; // phoneme table not found
+	if (phname == NULL) {
+		error(ctx, "Phoneme reference not found: '%s'", string);
+		return NULL;
+	}
 
 	mnem = StringToWord(phname);
 	for (ix = 1; ix < 256; ix++) {
@@ -2033,7 +2054,7 @@ static int CompilePhoneme(CompileContext *ctx, int compile_phoneme)
 				break;
 			case kWAV:
 				ctx->if_stack[ctx->if_level].returned = true;
-				// fallthrough:
+				ESPEAK_FALLTHROUGH;
 			case kVOWELSTART:
 			case kVOWELENDING:
 			case kANDWAV:
@@ -2063,7 +2084,7 @@ static int CompilePhoneme(CompileContext *ctx, int compile_phoneme)
 			case kINCLUDE:
 			case kPHONEMETABLE:
 				error(ctx, "Missing 'endphoneme' before '%s'", ctx->item_string);  // drop through to endphoneme
-				// fallthrough:
+				ESPEAK_FALLTHROUGH;
 			case kENDPHONEME:
 			case kENDPROCEDURE:
 				endphoneme = 1;
@@ -2203,7 +2224,7 @@ static void StartPhonemeTable(CompileContext *ctx, const char *name)
 		error(ctx, "Too many phonemetables");
 		return;
 	}
-	p = (PHONEME_TAB *)calloc(sizeof(PHONEME_TAB), N_PHONEME_TAB);
+	p = (PHONEME_TAB *)calloc(N_PHONEME_TAB, sizeof(PHONEME_TAB));
 
 	if (p == NULL) {
 		error(ctx, "Out of memory");
@@ -2246,7 +2267,7 @@ static void StartPhonemeTable(CompileContext *ctx, const char *name)
 static void CompilePhonemeFiles(CompileContext *ctx)
 {
 	FILE *f;
-	char buf[sizeof(path_home)+120];
+	char buf[N_PATH_BUF];
 
 	ctx->linenum = 1;
 
@@ -2275,7 +2296,7 @@ static void CompilePhonemeFiles(CompileContext *ctx)
 			break; // ignore bytes 0xef 0xbb 0xbf
 		case kINCLUDE:
 			NextItem(ctx, tSTRING);
-			sprintf(buf, "%s/%s", ctx->phsrc, ctx->item_string);
+			snprintf(buf, sizeof(buf), "%s/%s", ctx->phsrc, ctx->item_string);
 
 			if ((ctx->stack_ix < N_STACK) && (f = fopen(buf, "rb")) != NULL) {
 				ctx->stack[ctx->stack_ix].linenum = ctx->linenum;
@@ -2332,22 +2353,22 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 {
 	if (!log) log = stderr;
 
-	char fname[sizeof(path_home)+40];
-	char phdst[sizeof(path_home)+40]; // Destination: path to the phondata/phontab/phonindex output files.
+	char fname[N_PATH_BUF];
+	char phdst[N_PATH_BUF]; // Destination: path to the phondata/phontab/phonindex output files.
 
 	CompileContext *ctx = calloc(1, sizeof(CompileContext));
 	if (!ctx) return ENOMEM;
 
 	if (source_path) {
-		sprintf(ctx->phsrc, "%s", source_path);
+		snprintf(ctx->phsrc, sizeof(ctx->phsrc), "%s", source_path);
 	} else {
-		sprintf(ctx->phsrc, "%s/../phsource", path_home);
+		snprintf(ctx->phsrc, sizeof(ctx->phsrc), "%s/../phsource", path_home);
 	}
 
 	if (destination_path) {
-		sprintf(phdst, "%s", destination_path);
+		snprintf(phdst, sizeof(phdst), "%s", destination_path);
 	} else {
-		sprintf(phdst, "%s", path_home);
+		snprintf(phdst, sizeof(phdst), "%s", path_home);
 	}
 
 	samplerate = rate;
@@ -2365,7 +2386,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 
 	strncpy0(ctx->current_fname, "phonemes", sizeof(ctx->current_fname));
 
-	sprintf(fname, "%s/phonemes", ctx->phsrc);
+	snprintf(fname, sizeof(fname), "%s/phonemes", ctx->phsrc);
 	fprintf(log, "Compiling phoneme data: %s\n", fname);
 	ctx->f_in = fopen(fname, "rb");
 	if (ctx->f_in == NULL) {
@@ -2373,7 +2394,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 		return create_file_error_context(context, errno, fname);
 	}
 
-	sprintf(fname, "%s/%s", phdst, "phondata-manifest");
+	snprintf(fname, sizeof(fname), "%s/%s", phdst, "phondata-manifest");
 	if ((ctx->f_phcontents = fopen(fname, "w")) == NULL)
 		ctx->f_phcontents = stderr;
 
@@ -2391,7 +2412,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 	        "#  Address  Data file\n"
 	        "#  -------  ---------\n");
 
-	sprintf(fname, "%s/%s", phdst, "phondata");
+	snprintf(fname, sizeof(fname), "%s/%s", phdst, "phondata");
 	ctx->f_phdata = fopen(fname, "wb");
 	if (ctx->f_phdata == NULL) {
 		int error = errno;
@@ -2401,7 +2422,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 		return create_file_error_context(context, error, fname);
 	}
 
-	sprintf(fname, "%s/%s", phdst, "phonindex");
+	snprintf(fname, sizeof(fname), "%s/%s", phdst, "phonindex");
 	ctx->f_phindex = fopen(fname, "wb");
 	if (ctx->f_phindex == NULL) {
 		int error = errno;
@@ -2412,7 +2433,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 		return create_file_error_context(context, error, fname);
 	}
 
-	sprintf(fname, "%s/%s", phdst, "phontab");
+	snprintf(fname, sizeof(fname), "%s/%s", phdst, "phontab");
 	ctx->f_phtab = fopen(fname, "wb");
 	if (ctx->f_phtab == NULL) {
 		int error = errno;
@@ -2424,7 +2445,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 		return create_file_error_context(context, error, fname);
 	}
 
-	sprintf(fname, "%s/compile_prog_log", ctx->phsrc);
+	snprintf(fname, sizeof(fname), "%s/compile_prog_log", ctx->phsrc);
 	ctx->f_prog_log = fopen(fname, "wb");
 
 	// write a word so that further data doesn't start at displ=0
@@ -2467,7 +2488,7 @@ espeak_ng_CompilePhonemeDataPath(long rate,
 		fclose(ctx->f_errors);
 
 	espeak_ng_STATUS status = ReadPhondataManifest(ctx, context);
-	int res = ctx->error_count > 0 ? ENS_COMPILE_ERROR : ENS_OK;
+	espeak_ng_STATUS res = ctx->error_count > 0 ? ENS_COMPILE_ERROR : ENS_OK;
 	clean_context(ctx);
 	return (status != ENS_OK) ? status : res;
 }
@@ -2547,7 +2568,7 @@ espeak_ng_CompileIntonationPath(const char *source_path,
 
 	char name[12];
 	char tune_names[N_TUNE_NAMES][12];
-	char buf[sizeof(path_home)+150];
+	char buf[N_PATH_BUF];
 
 	CompileContext *ctx = calloc(1, sizeof(CompileContext));
 	if (!ctx) return ENOMEM;
@@ -2555,9 +2576,9 @@ espeak_ng_CompileIntonationPath(const char *source_path,
 	ctx->error_count = 0;
 	ctx->f_errors = log;
 
-	sprintf(buf, "%s/../phsource/intonation.txt", source_path);
+	snprintf(buf, sizeof(buf), "%s/../phsource/intonation.txt", source_path);
 	if ((ctx->f_in = fopen(buf, "r")) == NULL) {
-		sprintf(buf, "%s/../phsource/intonation", source_path);
+		snprintf(buf, sizeof(buf), "%s/../phsource/intonation", source_path);
 		if ((ctx->f_in = fopen(buf, "r")) == NULL) {
 			int error = errno;
 			fclose(ctx->f_errors);
@@ -2612,7 +2633,7 @@ espeak_ng_CompileIntonationPath(const char *source_path,
 		return ENOMEM;
 	}
 
-	sprintf(buf, "%s/intonations", destination_path);
+	snprintf(buf, sizeof(buf), "%s/intonations", destination_path);
 	f_out = fopen(buf, "wb");
 	if (f_out == NULL) {
 		int error = errno;
@@ -2792,3 +2813,4 @@ static int CalculateSample(unsigned char c3, int c1) {
 
 	return (c1 & 0xff) + c2;
 }
+

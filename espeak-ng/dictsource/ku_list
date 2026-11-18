@@ -7,7 +7,7 @@ _0	s'Ifr
 _1	j'Ek
 _2	d'U
 _3	s'e
-_4	dZ'ar
+_4	tS'ar
 _5	p'endZ
 _6	S'ES
 _7	h'Eft
@@ -37,6 +37,10 @@ _0M1	hEz'ar
 _1M1	hEz'ar
 _0M2	mIl'jon
 _1M2	mIl'jon
+_0M3	mIlj'ar
+_1M3	mIlj'ar
+_0M4	trIlj'on
+_1M4	trIlj'on
 
 _0and	_u
 _dpt	_xal
@@ -105,6 +109,10 @@ wî	$u+
 me	$u+
 we	$u+
 wan	$u+
+tu	$u+
+ew	$u+
+em	$u+
+hûn	$u+
 
 bes	$pause
 an	$u $pause
@@ -125,8 +133,40 @@ got	$u
 
 // abbreviations
 hwd	hEr||wEki||dIn
+Dr	dokt'oR
+Prof	pR,ofEs'oR
+
+// currency symbols and units
+€	,EU*'o
+£	stERl'in
+TL	li*'E#
+km	c,ilomEtR'E#
+kg	c,ilogR'am
+cm	s,antimEtR'E#
 
 // pronunciation exceptions
 
 lê	$u+
 nebû	$1
+
+// verb-prefix stress (negation, prohibitive, imperative, preverbs) — intentionally partial, extend as needed
+naxwaze	$1
+nabînim	$1
+nizanim	$1
+nabêjim	$1
+meke	$1
+mexwe	$1
+bike	$1
+bixwe	$1
+bixwînim	$1
+vekirin	$1
+veke	$1
+rabûn	$1
+radibim	$1
+radibe	$1
+hilbijartin	$1
+hildibijêrim	$1
+daketin	$1
+dakeve	$1
+derketin	$1
+derket	$1

@@ -42,7 +42,7 @@ ESPEAK_DIR := espeak-ng
 #---------------------------------------------------------------------------------
 APP_TITLE   := 	AIO_LS_pack_Updater
 APP_AUTHOR  := 	Shadow256
-APP_VERSION := 	7.14.00
+APP_VERSION := 	7.15.00
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -146,6 +146,12 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CFILES		+= $(ESPEAK_SRC)
+
+# eSpeak-NG optional components not used by the Switch homebrew. Keep the
+# upstream files intact so the eSpeak-NG directory can be updated directly.
+ESPEAK_EXCLUDED_CFILES := compilembrola.c sPlayer.c
+CFILES := $(filter-out $(ESPEAK_EXCLUDED_CFILES),$(CFILES))
+# sPlayer.h is a header and is never compiled as a translation unit.
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
@@ -224,7 +230,7 @@ all: $(BUILD)
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 clean:
@@ -248,7 +254,7 @@ DEPENDS	:=	$(OFILES:.o=.d)
 # Hekate-style progress reporting. The dry-run marker counts only the object
 # compilations that Make would actually execute in this build.
 ifndef COMPILE_PROGRESS
-COMPILE_TOTAL := $(shell $(MAKE) $(OUTPUT).elf --no-print-directory -nrRf $(firstword $(MAKEFILE_LIST)) COMPILE_PROGRESS="COMPILE_PROGRESS_OBJ" | grep -c "COMPILE_PROGRESS_OBJ")
+COMPILE_TOTAL := $(shell MAKEFLAGS= $(MAKE) -j1 $(OUTPUT).elf --no-print-directory -nrRf $(firstword $(MAKEFILE_LIST)) COMPILE_PROGRESS="COMPILE_PROGRESS_OBJ" | grep -c "COMPILE_PROGRESS_OBJ")
 COMPILE_STEP := x
 COMPILE_COUNT = $(words $(COMPILE_STEP))$(eval COMPILE_STEP := x $(COMPILE_STEP))
 COMPILE_PROGRESS = printf "\r[%3d%%] Compiling %s\033[K" `expr $(COMPILE_COUNT) \* 100 / $(COMPILE_TOTAL)`
@@ -310,7 +316,7 @@ endif
 	exit $$result
 
 %.elf:
-	@printf '\n'; echo linking $(notdir $@)
+	@printf '\r[100%%] Compilation complete: %s\033[K\n' "$(notdir $@)"; echo linking $(notdir $@)
 	$(ADD_COMPILE_COMMAND) end
 	@$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 	@$(NM) -CSn $@ > $(notdir $*.lst)
